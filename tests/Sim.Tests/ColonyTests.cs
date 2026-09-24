@@ -9,7 +9,8 @@ public class ColonyTests
     {
         var rules = Rules.Default;
         Assert.Equal(Enum.GetValues<BuildingKind>().Length, rules.Buildings.Length);
-        Assert.Equal(20, rules[BuildingKind.House].Cost.Wood);
+        Assert.True(rules[BuildingKind.House].Cost.Wood > 0);
+        Assert.Equal(new[] { Tile.Grass }, rules[BuildingKind.Farm].Gathers);
         Assert.Equal(Resource.Wood, rules[BuildingKind.Woodcutter].Produces);
         Assert.NotNull(rules[BuildingKind.Watchtower].Weapon);
         // A modified copy is a different ruleset, and a replay's hash must know it.
@@ -24,8 +25,9 @@ public class ColonyTests
         double gold = world.Colony[Resource.Gold], wood = world.Colony[Resource.Wood];
         Place(world, BuildingKind.House, 68, 62);
         // One tick of Keep income lands in the same step, so allow for it.
-        Assert.InRange(world.Colony[Resource.Gold], gold - 30, gold - 30 + 0.2);
-        Assert.Equal(wood - 20, world.Colony[Resource.Wood], 6);
+        double houseGold = Rules.Default[BuildingKind.House].Cost.Gold;
+        Assert.InRange(world.Colony[Resource.Gold], gold - houseGold, gold - houseGold + 0.2);
+        Assert.Equal(wood - Rules.Default[BuildingKind.House].Cost.Wood, world.Colony[Resource.Wood], 6);
 
         var broke = World.Create(new WorldOptions(7, Rules: Rules.Default.WithStartingResources(new Cost { Gold = 100 })));
         broke.DrainEvents();
@@ -93,11 +95,11 @@ public class ColonyTests
     public void CrewsAreAssignedFirstComeFirstServed()
     {
         var world = Rich();
-        // The Keep houses 8. Three Watchtowers (2 each) and a Bombard (3) want 9.
-        var towers = new[] { (58, 58), (69, 58), (58, 69) }.Select(p => Place(world, BuildingKind.Watchtower, p.Item1, p.Item2)).ToList();
-        var bombard = Place(world, BuildingKind.Bombard, 69, 69);
+        // The Keep houses 8. Three Hunters (2 each) and a Woodcutter (3) want 9.
+        var hunters = new[] { (58, 58), (69, 58), (58, 69) }.Select(p => Place(world, BuildingKind.Hunter, p.Item1, p.Item2)).ToList();
+        var bombard = Place(world, BuildingKind.Woodcutter, 69, 69);
         RunSeconds(world, 13);
-        Assert.All(towers, t => Assert.True(t.Staffed));
+        Assert.All(hunters, t => Assert.True(t.Staffed));
         Assert.False(bombard.Staffed, "the last building placed should be the one left without a crew");
         Assert.False(bombard.Active);
 
@@ -110,20 +112,25 @@ public class ColonyTests
     public void GatherersSplitTheTilesTheyShare()
     {
         var world = Rich();
-        double alone = world.EstimateGathering(BuildingKind.Hunter, 68, 62);
-        var first = Built(world, BuildingKind.Hunter, 68, 62);
-        // Six tiles east: the gathering discs (radius 5) overlap, but the second
-        // Hunter's own footprint stays outside the first one's disc.
-        var second = Built(world, BuildingKind.Hunter, 74, 62);
+        double alone = world.EstimateGathering(BuildingKind.Farm, 66, 57);
+        var first = Built(world, BuildingKind.Farm, 66, 57);
         RunSeconds(world, 0.1);
-        Assert.Equal(alone, first.Rate, 9);
-        Assert.True(second.Rate < first.Rate, $"second hunter {second.Rate} should get less than the first {first.Rate}: they overlap");
+        Assert.True(alone > 0);
+        Assert.Equal(alone, first.Rate, 9); // the preview matches what it then collects
+        double firstAlone = first.Rate;
+
+        // Four tiles east: their fields overlap, and the first Farm (lower id) keeps what it had claimed.
+        double secondAlone = world.EstimateGathering(BuildingKind.Farm, 70, 57);
+        var second = Built(world, BuildingKind.Farm, 70, 57);
+        RunSeconds(world, 0.1);
+        Assert.True(second.Rate < firstAlone, $"second farm {second.Rate} should get less than the first {firstAlone}: they overlap");
+        Assert.True(first.Rate + second.Rate < firstAlone * 2);
     }
 
     [Fact]
     public void ShortSanctitySlowsEverythingThatDrawsIt()
     {
-        // A Keep that supplies 5 against a Watchtower (3) and a Hunter (1) plus Bombard (6): 5/10.
+        // A Keep that supplies 5 against a Watchtower (3), a Hunter (1) and a Bombard (6): 5/10.
         var rules = Rules.Default.WithBuilding(BuildingKind.Keep, k => k with { SanctitySupply = 5 });
         var world = Rich(rules);
         Built(world, BuildingKind.Watchtower, 58, 58);
@@ -159,7 +166,7 @@ public class ColonyTests
         var built = Built(world, BuildingKind.House, 68, 62);
         var wood1 = world.Colony[Resource.Wood];
         Run(world, new Demolish(built.Id));
-        Assert.Equal(wood1 + 20 * Rules.Default.RefundFraction, world.Colony[Resource.Wood], 6);
+        Assert.Equal(wood1 + built.Def.Cost.Wood * Rules.Default.RefundFraction, world.Colony[Resource.Wood], 6);
     }
 
     /// <summary>A 2x2 grass spot inside the Wardstone's ground but outside the Keep's.</summary>

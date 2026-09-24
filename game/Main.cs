@@ -233,6 +233,7 @@ public partial class Main : Node2D
             >= Key.Key1 and <= Key.Key9 => (int)(key.Keycode - Key.Key1),
             Key.Key0 => 9,
             Key.Minus => 10,
+            Key.Equal => 11,
             _ => -1,
         };
         if (slot >= 0 && slot < Palette.BuildBar.Length)

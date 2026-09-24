@@ -30,11 +30,20 @@ public static class Snapshot
                     Tile.Rock => (117, 112, 107),
                     _ => (46, 77, 128),
                 };
+                if (world.Colony.Consecrated[i] && world.BuildingIdAt(x, y) == 0) (r, g, b) = (r + 25, g + 25, b + 10);
                 int id = world.BuildingIdAt(x, y);
                 if (id != 0)
                 {
-                    var kind = world.Buildings.First(bl => bl.Id == id).Kind;
-                    (r, g, b) = kind == BuildingKind.Wall ? (230, 230, 240) : (240, 200, 60);
+                    var building = world.BuildingById(id)!;
+                    (r, g, b) = building.Possessed ? (170, 40, 200)
+                        : building.Kind switch
+                        {
+                            BuildingKind.Wall or BuildingKind.Gate => (230, 230, 240),
+                            BuildingKind.Watchtower or BuildingKind.Bombard => (60, 120, 255),
+                            BuildingKind.House => (255, 150, 60),
+                            BuildingKind.Keep => (255, 255, 0),
+                            _ => (200, 170, 60),
+                        };
                 }
                 if (density[i] > 0)
                 {

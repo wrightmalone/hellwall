@@ -10,6 +10,7 @@ using Hellwall.Sim;
 
 if (args.Length > 0 && args[0] == "bench") return Bench.Run(ParseArgs(args[1..]));
 if (args.Length > 0 && args[0] == "town") return TownProbe.Run(ParseArgs(args[1..]));
+if (args.Length > 0 && args[0] == "run") return RunProbe.Run(ParseArgs(args[1..]));
 
 var args_ = ParseArgs(args);
 if (args_.ContainsKey("help"))
@@ -20,6 +21,11 @@ if (args_.ContainsKey("help"))
 
         hellwall-sim town [--wave=200 --seconds=240 --seeds=3,7,11,19,42 --trace]
           the phase 2 gate: a walled town holds a wave an undefended one doesn't
+
+        hellwall-sim run [--win-seeds=7,3 --lose-seeds=7,3,11,19,42 --trace --snapshot-at=<sec>]
+          the phase 3 gate: a bot wins a full survival run; a passive one loses
+        hellwall-sim run --seeds=11,19 [--bot=full|passive]
+          play the bot on other maps, ungated
 
         hellwall-sim [options]
           --seed=<n>        world seed (default 7)

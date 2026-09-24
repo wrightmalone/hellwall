@@ -30,6 +30,7 @@ public static class Palette
         BuildingKind.Watchtower => new(0.45f, 0.55f, 0.75f),
         BuildingKind.Bombard => new(0.35f, 0.38f, 0.55f),
         BuildingKind.Barracks => new(0.70f, 0.30f, 0.30f),
+        BuildingKind.Farm => new(0.85f, 0.80f, 0.40f),
         _ => Colors.Magenta,
     };
 
@@ -45,6 +46,7 @@ public static class Palette
         BuildingKind.Watchtower => "Tw",
         BuildingKind.Bombard => "Bo",
         BuildingKind.Barracks => "Bar",
+        BuildingKind.Farm => "Farm",
         _ => "",
     };
 
@@ -65,10 +67,10 @@ public static class Palette
     /// <summary>Build bar order; hotkeys 1-9, 0, minus follow it.</summary>
     public static readonly BuildingKind[] BuildBar =
     [
-        BuildingKind.House, BuildingKind.Woodcutter, BuildingKind.Quarry, BuildingKind.Hunter,
+        BuildingKind.House, BuildingKind.Farm, BuildingKind.Hunter, BuildingKind.Woodcutter, BuildingKind.Quarry,
         BuildingKind.Shrine, BuildingKind.Wardstone, BuildingKind.Wall, BuildingKind.Gate,
         BuildingKind.Watchtower, BuildingKind.Bombard, BuildingKind.Barracks,
     ];
 
-    public static readonly string[] BuildKeys = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "0", "-"];
+    public static readonly string[] BuildKeys = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "0", "-", "="];
 }

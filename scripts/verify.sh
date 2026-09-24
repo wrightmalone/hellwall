@@ -36,6 +36,10 @@ dotnet src/Sim.Headless/bin/Release/net10.0/hellwall-sim.dll bench
 step "town probe (defended holds, undefended falls)"
 dotnet src/Sim.Headless/bin/Release/net10.0/hellwall-sim.dll town
 
+# Phase 3 gate: a bot wins a full 60-day run on the designated map; a passive one loses on five.
+step "survival run (bot wins, passive loses)"
+dotnet src/Sim.Headless/bin/Release/net10.0/hellwall-sim.dll run
+
 if [[ $RUN_GODOT == 1 ]]; then
   step "godot: build C# and boot the main scene"
   mkdir -p out

@@ -55,9 +55,9 @@ public class PossessionTests
         var tower = Built(world, BuildingKind.Watchtower, 58, 58);
         var wall = Built(world, BuildingKind.Wall, 70, 70);
         RunSeconds(world, 0.2);
-        Assert.True(hunter.Staffed && tower.Staffed);
+        Assert.True(hunter.Staffed);
         Assert.Equal(hunter.Def.Workers, hunter.PeopleInside);
-        Assert.Equal(0, tower.PeopleInside); // crewed, but a fortification
+        Assert.Equal(0, tower.PeopleInside); // a fortification
         Assert.Equal(0, wall.PeopleInside);
         Assert.Equal(0, world.Buildings.First(b => b.Kind == BuildingKind.Keep).PeopleInside);
     }

@@ -23,14 +23,14 @@ public class CombatTests
     }
 
     [Fact]
-    public void AnUncrewedTowerDoesNotFire()
+    public void ATowerWithNoSanctityDoesNotFire()
     {
-        var rules = Dummies(Rules.Default.WithBuilding(BuildingKind.Keep, k => k with { Housing = 0 }));
+        var rules = Dummies(Rules.Default.WithBuilding(BuildingKind.Keep, k => k with { SanctitySupply = 0 }));
         var world = Rich(rules);
         var tower = Built(world, BuildingKind.Watchtower, 58, 58);
         Run(world, new SpawnDemons(DemonKind.Imp, (int)tower.CentreX + 3, (int)tower.CentreY, 1));
         var events = RunSeconds(world, 5);
-        Assert.False(tower.Staffed);
+        Assert.Equal(0f, world.Colony.Power);
         Assert.DoesNotContain(events, e => e is ShotFired);
         Assert.Equal(1, world.Horde.Count);
     }

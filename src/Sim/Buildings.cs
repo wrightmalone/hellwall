@@ -14,6 +14,7 @@ public enum BuildingKind : byte
     Watchtower,
     Bombard,
     Barracks,
+    Farm,
 }
 
 public sealed class Building
