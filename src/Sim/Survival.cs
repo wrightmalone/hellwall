@@ -1,0 +1,143 @@
+namespace Hellwall.Sim;
+
+/// <summary>The survival mode's clock and wave schedule, from rules.json.</summary>
+public sealed record SurvivalRules
+{
+    public float DaySeconds { get; init; } = 60;
+
+    /// <summary>The Convergence lands at the end of this day; survive it to win.</summary>
+    public int Days { get; init; } = 60;
+
+    /// <summary>The first wave lands at the end of this day.</summary>
+    public int FirstWaveDay { get; init; } = 3;
+    public int WaveEveryDays { get; init; } = 3;
+
+    /// <summary>A wave is announced, with its size and sides, this long before it lands.</summary>
+    public float TelegraphSeconds { get; init; } = 60;
+
+    public int FirstWaveSize { get; init; } = 30;
+
+    /// <summary>Each wave is this many times the size of the one before.</summary>
+    public double WaveGrowth { get; init; } = 1.2;
+
+    /// <summary>Every this many waves, waves come from one more side, up to MaxSides.</summary>
+    public int WavesPerExtraSide { get; init; } = 5;
+    public int MaxSides { get; init; } = 3;
+
+    /// <summary>The final wave, from every side at once.</summary>
+    public int ConvergenceSize { get; init; } = 4000;
+
+    public double HoundShare { get; init; } = 0.2;
+}
+
+public sealed class PlannedWave
+{
+    public int Number;
+    public int LandsAtTick;
+    public int Size;
+    public bool Final;
+
+    /// <summary>Chosen when the wave is announced, not before.</summary>
+    public Side[] Sides = [];
+    public bool Announced;
+    public bool Landed;
+
+    public int AnnounceTick(SurvivalRules rules) => LandsAtTick - (int)(rules.TelegraphSeconds * Balance.TickHz);
+}
+
+/// <summary>
+/// Survival state: the planned waves and where the run stands. The schedule
+/// (when and how big) is fixed at creation; each wave's sides are drawn from
+/// the world's Rng when it's announced, so the player learns the direction a
+/// minute ahead and not before.
+/// </summary>
+public sealed class Survival
+{
+    public readonly SurvivalRules Rules;
+    public readonly List<PlannedWave> Waves = new();
+    public bool FinalLanded;
+
+    public Survival(SurvivalRules rules)
+    {
+        Rules = rules;
+        int ticksPerDay = (int)(rules.DaySeconds * Balance.TickHz);
+        int n = 1;
+        for (int day = rules.FirstWaveDay; day < rules.Days; day += rules.WaveEveryDays, n++)
+        {
+            Waves.Add(new PlannedWave
+            {
+                Number = n,
+                LandsAtTick = day * ticksPerDay,
+                Size = (int)Math.Round(rules.FirstWaveSize * Math.Pow(rules.WaveGrowth, n - 1)),
+            });
+        }
+        Waves.Add(new PlannedWave { Number = n, LandsAtTick = rules.Days * ticksPerDay, Size = rules.ConvergenceSize, Final = true });
+    }
+
+    public int TicksPerDay => (int)(Rules.DaySeconds * Balance.TickHz);
+
+    /// <summary>1-based day number at a tick.</summary>
+    public int DayAt(int tick) => tick / TicksPerDay + 1;
+
+    /// <summary>The next wave that hasn't landed, announced or not.</summary>
+    public PlannedWave? Next => Waves.FirstOrDefault(w => !w.Landed);
+}
+
+internal static class SurvivalSystem
+{
+    public static void Step(World world)
+    {
+        var s = world.Survival;
+        if (s == null) return;
+
+        foreach (var wave in s.Waves)
+        {
+            if (wave.Landed) continue;
+            if (!wave.Announced && world.Tick >= wave.AnnounceTick(s.Rules))
+            {
+                wave.Sides = wave.Final ? Enum.GetValues<Side>() : DrawSides(world, SidesFor(s.Rules, wave.Number));
+                wave.Announced = true;
+                world.Emit(new WaveAnnounced(world.Tick, wave.Number, wave.LandsAtTick, wave.Sides, wave.Size, wave.Final));
+            }
+            if (wave.Announced && world.Tick >= wave.LandsAtTick)
+            {
+                int spawned = Land(world, wave, s.Rules.HoundShare);
+                wave.Landed = true;
+                if (wave.Final) s.FinalLanded = true;
+                world.Emit(new WaveLanded(world.Tick, wave.Number, spawned, wave.Final));
+            }
+        }
+
+        if (s.FinalLanded && world.Horde.Count == 0) world.Win();
+    }
+
+    static int SidesFor(SurvivalRules rules, int number) =>
+        Math.Min(rules.MaxSides, 1 + (number - 1) / Math.Max(1, rules.WavesPerExtraSide));
+
+    static Side[] DrawSides(World world, int count)
+    {
+        var sides = Enum.GetValues<Side>().ToList();
+        var chosen = new List<Side>();
+        for (int i = 0; i < count && sides.Count > 0; i++)
+        {
+            int k = world.Rng.NextInt(sides.Count);
+            chosen.Add(sides[k]);
+            sides.RemoveAt(k);
+        }
+        chosen.Sort();
+        return chosen.ToArray();
+    }
+
+    static int Land(World world, PlannedWave wave, double houndShare)
+    {
+        int spawned = 0;
+        for (int i = 0; i < wave.Sides.Length; i++)
+        {
+            int share = wave.Size / wave.Sides.Length + (i < wave.Size % wave.Sides.Length ? 1 : 0);
+            int hounds = (int)(share * houndShare);
+            spawned += world.SpawnAtEdge(wave.Sides[i], DemonKind.Imp, share - hounds);
+            spawned += world.SpawnAtEdge(wave.Sides[i], DemonKind.Hound, hounds);
+        }
+        return spawned;
+    }
+}

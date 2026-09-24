@@ -140,6 +140,8 @@ public sealed class Rules
     /// <summary>Seconds between Thralls leaving a possessed building.</summary>
     public float PossessionSpawnSeconds { get; private init; }
 
+    public SurvivalRules Survival { get; private init; } = new();
+
     public BuildingDef[] Buildings { get; private init; } = [];
     public UnitDef[] Units { get; private init; } = [];
     public DemonDef[] Demons { get; private init; } = [];
@@ -163,6 +165,7 @@ public sealed class Rules
         public double ColonistFoodPerSecond { get; init; }
         public double RefundFraction { get; init; }
         public float PossessionSpawnSeconds { get; init; }
+        public SurvivalRules Survival { get; init; } = new();
         public Dictionary<BuildingKind, BuildingDef> Buildings { get; init; } = new();
         public Dictionary<UnitKind, UnitDef> Units { get; init; } = new();
         public Dictionary<DemonKind, DemonDef> Demons { get; init; } = new();
@@ -186,6 +189,7 @@ public sealed class Rules
             ColonistFoodPerSecond = file.ColonistFoodPerSecond,
             RefundFraction = file.RefundFraction,
             PossessionSpawnSeconds = file.PossessionSpawnSeconds,
+            Survival = file.Survival,
             Buildings = Dense(file.Buildings, "building"),
             Units = Dense(file.Units, "unit"),
             Demons = Dense(file.Demons, "demon"),
@@ -219,16 +223,24 @@ public sealed class Rules
         return Copy(r => r.Demons = demons);
     }
 
+    /// <summary>A copy with a different survival schedule (short runs for tests, tuning sweeps).</summary>
+    public Rules WithSurvival(Func<SurvivalRules, SurvivalRules> change)
+    {
+        var survival = change(Survival);
+        return Copy(r => r.Survival = survival);
+    }
+
     sealed class Builder
     {
         public Cost StartingResources = Cost.None;
         public BuildingDef[] Buildings = [];
         public DemonDef[] Demons = [];
+        public SurvivalRules Survival = new();
     }
 
     Rules Copy(Action<Builder> change)
     {
-        var b = new Builder { StartingResources = StartingResources, Buildings = Buildings, Demons = Demons };
+        var b = new Builder { StartingResources = StartingResources, Buildings = Buildings, Demons = Demons, Survival = Survival };
         change(b);
         return new Rules
         {
@@ -237,6 +249,7 @@ public sealed class Rules
             ColonistFoodPerSecond = ColonistFoodPerSecond,
             RefundFraction = RefundFraction,
             PossessionSpawnSeconds = PossessionSpawnSeconds,
+            Survival = b.Survival,
             Buildings = b.Buildings,
             Units = Units,
             Demons = b.Demons,
@@ -246,7 +259,7 @@ public sealed class Rules
     }
 
     static string Describe(Builder b) =>
-        JsonSerializer.Serialize(new { b.StartingResources, b.Buildings, b.Demons }, Options);
+        JsonSerializer.Serialize(new { b.StartingResources, b.Buildings, b.Demons, b.Survival }, Options);
 
     static T[] Dense<TKey, T>(Dictionary<TKey, T> map, string what) where TKey : struct, Enum
     {

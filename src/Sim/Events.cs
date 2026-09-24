@@ -46,3 +46,8 @@ public sealed record DemonsKilled(int Tick, int Count) : SimEvent(Tick);
 public sealed record ShotFired(int Tick, float FromX, float FromY, float ToX, float ToY, float Splash, bool FromUnit) : SimEvent(Tick);
 
 public sealed record OutcomeChanged(int Tick, Outcome Outcome) : SimEvent(Tick);
+
+/// <summary>A wave is coming: where from, how many, and when.</summary>
+public sealed record WaveAnnounced(int Tick, int Number, int LandsAtTick, Side[] Sides, int Size, bool Final) : SimEvent(Tick);
+
+public sealed record WaveLanded(int Tick, int Number, int Spawned, bool Final) : SimEvent(Tick);

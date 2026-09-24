@@ -9,7 +9,8 @@ public enum Outcome : byte
 
 /// <param name="DormantPacks">How many sleeping packs to scatter at creation. Zero keeps tests quiet.</param>
 /// <param name="Rules">Content numbers; null for the defaults shipped in rules.json.</param>
-public readonly record struct WorldOptions(uint Seed, int MapSize = Balance.DefaultMapSize, int DormantPacks = 0, Rules? Rules = null);
+/// <param name="Survival">Run the day clock and wave schedule. Off for tests and probes that script their own waves.</param>
+public readonly record struct WorldOptions(uint Seed, int MapSize = Balance.DefaultMapSize, int DormantPacks = 0, Rules? Rules = null, bool Survival = false);
 
 public sealed class WorldStats
 {
@@ -33,6 +34,12 @@ public sealed class World
     public Outcome Outcome { get; private set; } = Outcome.Running;
     public Colony Colony { get; }
     public WorldStats Stats { get; } = new();
+
+    /// <summary>The day clock and wave schedule, or null when the run isn't a survival run.</summary>
+    public Survival? Survival { get; }
+
+    /// <summary>1-based; counts on even without a survival schedule.</summary>
+    public int Day => Tick / (int)(Rules.Survival.DaySeconds * Balance.TickHz) + 1;
 
     /// <summary>Ordered by id, ascending. Hashing and iteration rely on that.</summary>
     public IReadOnlyList<Building> Buildings => _buildings;
@@ -88,6 +95,7 @@ public sealed class World
         Flow = new FlowField(Terrain.Width, Terrain.Height);
         Noise = new NoiseGrid(Terrain.Width, Terrain.Height);
         Spatial = new SpatialHash(Terrain.Width, Terrain.Height);
+        if (options.Survival) Survival = new Survival(Rules.Survival);
     }
 
     public static World Create(WorldOptions options)
@@ -118,6 +126,7 @@ public sealed class World
         RebuildHumanFieldsIfNeeded();
         Noise.Decay();
         WakePacks();
+        SurvivalSystem.Step(this);
 
         Spatial.Build(Horde);
         _spatialStale = false;
@@ -154,6 +163,32 @@ public sealed class World
     }
 
     internal void Emit(SimEvent e) => _events.Add(e);
+
+    internal void Win()
+    {
+        if (Outcome != Outcome.Running) return;
+        Outcome = Outcome.Won;
+        _events.Add(new OutcomeChanged(Tick, Outcome));
+    }
+
+    /// <summary>Spawn a crowd at the middle of one map edge, snapped to ground that can reach the colony.</summary>
+    internal int SpawnAtEdge(Side side, DemonKind kind, int count, int inset = 6)
+    {
+        if (count <= 0) return 0;
+        int size = Terrain.Width, c = size / 2;
+        var (x, y) = side switch
+        {
+            Side.North => (c, inset),
+            Side.South => (c, size - 1 - inset),
+            Side.West => (inset, c),
+            _ => (size - 1 - inset, c),
+        };
+        var tile = FindReachableTileNear(x, y, maxRadius: 40);
+        if (tile == null) return 0;
+        int spawned = SpawnCluster(kind, tile.Value.X, tile.Value.Y, count);
+        if (spawned > 0) _events.Add(new DemonsSpawned(Tick, kind, spawned));
+        return spawned;
+    }
 
     internal void MarkNetworkDirty() => NetworkDirty = true;
 

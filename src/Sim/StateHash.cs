@@ -88,6 +88,16 @@ public static class StateHash
         }
 
         foreach (var level in world.Noise.Level) h = Mix(h, Bits(level));
+
+        if (world.Survival is { } s)
+        {
+            h = MixByte(h, s.FinalLanded ? (byte)1 : (byte)0);
+            foreach (var w in s.Waves)
+            {
+                h = MixByte(h, (byte)((w.Announced ? 1 : 0) | (w.Landed ? 2 : 0)));
+                foreach (var side in w.Sides) h = MixByte(h, (byte)side);
+            }
+        }
         // Flow field and spatial hash are pure functions of the above, so they aren't hashed.
         return h;
     }

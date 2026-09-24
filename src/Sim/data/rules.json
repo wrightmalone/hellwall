@@ -5,6 +5,14 @@
   "refundFraction": 0.5,
   "possessionSpawnSeconds": 1.0,
 
+  "survival": {
+    "daySeconds": 60, "days": 60,
+    "firstWaveDay": 3, "waveEveryDays": 3, "telegraphSeconds": 60,
+    "firstWaveSize": 30, "waveGrowth": 1.2,
+    "wavesPerExtraSide": 5, "maxSides": 3,
+    "convergenceSize": 4000, "houndShare": 0.2
+  },
+
   "buildings": {
     "Keep":       { "size": [3, 3], "hp": 1600, "buildSeconds": 0,  "housing": 8,  "gold": 1.0,
                     "sanctitySupply": 40, "consecrateRadius": 12 },
