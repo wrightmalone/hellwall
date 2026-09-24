@@ -4,9 +4,11 @@ A colony-survival RTS: a walled human settlement against demon hordes, where
 one breach can cascade into losing everything. The plan, pillars and roadmap
 are in [PLAN.md](./PLAN.md).
 
-**Status: phase 2 (colony core) complete.** A walled town holds a wave that
-an undefended one doesn't, on five seeds; 20,000 demons still run at 20 Hz in
-~6 ms/tick with combat on.
+**Status: phase 3 (survival loop) complete: the clone is complete.** A
+60-day survival run with announced waves, possession, and a final
+Convergence is winnable (a scripted bot wins it on the designated map and a
+second one) and losable (an economy-only bot falls by day 9 on every map
+tried). 20,000 demons still run at 20 Hz in ~6 ms/tick.
 
 ## Layout
 
@@ -59,6 +61,16 @@ dotnet run -c Release --project src/Sim.Headless -- town
 
 Add `--trace` to see the defended town's towers, crews and Keep every 5 s.
 
+The phase 3 gate, headless (also run by verify.sh, about a minute):
+
+```bash
+dotnet run -c Release --project src/Sim.Headless -- run
+```
+
+`--trace` prints the bot's decisions and the colony every five days;
+`--snapshot-at=<seconds>` writes a picture of the map; `--seeds=11,19`
+plays the bot on other maps without gating.
+
 The in-engine gate (opens a window):
 
 ```bash
@@ -78,11 +90,36 @@ Run the game:
 ```
 
 Or open `game/project.godot` in the Godot editor and press F5. To watch the
-probe's town hold a wave at 4x speed:
+bot play a whole run (Tab to speed up, Esc to take over):
+
+```bash
+/Applications/Godot_mono.app/Contents/MacOS/Godot --path game -- --autoplay
+```
+
+To watch the probe's town hold a wave at 4x speed:
 
 ```bash
 /Applications/Godot_mono.app/Contents/MacOS/Godot --path game -- --demo
 ```
+
+## A survival run
+
+60 one-minute days. From day 6 a wave lands every three days, each larger
+than the last and from more sides as the run goes on; each is announced a
+minute ahead with its size and direction, pinned to the edge of the screen.
+At the end of day 60 the Convergence (2,500) comes from every side at once.
+Survive it and the run is won; lose the Keep and it's over. Forty dormant
+packs (about 10,000 demons) sleep across the map until noise wakes them.
+
+**Possession is the cascade.** A demon reaching an inhabited building
+(a House, or a workplace with its crew in) takes it: its people come out as
+Thralls one a second, and it falls when it's empty. Losing them can leave
+other buildings short of crew. Demolishing a possessed building purges it.
+Soldiers killed by demons rise as Thralls. Towers and walls are only ever
+battered down.
+
+F5 / F9 quicksave and quickload. Saves are full snapshots, checked by a test
+that plays a loaded world against the original tick for tick.
 
 ## The colony
 
@@ -91,16 +128,18 @@ Every content number lives in [src/Sim/data/rules.json](src/Sim/data/rules.json)
 - **Buildings** cost gold, wood and stone, and take time to build.
 - **Colonists** live in Houses (and the Keep), pay a tithe, eat, and crew
   buildings first come first served. A building short of its crew is idle.
-- **Gatherers** (Woodcutter, Quarry, Hunter) collect from matching tiles
-  around them; overlapping gatherers split the tiles.
+- **Gatherers** collect from matching tiles around them: Woodcutter from
+  forest, Quarry from rock, Hunter from forest, Farm from open grass.
+  Overlapping gatherers split the tiles, and tiles under buildings yield
+  nothing, so farmland competes with building space.
 - **Holy ground is the power grid.** The Keep, Shrines and Wardstones
   consecrate a radius; everything must be built on connected ground, and
   losing a Wardstone darkens what lies beyond it. Crewed Shrines supply
   sanctity; a shortfall slows everything that draws it.
 - **Demons** head for every building except walls and gates, which they path
   through at 30x cost: they walk round a short wall and break a long one.
-- **Towers** (Watchtower, Bombard) and **soldiers** (Militia, Marksman,
-  Templar) shoot the nearest demon. Shots are loud. Demons within four tiles
+- **Towers** (Watchtower, Bombard) draw sanctity but no crew; **soldiers**
+  (Militia, Marksman, Templar) train at a Barracks. Both shoot the nearest demon. Shots are loud. Demons within four tiles
   of a soldier go for it.
 - **Losing the Keep loses the game.**
 
@@ -137,7 +176,7 @@ p99 9.1 ms, sim 4.8 ms/tick.
 
 | Input | Action |
 |---|---|
-| `1`–`9`, `0`, `-` | arm a building (or click the build bar); click to place |
+| `1`–`9`, `0`, `-`, `=` | arm a building (or click the build bar); click to place |
 | drag with Wall or Gate armed | lay a straight line |
 | right-click or Esc | disarm, then deselect |
 | click | select a soldier or building |
@@ -147,6 +186,23 @@ p99 9.1 ms, sim 4.8 ms/tick.
 | `Ctrl+1`–`9` / `Alt+1`–`9` | set / recall a control group |
 | `Q` `E` `R` with a Barracks selected | train Militia / Marksman / Templar |
 | `X` or Delete | demolish the selected building (half refund once built) |
-| space | pause; building and orders still work while paused |
+| space / Tab | pause (building and orders still work) / cycle 1x, 2x, 4x |
+| F5 / F9 | quicksave / quickload |
 | WASD, arrows / wheel | pan / zoom |
 | `N` / `K` / `J` | debug: noise at the cursor / a 200-demon wave / 20k assault |
+
+## Bot results
+
+`hellwall-sim run` plays the bot on the designated map (seed 7) and seed 3 and
+requires wins; other maps are informational. At the time of writing:
+
+| Seed | Full bot | Passive bot |
+|---|---|---|
+| 7 | won, day 63, 4,663 demons killed | lost day 9 |
+| 3 | won, day 62, 4,594 killed | lost day 8 |
+| 11 | lost at the Convergence, day 62 | lost day 8 |
+| 19 | lost day 50 | lost day 8 |
+| 42 | lost day 49 | lost day 8 |
+
+The bot is a lower bound, not a target: it packs towers into blocks, builds
+over its own farmland, and doesn't plan chokepoints.

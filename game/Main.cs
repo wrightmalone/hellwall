@@ -17,6 +17,7 @@ namespace Hellwall.Game;
 ///                        print frame and sim timings, then quit
 ///   --demo[=seconds]     build a walled town, send a wave at it, screenshot mid-fight
 ///   --skip=seconds       fast-forward the sim before the first frame
+///   --autoplay           let the headless harness's bot play (watch it, or take over any time with Esc)
 /// </summary>
 public partial class Main : Node2D
 {
@@ -31,6 +32,7 @@ public partial class Main : Node2D
     static readonly string SavePath = ProjectSettings.GlobalizePath("user://quicksave.hwsave");
     static readonly double[] Speeds = [1, 2, 4];
     int _speed;
+    Hellwall.Headless.Bot? _bot;
     Camera2D _camera = null!;
     HordeRenderer _horde = null!;
     WorldView _view = null!;
@@ -83,10 +85,17 @@ public partial class Main : Node2D
         if (_benchSeconds > 0) StartBenchAssault();
         if (_demoSeconds > 0) StartDemo();
 
+        if (options.ContainsKey("autoplay")) _bot = new Hellwall.Headless.Bot(_world, Hellwall.Headless.Bot.Style.Full);
+
         // Fast-forward before the first frame: for screenshots and for jumping into the middle of a run.
         if (options.TryGetValue("skip", out var skip))
         {
-            for (int t = 0; t < double.Parse(skip) * Balance.TickHz && _world.Outcome == Outcome.Running; t++) _world.Step();
+            for (int t = 0; t < double.Parse(skip) * Balance.TickHz && _world.Outcome == Outcome.Running; t++)
+            {
+                if (_bot != null && _world.Tick % Balance.TickHz == 0) _bot.Act();
+                _world.Step();
+                if (_bot != null) _bot.See(_world.DrainEvents());
+            }
             HandleEvents();
         }
 
@@ -108,6 +117,7 @@ public partial class Main : Node2D
             int budget = 5; // cap catch-up so a stall doesn't spiral into a burst of ticks
             while (_accumulator >= TickSeconds && budget-- > 0)
             {
+                if (_bot != null && _world.Tick % Balance.TickHz == 0) _bot.Act();
                 _simClock.Restart();
                 _world.Step();
                 double ms = _simClock.Elapsed.TotalMilliseconds;
@@ -139,7 +149,9 @@ public partial class Main : Node2D
 
     void HandleEvents()
     {
-        foreach (var e in _world.DrainEvents())
+        var events = _world.DrainEvents();
+        _bot?.See(events);
+        foreach (var e in events)
         {
             switch (e)
             {
@@ -247,6 +259,11 @@ public partial class Main : Node2D
         switch (key.Keycode)
         {
             case Key.Escape:
+                if (_bot != null)
+                {
+                    _bot = null;
+                    _state.Say("You have the colony.");
+                }
                 _state.Armed = null;
                 _state.SelectedUnits.Clear();
                 _state.SelectedBuilding = null;

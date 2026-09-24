@@ -11,5 +11,7 @@
 
   <ItemGroup>
     <ProjectReference Include="../src/Sim/Sim.csproj" />
+    <!-- The headless harness scripted player, so the autoplay option can show it playing. -->
+    <Compile Include="../src/Sim.Headless/Bot.cs" Link="Bot.cs" />
   </ItemGroup>
 </Project>
