@@ -42,7 +42,7 @@
   },
 
   "woods": {
-    "blocks": false, "treeHp": 300, "treeCost": 20, "chopDps": 5.5, "woodPerHp": 0.1, "carry": 10, "speed": 2.2, "reach": 14
+    "blocks": false, "treeHp": 120, "treeCost": 6, "chopDps": 2.2, "woodPerHp": 0.25, "carry": 10, "speed": 2.2, "reach": 14
   },
 
   "hellgates": {

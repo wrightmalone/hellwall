@@ -328,6 +328,7 @@ p99 9.1 ms, sim 4.8 ms/tick.
 | `1`–`9`, `0`, `-`, `=` | arm a building (or click the build bar); click to place |
 | drag with Wall or Gate armed | lay a straight line |
 | right-click or Esc | disarm, then deselect |
+| Esc with nothing selected, or F10 | pause menu: fullscreen, master volume, quit to main menu, exit |
 | click | select a soldier or building |
 | drag | box-select soldiers (shift adds) |
 | right-click with soldiers | attack-move; shift+right-click for a plain move |
