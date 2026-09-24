@@ -8,14 +8,20 @@ using Hellwall.Sim;
 // the world to CSV, and print the final state hash. Two runs that print the
 // same hash played the same game; scripts/verify.sh relies on that.
 
+if (args.Length > 0 && args[0] == "bench") return Bench.Run(ParseArgs(args[1..]));
+
 var args_ = ParseArgs(args);
 if (args_.ContainsKey("help"))
 {
     Console.WriteLine("""
+        hellwall-sim bench [--units=20000 --size=256 --ticks=2400 --gate-ms=12 --seed=7]
+          the phase 1 performance gate; exits 1 on failure
+
         hellwall-sim [options]
           --seed=<n>        world seed (default 7)
           --ticks=<n>       ticks to run (default 1200 = 60s)
           --size=<n>        map size in tiles (default 128)
+          --packs=<n>       dormant packs to scatter (default 0)
           --script=<path>   tick-stamped command script (JSON)
           --out=<path>      write samples as CSV
           --sample=<sec>    sample interval in seconds (default 10)
@@ -34,9 +40,10 @@ var script = args_.TryGetValue("script", out var scriptPath)
     ? Script.Load(scriptPath)
     : ("none", new List<ScriptedCommand>());
 
-var world = World.Create(new WorldOptions(seed, size));
+int packs = int.Parse(args_.GetValueOrDefault("packs", "0"), CultureInfo.InvariantCulture);
+var world = World.Create(new WorldOptions(seed, size, packs));
 int sampleEvery = Math.Max(1, (int)Math.Round(sampleSeconds * Balance.TickHz));
-var csv = new StringBuilder("tick,seconds,buildings,houses,walls,rejected,hash\n");
+var csv = new StringBuilder("tick,seconds,buildings,houses,walls,demons,packs_asleep,rejected,hash\n");
 int next = 0;
 int rejected = 0;
 int eventCount = 0;
@@ -67,7 +74,7 @@ if (args_.TryGetValue("out", out var outPath))
     File.WriteAllText(outPath, csv.ToString());
 }
 
-Console.WriteLine($"script={script.Item1} seed={seed} ticks={world.Tick} buildings={world.Buildings.Count} events={eventCount} rejected={rejected}");
+Console.WriteLine($"script={script.Item1} seed={seed} ticks={world.Tick} buildings={world.Buildings.Count} demons={world.Horde.Count} events={eventCount} rejected={rejected}");
 Console.WriteLine($"sim_ms={ms.ToString("F1", CultureInfo.InvariantCulture)} ms_per_tick={(ms / Math.Max(1, world.Tick)).ToString("F4", CultureInfo.InvariantCulture)}");
 Console.WriteLine($"hash={StateHash.Hex(world)}");
 return 0;
@@ -77,8 +84,9 @@ void Sample()
     int houses = world.Buildings.Count(b => b.Kind == BuildingKind.House);
     int walls = world.Buildings.Count(b => b.Kind == BuildingKind.Wall);
     double seconds = world.Tick / (double)Balance.TickHz;
+    int asleep = world.Packs.Count(p => !p.Awake);
     csv.Append(CultureInfo.InvariantCulture,
-        $"{world.Tick},{seconds:F1},{world.Buildings.Count},{houses},{walls},{rejected},{StateHash.Hex(world)}\n");
+        $"{world.Tick},{seconds:F1},{world.Buildings.Count},{houses},{walls},{world.Horde.Count},{asleep},{rejected},{StateHash.Hex(world)}\n");
 }
 
 static Dictionary<string, string> ParseArgs(string[] argv)

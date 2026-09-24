@@ -18,3 +18,9 @@ public sealed record Demolish(int BuildingId) : Command;
 
 /// <summary>A tick-stamped command: the serialized form of a script or replay.</summary>
 public readonly record struct ScriptedCommand(int Tick, Command Command);
+
+/// <summary>Debug and scenario: scatter Count demons over a disc centred on tile (X, Y).</summary>
+public sealed record SpawnDemons(DemonKind Kind, int X, int Y, int Count) : Command;
+
+/// <summary>Debug and scenario: a noise pulse, as a stand-in for combat until phase 2.</summary>
+public sealed record MakeNoise(int X, int Y, float Radius, float Intensity) : Command;

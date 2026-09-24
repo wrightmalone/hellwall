@@ -39,7 +39,8 @@ public class PlacementTests
     {
         var world = NewWorld();
         var events = Run(world, new PlaceBuilding(BuildingKind.House, 68, 62));
-        var placed = Assert.IsType<BuildingPlaced>(Assert.Single(events));
+        var placed = Assert.Single(events.OfType<BuildingPlaced>());
+        Assert.Single(events.OfType<NoiseMade>()); // building is loud
         Assert.Equal(BuildingKind.House, placed.Kind);
         Assert.Equal(placed.BuildingId, world.BuildingIdAt(69, 63));
     }
@@ -77,7 +78,7 @@ public class PlacementTests
     public void DemolishFreesTilesButNeverTheKeep()
     {
         var world = NewWorld();
-        var placed = (BuildingPlaced)Run(world, new PlaceBuilding(BuildingKind.House, 68, 62))[0];
+        var placed = Run(world, new PlaceBuilding(BuildingKind.House, 68, 62)).OfType<BuildingPlaced>().Single();
 
         Assert.IsType<BuildingRemoved>(Assert.Single(Run(world, new Demolish(placed.BuildingId))));
         Assert.Equal(0, world.BuildingIdAt(68, 62));

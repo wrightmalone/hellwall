@@ -28,6 +28,10 @@ echo "seed 7: $a | seed 7 again: $b | seed 8: $c"
 [[ "$a" == "$b" ]] || { echo "FAIL: same seed, different hash"; exit 1; }
 [[ "$a" != "$c" ]] || { echo "FAIL: different seeds, same hash"; exit 1; }
 
+# Phase 1 gate: 20k demons, walled Keep. Exits nonzero on any failed gate.
+step "horde bench (20k demons, headless)"
+dotnet src/Sim.Headless/bin/Release/net10.0/hellwall-sim.dll bench
+
 if [[ $RUN_GODOT == 1 ]]; then
   step "godot: build C# and boot the main scene"
   mkdir -p out

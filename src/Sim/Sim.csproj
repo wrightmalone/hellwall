@@ -8,6 +8,13 @@
   <PropertyGroup>
     <AssemblyName>Hellwall.Sim</AssemblyName>
     <RootNamespace>Hellwall.Sim</RootNamespace>
+    <!--
+      Optimized in every configuration. Godot runs the Debug build of the game,
+      and an unoptimized sim runs ~2.5x slower (13.8 vs 5.4 ms/tick at 20k
+      demons), which makes a debug session unplayable. The sim is tested
+      headlessly, so losing step-through debugging here is cheap.
+    -->
+    <Optimize>true</Optimize>
   </PropertyGroup>
 
   <ItemGroup>

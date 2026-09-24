@@ -31,4 +31,7 @@ public sealed class Terrain
     public void Set(int x, int y, Tile tile) => Tiles[Index(x, y)] = tile;
 
     public static bool IsBuildable(Tile tile) => tile == Tile.Grass;
+
+    /// <summary>Demons cross grass and forest (forest costs double in the flow field); rock and water block.</summary>
+    public static bool IsWalkable(Tile tile) => tile is Tile.Grass or Tile.Forest;
 }

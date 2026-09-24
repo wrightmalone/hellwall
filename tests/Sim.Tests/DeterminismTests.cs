@@ -14,11 +14,14 @@ public class DeterminismTests
         new(15, new PlaceBuilding(BuildingKind.Wall, 60, 58)),
         new(40, new Demolish(2)),
         new(40, new PlaceBuilding(BuildingKind.House, 58, 62)),
+        new(50, new SpawnDemons(DemonKind.Imp, 20, 64, 400)),
+        new(50, new SpawnDemons(DemonKind.Hound, 108, 64, 100)),
+        new(120, new MakeNoise(30, 30, 40, 3)),
     ];
 
     static List<string> Replay(uint seed, int ticks)
     {
-        var world = World.Create(new WorldOptions(seed));
+        var world = World.Create(new WorldOptions(seed, Balance.DefaultMapSize, DormantPacks: 4));
         var hashes = new List<string>();
         int next = 0;
         for (int t = 0; t < ticks; t++)
@@ -34,7 +37,9 @@ public class DeterminismTests
     [Fact]
     public void SameSeedAndScriptGiveIdenticalHashEveryTick()
     {
-        Assert.Equal(Replay(7, 200), Replay(7, 200));
+        var a = Replay(7, 400);
+        Assert.Equal(a, Replay(7, 400));
+        Assert.NotEqual(a[60], a[61]); // the horde is actually moving, so the hash covers it
     }
 
     [Fact]
