@@ -51,7 +51,7 @@ public partial class Hud : CanvasLayer
         "BARRACKS  select it to train: Q E R T Y F, shift-click for five; click a queued soldier to cancel; right-click the ground for a rally point\n" +
         "GROUPS  Ctrl+1-9 set · Alt+1-9 recall\n" +
         "X / Delete  demolish (purges a possessed building) · alerts on the left: click to go there\n" +
-        "Space pause · Tab speed · F5 save · F9 load · WASD or screen edges pan · wheel zoom · minimap click to jump · F3 debug\n" +
+        "Esc or F10 menu · Space pause · Tab speed · F5 save · F9 load · WASD or screen edges pan · wheel zoom · minimap click to jump · F3 debug\n" +
         "Debug: N noise at cursor · K wave · J 20k assault\n" +
         "F1 to close";
 

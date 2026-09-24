@@ -138,7 +138,13 @@ public static class RunProbe
         if (args.TryGetValue("difficulty", out var d)) args_difficulty = Enum.Parse<Difficulty>(d, ignoreCase: true);
         if (args.TryGetValue("map", out var m)) args_map = Enum.Parse<MapKind>(m, ignoreCase: true);
         args_woods = args.ContainsKey("woods");
+        if (args.TryGetValue("tree-hp", out var hp)) args_treeHp = float.Parse(hp, CultureInfo.InvariantCulture);
+        if (args.TryGetValue("tree-cost", out var cost)) args_treeCost = int.Parse(cost, CultureInfo.InvariantCulture);
     }
+
+    /// <summary>--tree-hp and --tree-cost: tune the woods from the command line.</summary>
+    static float args_treeHp = -1;
+    static int args_treeCost = -1;
 
     /// <summary>--woods: forest blocks, woodsmen fell it (WoodsRules.Blocks), whatever rules.json says.</summary>
     static bool args_woods;
@@ -149,6 +155,8 @@ public static class RunProbe
         bool endless = endlessDays > 0;
         rules ??= Rules.Default;
         if (args_woods) rules = rules.WithWoods(w => w with { Blocks = true });
+        if (args_treeHp > 0) rules = rules.WithWoods(w => w with { TreeHp = args_treeHp });
+        if (args_treeCost > 0) rules = rules.WithWoods(w => w with { TreeCost = args_treeCost });
         var world = scenario != null
             ? World.Create(scenario.Options(rules ?? Rules.Default))
             : World.Create(new WorldOptions(seed, 256, 0, rules ?? Rules.Default, Survival: true, Difficulty: args_difficulty, Endless: endless, Map: args_map));

@@ -88,10 +88,14 @@ public partial class NewGameMenu : CanvasLayer
         _woods.TooltipText = "No one walks through the trees. Woodcutters send out woodsmen who fell them one by one, so the forest\nshrinks and opens new ways into your town. The horde can hack through trees, slowly.";
         box.AddChild(_woods);
 
-        var volumeRow = Row(box, "Volume");
+        var volumeRow = Row(box, "Master volume");
         var volume = new HSlider { MinValue = 0, MaxValue = 1, Step = 0.05, Value = Sound.Volume, SizeFlagsHorizontal = Control.SizeFlags.ExpandFill };
         volume.ValueChanged += v => Settings.Set("volume", (float)v);
         volumeRow.AddChild(volume);
+
+        var fullscreen = new CheckBox { Text = "Fullscreen", ButtonPressed = Display.Fullscreen };
+        fullscreen.Toggled += on => Display.SetFullscreen(on);
+        box.AddChild(fullscreen);
 
         var edge = new CheckBox { Text = "Scroll at the screen edges", ButtonPressed = Main.EdgeScroll };
         edge.Toggled += on => Settings.Set("edge_scroll", on);

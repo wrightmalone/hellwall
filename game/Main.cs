@@ -24,6 +24,7 @@ namespace Hellwall.Game;
 ///   --skip=seconds       fast-forward the sim before the first frame
 ///   --autoplay           let the headless harness's bot play (watch it, or take over any time with Esc)
 ///   --inspect=Kind       select the first building of that kind (for screenshots)
+///   --pausemenu          open the pause menu at once (screenshots)
 ///   --selftest=controls  select the soldiers, press A, click: check they got an attack-move there, print, quit
 /// </summary>
 public partial class Main : Node2D
@@ -78,6 +79,7 @@ public partial class Main : Node2D
     public override void _Ready()
     {
         _options = ParseUserArgs();
+        Display.Apply();
         var o = _options;
         var setup = new GameSetup(
             o.TryGetValue("seed", out var s) ? uint.Parse(s) : 11u,
@@ -173,6 +175,7 @@ public partial class Main : Node2D
 
         // scripts/verify.sh looks for this line: the engine banner alone doesn't prove the C# scene ran.
         if (options.GetValueOrDefault("selftest") == "controls") CallDeferred(nameof(SelfTestControls));
+        if (options.ContainsKey("pausemenu")) CallDeferred(nameof(OpenPauseMenu)); // for screenshots of it
         GD.Print($"hellwall: world ready seed={_world.Seed} map={_world.Map} difficulty={_world.Rules.Difficulty} endless={_world.Survival?.Endless ?? false} hash={StateHash.Hex(_world)}");
         _started = true;
     }
@@ -248,7 +251,26 @@ public partial class Main : Node2D
         _world.FlushCommands();
         bool ordered = _world.Units.Count > 0 && _world.Units.All(u => u.Order == OrderKind.AttackMove && u.DestX == target.X && u.DestY == target.Y);
         bool kept = _state.SelectedUnits.Count == _world.Units.Count && !_state.AttackMoveArmed;
-        GD.Print(armed && ordered && kept ? "hellwall-selftest: PASS controls" : $"hellwall-selftest: FAIL controls (units {_world.Units.Count}, armed {armed}, ordered {ordered}, selection kept and disarmed {kept})");
+
+        // Esc clears the selection; Esc again, with nothing selected, opens the pause menu and stops the sim; Esc closes it.
+        async Task Escape()
+        {
+            Input.ParseInputEvent(new InputEventKey { Keycode = Key.Escape, Pressed = true });
+            Input.FlushBufferedEvents();
+            Input.ParseInputEvent(new InputEventKey { Keycode = Key.Escape, Pressed = false });
+            Input.FlushBufferedEvents();
+            for (int i = 0; i < 2; i++) await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
+        }
+        await Escape();
+        bool cleared = _state.SelectedUnits.Count == 0 && _pauseMenu == null;
+        await Escape();
+        int tick = _world.Tick;
+        for (int i = 0; i < 10; i++) await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
+        bool menu = _pauseMenu != null && _paused && _world.Tick == tick;
+        await Escape();
+        bool resumed = _pauseMenu == null && !_paused;
+        bool pass = armed && ordered && kept && cleared && menu && resumed;
+        GD.Print(pass ? "hellwall-selftest: PASS controls" : $"hellwall-selftest: FAIL controls (units {_world.Units.Count}, armed {armed}, ordered {ordered}, selection kept and disarmed {kept}, esc cleared {cleared}, menu paused {menu}, resumed {resumed})");
         GetTree().Quit();
     }
 
@@ -264,7 +286,7 @@ public partial class Main : Node2D
     /// <summary>Keep the cursor inside the window while playing (so the edges scroll), and free it on menus and the end screen.</summary>
     void UpdateMouseMode()
     {
-        var want = _started && ConfineMouse && _world.Outcome == Outcome.Running ? Input.MouseModeEnum.Confined : Input.MouseModeEnum.Visible;
+        var want = _started && ConfineMouse && _pauseMenu == null && _world.Outcome == Outcome.Running ? Input.MouseModeEnum.Confined : Input.MouseModeEnum.Visible;
         if (Input.MouseMode != want) Input.MouseMode = want;
     }
 
@@ -415,9 +437,38 @@ public partial class Main : Node2D
         }
     }
 
+    /// <summary>The pause menu, while it's open: the sim is stopped and the game takes no input but Esc.</summary>
+    PauseMenu? _pauseMenu;
+    bool _pausedBeforeMenu;
+
+    void OpenPauseMenu()
+    {
+        if (_pauseMenu != null || _world.Outcome != Outcome.Running) return;
+        _pausedBeforeMenu = _paused;
+        _paused = true;
+        DisarmAttackMove();
+        _state.Armed = null;
+        _pauseMenu = new PauseMenu { Resume = ClosePauseMenu, QuitToMenu = NewRun };
+        AddChild(_pauseMenu);
+    }
+
+    void ClosePauseMenu()
+    {
+        if (_pauseMenu == null) return;
+        _pauseMenu.QueueFree();
+        _pauseMenu = null;
+        _paused = _pausedBeforeMenu;
+    }
+
     public override void _UnhandledInput(InputEvent @event)
     {
         if (!_started) return;
+        if (_pauseMenu != null)
+        {
+            if (@event is InputEventKey { Pressed: true, Echo: false, Keycode: Key.Escape or Key.F10 }) ClosePauseMenu();
+            GetViewport().SetInputAsHandled();
+            return;
+        }
         switch (@event)
         {
             case InputEventMouseButton { ButtonIndex: MouseButton.Left } mb:
@@ -509,6 +560,10 @@ public partial class Main : Node2D
                 _state.AttackMoveArmed = true;
                 _state.Armed = null;
                 Input.SetDefaultCursorShape(Input.CursorShape.Cross);
+                break;
+            case Key.Escape when _bot == null && _state.Armed == null && _state.SelectedUnits.Count == 0 && _state.SelectedBuilding == null:
+            case Key.F10:
+                OpenPauseMenu();
                 break;
             case Key.Escape:
                 if (_bot != null)
@@ -636,7 +691,7 @@ public partial class Main : Node2D
         int asleep = _world.Packs.Where(p => !p.Awake).Sum(p => p.Count);
         _hud.DebugText =
             $"{(_paused ? "PAUSED   " : "")}{Speeds[_speed]}x   demons {_world.Horde.Count} (+{asleep} asleep)   killed {_world.Stats.DemonsKilled}   " +
-            $"fps {Engine.GetFramesPerSecond():0}  sim {_simMsShown:0.00} ms   ·   F1 controls · Space pause · Tab speed · F5 save · F9 load";
+            $"fps {Engine.GetFramesPerSecond():0}  sim {_simMsShown:0.00} ms   ·   F1 controls · Esc menu · Space pause · Tab speed · F5 save · F9 load";
     }
 
     // --- scripted runs ---
@@ -729,6 +784,7 @@ public partial class Main : Node2D
 
     void PanCamera(double delta)
     {
+        if (_pauseMenu != null) return;
         if (Input.IsKeyPressed(Key.Ctrl) || Input.IsKeyPressed(Key.Alt)) return;
         var dir = Vector2.Zero;
         if (Input.IsKeyPressed(Key.W) || Input.IsKeyPressed(Key.Up)) dir.Y -= 1;
