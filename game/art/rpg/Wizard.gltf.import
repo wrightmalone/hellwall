@@ -3,13 +3,13 @@
 importer="scene"
 importer_version=1
 type="PackedScene"
-uid="uid://bfnnh0ljbaqff"
-path="res://.godot/imported/character_rogue.gltf-51e56f8ff3f2ecb944875d2aea00dce0.scn"
+uid="uid://d02cdv72wdem2"
+path="res://.godot/imported/Wizard.gltf-d9c55f958fbc27549d2b256f89b1dc42.scn"
 
 [deps]
 
-source_file="res://art/kaykit/Models/Characters/gltf/character_rogue.gltf"
-dest_files=["res://.godot/imported/character_rogue.gltf-51e56f8ff3f2ecb944875d2aea00dce0.scn"]
+source_file="res://art/rpg/Wizard.gltf"
+dest_files=["res://.godot/imported/Wizard.gltf-d9c55f958fbc27549d2b256f89b1dc42.scn"]
 
 [params]
 

@@ -3,13 +3,13 @@
 importer="scene"
 importer_version=1
 type="PackedScene"
-uid="uid://dlhs74c45oopi"
-path="res://.godot/imported/crossbow_common.gltf.glb-649a78dc1abc5aec9656ede91b0ef732.scn"
+uid="uid://bahret2c7fndu"
+path="res://.godot/imported/Warrior.gltf-a5e8231e5d751cfc72c221b3a6ed5bfa.scn"
 
 [deps]
 
-source_file="res://art/kaykit/Models/gltf/crossbow_common.gltf.glb"
-dest_files=["res://.godot/imported/crossbow_common.gltf.glb-649a78dc1abc5aec9656ede91b0ef732.scn"]
+source_file="res://art/rpg/Warrior.gltf"
+dest_files=["res://.godot/imported/Warrior.gltf-a5e8231e5d751cfc72c221b3a6ed5bfa.scn"]
 
 [params]
 

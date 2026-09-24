@@ -3,13 +3,13 @@
 importer="scene"
 importer_version=1
 type="PackedScene"
-uid="uid://cdd7c1insfux0"
-path="res://.godot/imported/axe_common.gltf.glb-e062c21d17e28e0f2b41a628e8a1d3b1.scn"
+uid="uid://btthkugd5cdna"
+path="res://.godot/imported/Monk.gltf-faeb051ac0ee50eae8e70c8bc046cf5f.scn"
 
 [deps]
 
-source_file="res://art/kaykit/Models/gltf/axe_common.gltf.glb"
-dest_files=["res://.godot/imported/axe_common.gltf.glb-e062c21d17e28e0f2b41a628e8a1d3b1.scn"]
+source_file="res://art/rpg/Monk.gltf"
+dest_files=["res://.godot/imported/Monk.gltf-faeb051ac0ee50eae8e70c8bc046cf5f.scn"]
 
 [params]
 

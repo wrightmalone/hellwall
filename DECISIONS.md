@@ -408,6 +408,27 @@ Everything is placeholder-styled (dark iron, gold for holy, red for threat). Ico
   attack-move there as they come out.
 - **In the sim:** both are commands (CancelTraining, SetRally), saved (format 5) and hashed.
 
+### 44. North is up-right everywhere (you found the minimap and the view disagreed)
+The minimap is now a diamond in the view's own isometric projection, so the map's north edge runs
+up and to the right in both, with an N mark. The wave arrows on it, the edge warnings and the
+callouts all agree. Callouts also say where a side is on screen: "from the north (top right)".
+Turning the camera so north pointed straight up wasn't worth it: in any isometric view the
+map's edges run diagonally.
+
+### 45. Soldiers are Quaternius's RPG Characters (you downloaded the pack)
+The same artist as the demons, so the two sides now have the same level of detail. Each uses its own walk.
+
+| Soldier | Character |
+|---|---|
+| Militia | the Rogue, its crimson cloak recoloured an earthy brown so it doesn't read as a demon |
+| Marksman | the Ranger |
+| Templar | the Warrior |
+| Crossbowman | the Ranger in blue |
+| Chaplain | the Cleric |
+| Outrider | the Monk |
+
+They're baked a little taller than the demons and with more fill light, because their textures are darker. KayKit's characters are gone; its coin, plate and goblet remain as resource icons.
+
 ## Things I noticed that you should decide
 
 - **Scale:** addressed by 12-14 and 21. The Convergence is 9,000 plus whatever

@@ -3,13 +3,13 @@
 importer="scene"
 importer_version=1
 type="PackedScene"
-uid="uid://ca8xq7bc7mmt3"
-path="res://.godot/imported/shield_common.gltf.glb-ca589eecbea08e4596a896639fc8529a.scn"
+uid="uid://brguxmfx02hx6"
+path="res://.godot/imported/Rogue.gltf-8d3c0d03fc2b51c8894aaf5c27e7cbf3.scn"
 
 [deps]
 
-source_file="res://art/kaykit/Models/gltf/shield_common.gltf.glb"
-dest_files=["res://.godot/imported/shield_common.gltf.glb-ca589eecbea08e4596a896639fc8529a.scn"]
+source_file="res://art/rpg/Rogue.gltf"
+dest_files=["res://.godot/imported/Rogue.gltf-8d3c0d03fc2b51c8894aaf5c27e7cbf3.scn"]
 
 [params]
 

@@ -3,13 +3,13 @@
 importer="scene"
 importer_version=1
 type="PackedScene"
-uid="uid://ceu5hfpgf6ppr"
-path="res://.godot/imported/character_knight.gltf-96ec5da1b6d7cf21af7a7dd6bd70ffd0.scn"
+uid="uid://cu3me5tlt62sk"
+path="res://.godot/imported/Cleric.gltf-6276080fb03a2a2387159ef3547f8bbd.scn"
 
 [deps]
 
-source_file="res://art/kaykit/Models/Characters/gltf/character_knight.gltf"
-dest_files=["res://.godot/imported/character_knight.gltf-96ec5da1b6d7cf21af7a7dd6bd70ffd0.scn"]
+source_file="res://art/rpg/Cleric.gltf"
+dest_files=["res://.godot/imported/Cleric.gltf-6276080fb03a2a2387159ef3547f8bbd.scn"]
 
 [params]
 

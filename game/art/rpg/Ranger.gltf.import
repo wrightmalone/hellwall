@@ -3,13 +3,13 @@
 importer="scene"
 importer_version=1
 type="PackedScene"
-uid="uid://b131vva8gwoyy"
-path="res://.godot/imported/sword_common.gltf.glb-541186193ccf0a6197c59b9820742040.scn"
+uid="uid://b4vxio1k6g5gb"
+path="res://.godot/imported/Ranger.gltf-7db3ff6285b92f81fa5cb162c9c1e297.scn"
 
 [deps]
 
-source_file="res://art/kaykit/Models/gltf/sword_common.gltf.glb"
-dest_files=["res://.godot/imported/sword_common.gltf.glb-541186193ccf0a6197c59b9820742040.scn"]
+source_file="res://art/rpg/Ranger.gltf"
+dest_files=["res://.godot/imported/Ranger.gltf-7db3ff6285b92f81fa5cb162c9c1e297.scn"]
 
 [params]
 

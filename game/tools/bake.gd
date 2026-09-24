@@ -17,17 +17,19 @@ const LOOK_Y := 0.45
 const KK := "res://art/kaykit/Models/Characters/gltf/"
 const KW := "res://art/kaykit/Models/gltf/"
 const QM := "res://art/quaternius/"
+const RP := "res://art/rpg/"
 const GY := "res://art/kenney3d/graveyard-kit/"
 
 # name, model, tint for the body (null: none), scale, [weapon right, item left]
 var variants := [
-	# Soldiers: KayKit's Dungeon Pack people (flat-coloured, no tint needed), half scale to match the Kenney demons.
-	["unit-militia", KK + "character_rogue.gltf", null, 0.5, [KW + "dagger_common.gltf.glb", ""]],
-	["unit-marksman", KK + "character_rogue.gltf", null, 0.5, [KW + "crossbow_common.gltf.glb", ""]],
-	["unit-templar", KK + "character_knight.gltf", null, 0.52, [KW + "sword_common.gltf.glb", KW + "shield_common.gltf.glb"]],
-	["unit-crossbowman", KK + "character_knight.gltf", null, 0.5, [KW + "crossbow_common.gltf.glb", KW + "shield_common.gltf.glb"]],
-	["unit-chaplain", KK + "character_mage.gltf", null, 0.5, [KW + "staff_common.gltf.glb", ""]],
-	["unit-outrider", KK + "character_barbarian.gltf", null, 0.55, [KW + "axe_common.gltf.glb", ""]],
+	# Soldiers: Quaternius RPG Characters, the same artist as the demons, fitted to a height
+	# and walked with their own clip. The Crossbowman is the Ranger in blue (8th field: recolour strength).
+	["unit-militia", RP + "Rogue.gltf", Color(0.5, 0.42, 0.28), 1.0, ["", ""], 1.0, "Walk", 0.3], # an earthy cloak: its own crimson read as a demon
+	["unit-marksman", RP + "Ranger.gltf", null, 1.0, ["", ""], 1.0, "Walk"],
+	["unit-templar", RP + "Warrior.gltf", null, 1.0, ["", ""], 1.05, "Walk"],
+	["unit-crossbowman", RP + "Ranger.gltf", Color(0.35, 0.5, 0.95), 1.0, ["", ""], 1.0, "Walk", 0.45],
+	["unit-chaplain", RP + "Cleric.gltf", null, 1.0, ["", ""], 1.0, "Walk"],
+	["unit-outrider", RP + "Monk.gltf", null, 1.0, ["", ""], 1.05, "Walk"],
 	# Demons: Quaternius Ultimate Monsters, fitted to a height (6th field) and walked with
 	# their own clip (7th); the Thrall stays Kenney's zombie, a possessed colonist.
 	["demon-imp", QM + "Big/Demon.gltf", null, 1.0, ["", ""], 0.72, "Walk"],
@@ -42,6 +44,7 @@ var variants := [
 
 var viewport: SubViewport
 var camera: Camera3D
+var env: WorldEnvironment
 
 func _initialize():
 	viewport = SubViewport.new()
@@ -62,7 +65,7 @@ func _initialize():
 	sun.rotation_degrees = Vector3(-55, 20, 0)
 	sun.light_energy = 1.1
 	viewport.add_child(sun)
-	var env := WorldEnvironment.new()
+	env = WorldEnvironment.new()
 	env.environment = Environment.new()
 	env.environment.background_mode = Environment.BG_CLEAR_COLOR
 	env.environment.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
@@ -85,13 +88,15 @@ func bake():
 	quit()
 
 func bake_one(v):
+	# The RPG characters' textures are darker than the monsters': more fill light, so both read at 30 px.
+	env.environment.ambient_light_energy = 0.95 if v[1].begins_with(RP) else 0.55
 	var model: Node3D = load(v[1]).instantiate()
 	model.scale = Vector3.ONE * v[3]
 	viewport.add_child(model)
 	if v.size() > 5:
 		fit(model, v[5])
 	if v[2] != null:
-		tint(model, v[2], v[0].begins_with("demon"))
+		tint(model, v[2], v[0].begins_with("demon") or v.size() > 7, v[7] if v.size() > 7 else -1.0)
 	attach(model, v[4][0], "arm-right")
 	attach(model, v[4][1], "arm-left")
 	# Kenney's characters come with a walk; KayKit's don't, so theirs is made from their parts below.
@@ -151,7 +156,7 @@ func stride(model: Node3D, size: float, phase: float):
 
 # Recolour the model toward a tint: soldiers keep their faces (the head is
 # left alone), demons are recoloured head to foot.
-func tint(model: Node3D, colour: Color, whole: bool):
+func tint(model: Node3D, colour: Color, whole: bool, strength := -1.0):
 	var shader := load("res://tools/recolor.gdshader")
 	for m in model.find_children("*", "MeshInstance3D", true, false):
 		if not whole and m.name.begins_with("head"):
@@ -167,7 +172,7 @@ func tint(model: Node3D, colour: Color, whole: bool):
 				copy.shader = shader
 				copy.set_shader_parameter("albedo_tex", mat.albedo_texture)
 				copy.set_shader_parameter("tint", colour)
-				copy.set_shader_parameter("amount", 0.8 if whole else 0.9)
+				copy.set_shader_parameter("amount", strength if strength >= 0 else (0.8 if whole else 0.9))
 				m.set_surface_override_material(s, copy)
 
 # Hang a prop on a bone (rigged models) or on the limb node of the same name (the graveyard's part-animated ones).
