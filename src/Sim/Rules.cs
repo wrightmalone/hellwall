@@ -80,6 +80,32 @@ public sealed record WildsRules
     public float WakeRadius { get; init; } = 7;
 }
 
+public enum Difficulty : byte
+{
+    Easy,
+    Normal,
+    Hard,
+    Nightmare,
+}
+
+/// <summary>
+/// Multipliers a difficulty applies to the Normal rules (rules.json is
+/// Normal). Pure scaling of how many demons come and what you start with:
+/// the rules of play are the same at every level.
+/// </summary>
+public sealed record DifficultyDef
+{
+    /// <summary>Every regular wave's size.</summary>
+    public double Waves { get; init; } = 1;
+    public double Convergence { get; init; } = 1;
+    /// <summary>Sleeping packs' sizes.</summary>
+    public double Packs { get; init; } = 1;
+    /// <summary>Hellgate bands.</summary>
+    public double Gates { get; init; } = 1;
+    /// <summary>Starting resources.</summary>
+    public double Start { get; init; } = 1;
+}
+
 public sealed record StartingUnit
 {
     public UnitKind Kind { get; init; }
@@ -238,6 +264,39 @@ public sealed class Rules
 
     public TechDef[] Techs { get; private init; } = [];
 
+    public Dictionary<Difficulty, DifficultyDef> Difficulties { get; private init; } = new();
+
+    /// <summary>Endless mode's pool of horde mutations.</summary>
+    public CorruptionDef[] Corruptions { get; private init; } = [];
+
+    public CorruptionDef Corruption(string id) => Corruptions.FirstOrDefault(c => c.Id == id) ?? throw new KeyNotFoundException($"no corruption '{id}'");
+
+    /// <summary>The level these rules were scaled to (Normal for rules straight from the file).</summary>
+    public Difficulty Difficulty { get; private init; } = Difficulty.Normal;
+
+    /// <summary>These rules at another difficulty. Normal is these rules unchanged; scaling is always from Normal.</summary>
+    public Rules ForDifficulty(Difficulty level)
+    {
+        if (level == Difficulty) return this;
+        if (Difficulty != Difficulty.Normal) throw new InvalidOperationException($"rules already scaled to {Difficulty}");
+        var d = Difficulties.GetValueOrDefault(level) ?? new DifficultyDef();
+        int Round(double v) => Math.Max(1, (int)Math.Round(v));
+        var survival = Survival with { FirstWaveSize = Round(Survival.FirstWaveSize * d.Waves), ConvergenceSize = Round(Survival.ConvergenceSize * d.Convergence) };
+        var wilds = Wilds with { NearCount = Round(Wilds.NearCount * d.Packs), FarCount = Round(Wilds.FarCount * d.Packs) };
+        var gates = Hellgates with { BandSize = Round(Hellgates.BandSize * d.Gates) };
+        var start = StartingResources.Scale(d.Start);
+        var scaled = Copy(r => { r.Survival = survival; r.Wilds = wilds; r.Hellgates = gates; r.StartingResources = start; });
+        return new Rules
+        {
+            StartingResources = scaled.StartingResources, ColonistGoldPerSecond = scaled.ColonistGoldPerSecond, ColonistFoodPerSecond = scaled.ColonistFoodPerSecond,
+            RefundFraction = scaled.RefundFraction, PossessionSpawnSeconds = scaled.PossessionSpawnSeconds, StartingUnits = scaled.StartingUnits,
+            Survival = scaled.Survival, Hellgates = scaled.Hellgates, Wilds = scaled.Wilds, Techs = scaled.Techs, Difficulties = Difficulties, Corruptions = Corruptions,
+            Buildings = scaled.Buildings, Units = scaled.Units, Demons = scaled.Demons,
+            Difficulty = level,
+            Hash = scaled.Hash ^ ((ulong)level + 1) * 0x100000001B3UL,
+        };
+    }
+
     public TechDef Tech(string id) => Techs.FirstOrDefault(t => t.Id == id) ?? throw new KeyNotFoundException($"no tech '{id}'");
 
     public BuildingDef[] Buildings { get; private init; } = [];
@@ -268,6 +327,8 @@ public sealed class Rules
         public HellgateRules Hellgates { get; init; } = new();
         public WildsRules Wilds { get; init; } = new();
         public TechDef[] Techs { get; init; } = [];
+        public Dictionary<Difficulty, DifficultyDef> Difficulties { get; init; } = new();
+        public CorruptionDef[] Corruptions { get; init; } = [];
         public Dictionary<BuildingKind, BuildingDef> Buildings { get; init; } = new();
         public Dictionary<UnitKind, UnitDef> Units { get; init; } = new();
         public Dictionary<DemonKind, DemonDef> Demons { get; init; } = new();
@@ -296,6 +357,8 @@ public sealed class Rules
             Hellgates = file.Hellgates,
             Wilds = file.Wilds,
             Techs = file.Techs,
+            Difficulties = file.Difficulties,
+            Corruptions = file.Corruptions,
             Buildings = Dense(file.Buildings, "building"),
             Units = Dense(file.Units, "unit"),
             Demons = Dense(file.Demons, "demon"),
@@ -320,6 +383,20 @@ public sealed class Rules
         var demons = (DemonDef[])Demons.Clone();
         demons[(int)kind] = change(demons[(int)kind]);
         return Copy(r => r.Demons = demons);
+    }
+
+    /// <summary>A copy with a different corruption pool (one corruption, to test what it does).</summary>
+    public Rules WithCorruptions(CorruptionDef[] pool)
+    {
+        var copy = Copy(_ => { });
+        return new Rules
+        {
+            StartingResources = copy.StartingResources, ColonistGoldPerSecond = copy.ColonistGoldPerSecond, ColonistFoodPerSecond = copy.ColonistFoodPerSecond,
+            RefundFraction = copy.RefundFraction, PossessionSpawnSeconds = copy.PossessionSpawnSeconds, StartingUnits = copy.StartingUnits,
+            Survival = copy.Survival, Hellgates = copy.Hellgates, Wilds = copy.Wilds, Techs = copy.Techs, Difficulties = Difficulties, Corruptions = pool,
+            Buildings = copy.Buildings, Units = copy.Units, Demons = copy.Demons, Difficulty = Difficulty,
+            Hash = copy.Hash ^ Fnv(JsonSerializer.Serialize(pool, Options)),
+        };
     }
 
     /// <summary>A copy with one unit's definition replaced (no tech requirement, for tests).</summary>
@@ -385,6 +462,9 @@ public sealed class Rules
             Hellgates = b.Hellgates,
             Wilds = b.Wilds,
             Techs = Techs,
+            Difficulties = Difficulties,
+            Corruptions = Corruptions,
+            Difficulty = Difficulty,
             Buildings = b.Buildings,
             Units = b.Units,
             Demons = b.Demons,

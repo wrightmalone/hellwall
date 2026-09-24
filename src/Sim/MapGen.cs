@@ -8,10 +8,32 @@ namespace Hellwall.Sim;
 /// the World's Rng, so terrain never depends on how many numbers anything else
 /// has drawn. This is a placeholder until phase 5's procedural maps.
 /// </summary>
+public enum MapKind : byte
+{
+    /// <summary>Open ground, scattered lakes, rock and woods.</summary>
+    Plains,
+    /// <summary>Much more water: the land runs between lakes, and the lakes make chokepoints.</summary>
+    Lakes,
+    /// <summary>Rock ridges with passes between them. Stone is plentiful; room to build isn't.</summary>
+    Highlands,
+    /// <summary>Deep forest: wood everywhere, little open ground, and demons slowed in the trees.</summary>
+    Wildwood,
+}
+
 public static class MapGen
 {
-    public static Terrain Generate(uint seed, int size)
+    /// <summary>Noise thresholds per map kind: below Water is water, above Rock is rock, moisture above Forest is forest.</summary>
+    static (double Water, double Rock, double Forest) Thresholds(MapKind kind) => kind switch
     {
+        MapKind.Lakes => (0.42, 0.74, 0.60),
+        MapKind.Highlands => (0.24, 0.60, 0.62),
+        MapKind.Wildwood => (0.26, 0.74, 0.44),
+        _ => (0.30, 0.70, 0.58),
+    };
+
+    public static Terrain Generate(uint seed, int size, MapKind kind = MapKind.Plains)
+    {
+        var (waterLevel, rockLevel, forestLevel) = Thresholds(kind);
         var terrain = new Terrain(size, size);
         uint elevationSeed = seed;
         uint moistureSeed = seed ^ 0x9E3779B9u;
@@ -33,31 +55,29 @@ public static class MapGen
                 double e = Fbm(elevationSeed, x, y);
                 double m = Fbm(moistureSeed, x, y);
                 Tile tile =
-                    e < 0.30 ? Tile.Water :
-                    e > 0.70 ? Tile.Rock :
-                    m > 0.58 ? Tile.Forest :
+                    e < waterLevel ? Tile.Water :
+                    e > rockLevel ? Tile.Rock :
+                    m > forestLevel ? Tile.Forest :
                     Tile.Grass;
                 terrain.Set(x, y, tile);
             }
         }
 
-        EnsureNearby(terrain, seed, Tile.Rock, minimum: 60, blobRadius: 4, angleSalt: 0x51ED27u);
-        EnsureNearby(terrain, seed, Tile.Forest, minimum: 120, blobRadius: 6, angleSalt: 0xA3B195u);
+        // Rich iron out in the wilds first, so the fairness pass sees (and never counts on) it.
         PlaceOre(terrain, seed);
+        MakeFair(terrain, seed);
         return terrain;
     }
 
     /// <summary>
-    /// Iron lies out on the map, not at home: one modest deposit 22-28 tiles
-    /// from the Keep (on the landward side, like the fairness patches) and
-    /// richer ones further out, one per 2,000 tiles or so of map. An army is
-    /// made of iron, so a bigger army means reaching further.
+    /// Iron lies out on the map, not at home: rich deposits beyond 34 tiles,
+    /// one per 2,000 tiles or so of map. (The fairness pass adds one modest
+    /// deposit within reach.) An army is made of iron, so a bigger army means
+    /// reaching further.
     /// </summary>
     static void PlaceOre(Terrain terrain, uint seed)
     {
         int c = terrain.Width / 2;
-        // The near deposit may take forest as well as grass, so it lands wherever the heading points.
-        StampPatch(terrain, c, seed ^ 0x0E0E0Eu, 22 + Lattice(seed ^ 0x0E0E0Eu, 5, 6) * 6, Tile.Ore, radius: 3, overForest: true);
         int deposits = terrain.Width * terrain.Height / 2000;
         for (int i = 0; i < deposits; i++)
         {
@@ -66,32 +86,12 @@ public static class MapGen
             int dx = x - c, dy = y - c;
             if (dx * dx + dy * dy < 34 * 34) continue; // the rich ones are out in the wilds
             int radius = 2 + (int)(Lattice(seed ^ 0x0BE5u, i, 3) * 2);
-            Stamp(terrain, x, y, radius, Tile.Ore);
+            Stamp(terrain, x, y, radius, Tile.Ore, grassOnly: true);
         }
     }
 
-    /// <summary>A patch at `distance` from the centre, on whichever of sixteen headings crosses the most land.</summary>
-    static void StampPatch(Terrain terrain, int c, uint salt, double distance, Tile kind, int radius, bool overForest = false)
-    {
-        double start = Lattice(salt, 1, 2) * 2 * Math.PI;
-        double bestAngle = start;
-        int bestLand = -1;
-        for (int k = 0; k < 16; k++)
-        {
-            double a = start + k * Math.PI / 8;
-            int land = 0;
-            for (double d = Balance.KeepClearRadius; d <= distance + radius; d += 0.5)
-            {
-                int x = c + (int)Math.Round(Math.Cos(a) * d), y = c + (int)Math.Round(Math.Sin(a) * d);
-                if (terrain.InBounds(x, y) && terrain.Get(x, y) != Tile.Water) land++;
-            }
-            if (land > bestLand) { bestLand = land; bestAngle = a; }
-        }
-        Stamp(terrain, c + (int)Math.Round(Math.Cos(bestAngle) * distance), c + (int)Math.Round(Math.Sin(bestAngle) * distance), radius, kind, overForest);
-    }
-
-    /// <summary>Turn the grass in a disc into `kind`, leaving the Keep's clearing and every other tile alone.</summary>
-    static void Stamp(Terrain terrain, int bx, int by, int radius, Tile kind, bool overForest = false)
+    /// <summary>Turn what `kind` may overwrite in a disc into `kind`, leaving the Keep's clearing and every other tile alone.</summary>
+    static void Stamp(Terrain terrain, int bx, int by, int radius, Tile kind, bool grassOnly = false)
     {
         int c = terrain.Width / 2, clear = Balance.KeepClearRadius;
         for (int y = by - radius; y <= by + radius; y++)
@@ -101,58 +101,129 @@ public static class MapGen
                 if ((x - bx) * (x - bx) + (y - by) * (y - by) > radius * radius) continue;
                 if ((x - c) * (x - c) + (y - c) * (y - c) <= clear * clear) continue;
                 var was = terrain.Get(x, y);
-                if (was != Tile.Grass && !(overForest && was == Tile.Forest)) continue;
+                if (grassOnly ? was != Tile.Grass : !Overwrites(kind, was)) continue;
                 terrain.Set(x, y, kind);
             }
     }
 
     /// <summary>
-    /// Start fairness: every colony needs stone and wood within reach. If the
-    /// ground within 22 tiles of the centre holds fewer than `minimum` tiles of
-    /// the kind, stamp a round patch of it 16 to 20 tiles out, at an angle
-    /// drawn from the seed. Maps with no rock anywhere near the Keep were
-    /// unwinnable by every doctrine the bot knows (`hellwall-sim maps`).
+    /// The minimum a start must offer within FairReach steps over land. Measured
+    /// with `hellwall-sim maps` against which maps the bot wins: every map lost
+    /// early by every build path had under 50 tiles of reachable rock; every
+    /// map won had over 110.
     /// </summary>
-    static void EnsureNearby(Terrain terrain, uint seed, Tile kind, int minimum, int blobRadius, uint angleSalt)
-    {
-        int c = terrain.Width / 2;
-        const int reach = 22;
-        int have = 0;
-        for (int y = c - reach; y <= c + reach; y++)
-            for (int x = c - reach; x <= c + reach; x++)
-                if ((x - c) * (x - c) + (y - c) * (y - c) <= reach * reach && terrain.Get(x, y) == kind) have++;
-        if (have >= minimum) return;
+    public static readonly StartBudget Minimum = new(Grass: 0, Forest: 250, Rock: 130, Ore: 20, Water: 0);
 
-        // Of sixteen directions (starting from one drawn from the seed), take
-        // the one whose way out from the Keep crosses the most land: a patch
-        // across water is no use, since holy ground can't reach it.
-        double start = Lattice(seed ^ angleSalt, 1, 2) * 2 * Math.PI;
-        double distance = 16 + Lattice(seed ^ angleSalt, 3, 4) * 4;
-        double bestAngle = start;
-        int bestLand = -1;
-        for (int k = 0; k < 16; k++)
+    /// <summary>
+    /// Top up whatever a start lacks: stamp a patch on reachable grass 14 to
+    /// 26 steps out, where the disc holds the most grass (so the patch comes
+    /// out whole), and measure again. Up to six patches per kind. The home
+    /// iron is left in the open for the same reason the wilds keep off it.
+    /// </summary>
+    static void MakeFair(Terrain terrain, uint seed)
+    {
+        // Iron first: it may be stamped over rock, and the rock pass then makes up what it took.
+        foreach (var (kind, radius, salt) in new[] { (Tile.Ore, 3, 0x0E0E0Eu), (Tile.Rock, 4, 0x51ED27u), (Tile.Forest, 6, 0xA3B195u) })
+            for (int attempt = 0; attempt < 6; attempt++)
+            {
+                var have = Measure(terrain);
+                int count = kind switch { Tile.Rock => have.Rock, Tile.Forest => have.Forest, _ => have.Ore };
+                int need = kind switch { Tile.Rock => Minimum.Rock, Tile.Forest => Minimum.Forest, _ => Minimum.Ore };
+                if (count >= need) break;
+                if (BestPatch(terrain, seed ^ salt ^ (uint)attempt, radius, kind) is not { } at) break;
+                Stamp(terrain, at.X, at.Y, radius, kind);
+            }
+    }
+
+    /// <summary>
+    /// What a patch of `kind` may be stamped over: always grass; rock and
+    /// iron may also take forest (a start choked with trees still gets its
+    /// stone), and iron may take rock.
+    /// </summary>
+    static bool Overwrites(Tile kind, Tile was) =>
+        was == Tile.Grass || (was == Tile.Forest && kind is Tile.Rock or Tile.Ore) || (was == Tile.Rock && kind == Tile.Ore);
+
+    static (int X, int Y)? BestPatch(Terrain terrain, uint salt, int radius, Tile kind)
+    {
+        var dist = Reach(terrain, FairReach);
+        int w = terrain.Width;
+        (int X, int Y)? best = null;
+        double bestScore = double.MinValue;
+        for (int i = 0; i < dist.Length; i += 3)
         {
-            double a = start + k * Math.PI / 8;
-            int land = 0;
-            for (double d = Balance.KeepClearRadius; d <= distance + blobRadius; d += 0.5)
-            {
-                int x = c + (int)Math.Round(Math.Cos(a) * d), y = c + (int)Math.Round(Math.Sin(a) * d);
-                if (terrain.InBounds(x, y) && terrain.Get(x, y) != Tile.Water) land++;
-            }
-            if (land > bestLand) { bestLand = land; bestAngle = a; }
+            if (dist[i] < 14 || dist[i] > 26 || terrain.Tiles[i] == Tile.Water) continue;
+            int x = i % w, y = i / w, grass = 0;
+            // Only what Stamp will actually turn counts: never the Keep's clearing, which is all grass and would otherwise always win.
+            int c = w / 2, clear = Balance.KeepClearRadius;
+            for (int yy = y - radius; yy <= y + radius; yy++)
+                for (int xx = x - radius; xx <= x + radius; xx++)
+                    if (terrain.InBounds(xx, yy) && (xx - x) * (xx - x) + (yy - y) * (yy - y) <= radius * radius && Overwrites(kind, terrain.Get(xx, yy))
+                        && (xx - c) * (xx - c) + (yy - c) * (yy - c) > clear * clear) grass++;
+            // A little seeded jitter, so equally good spots don't always resolve the same way round the Keep.
+            double score = grass + Lattice(salt, x, y) * 3;
+            if (score > bestScore) { bestScore = score; best = (x, y); }
         }
-        int bx = c + (int)Math.Round(Math.Cos(bestAngle) * distance);
-        int by = c + (int)Math.Round(Math.Sin(bestAngle) * distance);
-        int clear = Balance.KeepClearRadius;
-        for (int y = by - blobRadius; y <= by + blobRadius; y++)
-            for (int x = bx - blobRadius; x <= bx + blobRadius; x++)
+        return best;
+    }
+
+    /// <summary>What a start offers: tiles of each kind a colony can reach over land within `reach` steps of the Keep.</summary>
+    public readonly record struct StartBudget(int Grass, int Forest, int Rock, int Ore, int Water)
+    {
+        public override string ToString() => $"grass {Grass,4} forest {Forest,4} rock {Rock,4} ore {Ore,3} water {Water,4}";
+    }
+
+    public const int FairReach = 30;
+
+    /// <summary>
+    /// Walk out from the Keep over land (4-neighbour steps, never onto
+    /// water) and count what's within `reach` steps. A lake between the Keep
+    /// and a quarry puts the quarry out of reach however close it looks.
+    /// Water is counted where it borders what was reached.
+    /// </summary>
+    public static StartBudget Measure(Terrain terrain, int reach = FairReach)
+    {
+        var dist = Reach(terrain, reach);
+        int grass = 0, forest = 0, rock = 0, ore = 0, water = 0;
+        for (int i = 0; i < dist.Length; i++)
+        {
+            if (dist[i] < 0) continue;
+            switch (terrain.Tiles[i])
             {
-                if (!terrain.InBounds(x, y)) continue;
-                if ((x - bx) * (x - bx) + (y - by) * (y - by) > blobRadius * blobRadius) continue;
-                if ((x - c) * (x - c) + (y - c) * (y - c) <= clear * clear) continue; // the Keep's clearing stays grass
-                if (terrain.Get(x, y) != Tile.Grass) continue; // only grass turns: never another patch, never a lake
-                terrain.Set(x, y, kind);
+                case Tile.Grass: grass++; break;
+                case Tile.Forest: forest++; break;
+                case Tile.Rock: rock++; break;
+                case Tile.Ore: ore++; break;
+                case Tile.Water: water++; break;
             }
+        }
+        return new StartBudget(grass, forest, rock, ore, water);
+    }
+
+    /// <summary>Steps from the centre over land, or -1 out of reach. Water tiles next to reached land get a distance but lead nowhere.</summary>
+    static int[] Reach(Terrain terrain, int reach)
+    {
+        int w = terrain.Width, c = w / 2;
+        var dist = new int[terrain.Tiles.Length];
+        Array.Fill(dist, -1);
+        var queue = new Queue<int>();
+        int start = terrain.Index(c, c);
+        dist[start] = 0;
+        queue.Enqueue(start);
+        while (queue.Count > 0)
+        {
+            int i = queue.Dequeue();
+            if (terrain.Tiles[i] == Tile.Water || dist[i] >= reach) continue;
+            int x = i % w, y = i / w;
+            foreach (var (nx, ny) in new[] { (x + 1, y), (x - 1, y), (x, y + 1), (x, y - 1) })
+            {
+                if (!terrain.InBounds(nx, ny)) continue;
+                int j = terrain.Index(nx, ny);
+                if (dist[j] >= 0) continue;
+                dist[j] = dist[i] + 1;
+                queue.Enqueue(j);
+            }
+        }
+        return dist;
     }
 
     static double Fbm(uint seed, int x, int y) =>

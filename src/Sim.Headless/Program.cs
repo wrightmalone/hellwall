@@ -13,6 +13,7 @@ if (args.Length > 0 && args[0] == "town") return TownProbe.Run(ParseArgs(args[1.
 if (args.Length > 0 && args[0] == "run") return RunProbe.Run(ParseArgs(args[1..]));
 if (args.Length > 0 && args[0] == "paths") return RunProbe.Paths(ParseArgs(args[1..]));
 if (args.Length > 0 && args[0] == "maps") return MapReport.Run(ParseArgs(args[1..]));
+if (args.Length > 0 && args[0] == "endless") return RunProbe.Endless(ParseArgs(args[1..]));
 
 var args_ = ParseArgs(args);
 if (args_.ContainsKey("help"))
@@ -26,11 +27,17 @@ if (args_.ContainsKey("help"))
 
         hellwall-sim run [--win-seeds=7,3 --lose-seeds=7,3,11,19,42 --trace --snapshot-at=<sec>]
           the phase 3 gate: a bot wins a full survival run; a passive one loses
-        hellwall-sim run --seeds=11,19 [--bot=full|passive]
+        hellwall-sim run --seeds=11,19 [--bot=full|passive --plan=fortress|pyre|legion --difficulty=normal]
           play the bot on other maps, ungated
 
-        hellwall-sim paths [--seeds=7 --trace]
+        hellwall-sim paths [--seeds=7 --trace --difficulty=normal]
           the phase 4 gate: fortress, pyre and legion research plans all win
+
+        hellwall-sim endless [--seeds=3,5,7 --plan=fortress --difficulty=normal --max-days=200 --trace]
+          endless mode: how long the bot lasts on each seed, and what the horde became
+
+        hellwall-sim maps [--seeds=3,11 --size=256]
+          what each start offers within reach
 
         hellwall-sim [options]
           --seed=<n>        world seed (default 7)

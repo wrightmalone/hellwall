@@ -14,9 +14,10 @@ public static class MapReport
     {
         var seeds = args.GetValueOrDefault("seeds", "3,11,5,7,19,42").Split(',').Select(v => uint.Parse(v, CultureInfo.InvariantCulture));
         int size = int.Parse(args.GetValueOrDefault("size", "256"), CultureInfo.InvariantCulture);
+        var kind = Enum.Parse<MapKind>(args.GetValueOrDefault("map", "plains"), ignoreCase: true);
         foreach (var seed in seeds)
         {
-            var t = MapGen.Generate(seed, size);
+            var t = MapGen.Generate(seed, size, kind);
             int c = size / 2;
             var row = new List<string> { $"seed {seed,3}" };
             foreach (var tile in new[] { Tile.Rock, Tile.Forest, Tile.Ore })
@@ -44,6 +45,7 @@ public static class MapReport
                 for (int x = 0; x < size; x++)
                     if (t.Get(x, y) == Tile.Ore) ore++;
             row.Add($"ore tiles {ore}");
+            row.Add($"reach{MapGen.FairReach}: {MapGen.Measure(t)}");
             Console.WriteLine(string.Join("   ", row));
         }
         return 0;

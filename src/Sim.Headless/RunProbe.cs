@@ -23,7 +23,10 @@ public static class RunProbe
         List<uint> Seeds(string key, string fallback) =>
             args.GetValueOrDefault(key, fallback).Split(',', StringSplitOptions.RemoveEmptyEntries).Select(v => uint.Parse(v, CultureInfo.InvariantCulture)).ToList();
         bool trace = args.ContainsKey("trace");
+        ReadDifficulty(args);
         double snapAt = args.TryGetValue("snapshot-at", out var at) ? double.Parse(at, CultureInfo.InvariantCulture) : -1;
+        string plan = args.GetValueOrDefault("plan", "fortress");
+        if (!Bot.Plans.ContainsKey(plan)) { Console.Error.WriteLine($"no plan '{plan}': {string.Join(", ", Bot.Plans.Keys)}"); return 2; }
 
         if (args.ContainsKey("seeds"))
         {
@@ -31,7 +34,7 @@ public static class RunProbe
             var styles = args.TryGetValue("bot", out var only) ? [Enum.Parse<Bot.Style>(only, ignoreCase: true)] : new[] { Bot.Style.Full };
             foreach (var seed in Seeds("seeds", ""))
                 foreach (var style in styles)
-                    Console.WriteLine(Play(seed, style, trace, snapAt));
+                    Console.WriteLine(Play(seed, style, trace, snapAt, plan));
             return 0;
         }
 
@@ -56,11 +59,34 @@ public static class RunProbe
     /// Bot.Plans plays the designated map with the full demon roster; every one
     /// has to win, and the spread of their margins shows whether one dominates.
     /// </summary>
+    /// <summary>
+    /// Endless mode, the phase 5 criterion: runs should vary by seed, in how
+    /// long they last and in what the horde became. Plays each seed until
+    /// the Keep falls (or --max-days) and prints the day and the corruptions.
+    /// </summary>
+    public static int Endless(Dictionary<string, string> args)
+    {
+        var seeds = args.GetValueOrDefault("seeds", "3,5,7,11,13,19,23,42").Split(',').Select(v => uint.Parse(v, CultureInfo.InvariantCulture)).ToList();
+        string plan = args.GetValueOrDefault("plan", "fortress");
+        int maxDays = int.Parse(args.GetValueOrDefault("max-days", "200"), CultureInfo.InvariantCulture);
+        bool trace = args.ContainsKey("trace");
+        ReadDifficulty(args);
+        foreach (var seed in seeds)
+        {
+            var r = Play(seed, Bot.Style.Full, trace, plan: plan, endlessDays: maxDays, onEnd: w => lastCorruptions = string.Join(" > ", w.Survival!.Corruptions.Select(id => w.Rules.Corruption(id).Name)));
+            Console.WriteLine(string.Create(CultureInfo.InvariantCulture, $"endless seed {seed,-3} {plan,-9} {(r.Outcome == Outcome.Lost ? "fell" : "stands"),-6} day {r.Day,3}  killed {r.Killed,7}  [{lastCorruptions}]"));
+        }
+        return 0;
+    }
+
+    static string lastCorruptions = "";
+
     public static int Paths(Dictionary<string, string> args)
     {
         var seeds = args.GetValueOrDefault("seeds", "11").Split(',').Select(v => uint.Parse(v, CultureInfo.InvariantCulture)).ToList();
         bool trace = args.ContainsKey("trace");
         args_perf = args.ContainsKey("perf");
+        ReadDifficulty(args);
         bool ok = true;
         foreach (var seed in seeds)
             foreach (var plan in Bot.Plans.Keys)
@@ -80,14 +106,24 @@ public static class RunProbe
 
     /// <summary>Print per-tick sim cost for each run (set by --perf).</summary>
     static bool args_perf;
+    static Difficulty args_difficulty = Difficulty.Normal;
+    static MapKind args_map = MapKind.Plains;
 
-    public static Result Play(uint seed, Bot.Style style, bool trace, double snapshotAt = -1, string plan = "fortress", Rules? rules = null)
+    /// <summary>--difficulty and --map, for every command that plays a run.</summary>
+    static void ReadDifficulty(Dictionary<string, string> args)
+    {
+        if (args.TryGetValue("difficulty", out var d)) args_difficulty = Enum.Parse<Difficulty>(d, ignoreCase: true);
+        if (args.TryGetValue("map", out var m)) args_map = Enum.Parse<MapKind>(m, ignoreCase: true);
+    }
+
+    public static Result Play(uint seed, Bot.Style style, bool trace, double snapshotAt = -1, string plan = "fortress", Rules? rules = null, int endlessDays = 0, Action<World>? onEnd = null)
     {
         var clock = Stopwatch.StartNew();
-        var world = World.Create(new WorldOptions(seed, 256, 0, rules ?? Rules.Default, Survival: true));
+        bool endless = endlessDays > 0;
+        var world = World.Create(new WorldOptions(seed, 256, 0, rules ?? Rules.Default, Survival: true, Difficulty: args_difficulty, Endless: endless, Map: args_map));
         var bot = new Bot(world, style, plan) { Verbose = trace };
         int possessed = 0;
-        int limit = (world.Rules.Survival.Days + 5) * (int)(world.Rules.Survival.DaySeconds * Balance.TickHz);
+        int limit = (endless ? endlessDays : world.Rules.Survival.Days + 5) * (int)(world.Rules.Survival.DaySeconds * Balance.TickHz);
         var tickClock = new Stopwatch();
         var tickMs = new List<double>(limit);
         int peakHorde = 0;
@@ -104,6 +140,7 @@ public static class RunProbe
             {
                 if (e is BuildingPossessed) possessed++;
                 if (trace && e is WaveLanded wl) Console.WriteLine($"    day {world.Day,2}: wave {wl.Number} landed ({wl.Spawned}{(wl.Final ? ", CONVERGENCE" : "")})");
+                if (trace && e is CorruptionTook ct) Console.WriteLine($"    day {world.Day,2}: CORRUPTION {ct.Name}");
             }
             if (trace && world.Tick % (5 * 60 * Balance.TickHz) == 0) Trace(world);
             if (snapshotAt >= 0 && world.Tick == (int)(snapshotAt * Balance.TickHz))
@@ -114,6 +151,7 @@ public static class RunProbe
             }
         }
         if (trace) Trace(world);
+        onEnd?.Invoke(world);
         if (args_perf)
         {
             tickMs.Sort();

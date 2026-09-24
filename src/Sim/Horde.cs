@@ -147,7 +147,7 @@ internal static class HordeSystem
 
         Array.Copy(h.X, h.PrevX, n);
         Array.Copy(h.Y, h.PrevY, n);
-        var demons = world.Rules.Demons;
+        var demons = world.Demons;
 
         var flow = world.Flow;
         var grid = world.Spatial;

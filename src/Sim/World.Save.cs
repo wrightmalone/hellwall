@@ -17,7 +17,7 @@ namespace Hellwall.Sim;
 public sealed partial class World
 {
     const uint Magic = 0x56535748; // "HWSV"
-    const int FormatVersion = 3;
+    const int FormatVersion = 4;
 
     public byte[] Save()
     {
@@ -31,6 +31,9 @@ public sealed partial class World
             w.Write(Seed);
             w.Write(Terrain.Width);
             w.Write(Survival != null);
+            w.Write(Survival?.Endless ?? false);
+            w.Write((byte)Rules.Difficulty);
+            w.Write((byte)Map);
 
             w.Write(Tick);
             w.Write((byte)Outcome);
@@ -148,12 +151,16 @@ public sealed partial class World
                     w.Write(wave.Sides.Length);
                     foreach (var side in wave.Sides) w.Write((byte)side);
                 }
+                w.Write(s.Corruptions.Count);
+                foreach (var id in s.Corruptions) w.Write(id);
+                w.Write(s.PendingCorruption ?? "");
+                w.Write(s.NextCorruptionTick);
             }
         }
         return stream.ToArray();
     }
 
-    /// <summary>Rebuild a world from Save's bytes. The rules must be the ones it was saved under.</summary>
+    /// <summary>Rebuild a world from Save's bytes. The rules must be the ones it was saved under (at Normal or at the save's own difficulty, which the save records).</summary>
     public static World Load(byte[] data, Rules rules)
     {
         using var r = new BinaryReader(new MemoryStream(data));
@@ -161,12 +168,15 @@ public sealed partial class World
         int version = r.ReadInt32();
         if (version != FormatVersion) throw new FormatException($"save format {version}, this build reads {FormatVersion}");
         ulong rulesHash = r.ReadUInt64();
-        if (rulesHash != rules.Hash) throw new FormatException("this save was made under different rules");
         uint seed = r.ReadUInt32();
         int size = r.ReadInt32();
         bool survival = r.ReadBoolean();
+        bool endless = r.ReadBoolean();
+        var difficulty = (Difficulty)r.ReadByte();
+        var map = (MapKind)r.ReadByte();
+        if (rulesHash != rules.ForDifficulty(difficulty).Hash) throw new FormatException("this save was made under different rules");
 
-        var world = new World(new WorldOptions(seed, size, 0, rules, survival));
+        var world = new World(new WorldOptions(seed, size, 0, rules, survival, difficulty, endless, map));
         world.Tick = r.ReadInt32();
         world.Outcome = (Outcome)r.ReadByte();
         world.Rng.State = r.ReadUInt32();
@@ -268,6 +278,7 @@ public sealed partial class World
             s.FinalLanded = r.ReadBoolean();
             s.FinalLandedTick = r.ReadInt32();
             int waves = r.ReadInt32();
+            if (s.Endless) s.Extend(waves); // planned as the run went on
             if (waves != s.Waves.Count) throw new FormatException("wave schedule doesn't match the rules");
             foreach (var wave in s.Waves)
             {
@@ -278,6 +289,12 @@ public sealed partial class World
                 for (int i = 0; i < sides.Length; i++) sides[i] = (Side)r.ReadByte();
                 wave.Sides = sides;
             }
+            int taken = r.ReadInt32();
+            for (int i = 0; i < taken; i++) s.Corruptions.Add(r.ReadString());
+            string pending = r.ReadString();
+            s.PendingCorruption = pending.Length == 0 ? null : pending;
+            s.NextCorruptionTick = r.ReadInt32();
+            CorruptionSystem.Recompute(world);
         }
 
         // Derived state: rebuilt, not stored.

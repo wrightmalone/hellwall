@@ -85,7 +85,8 @@ public sealed class Bot
             if (Place(BuildingKind.Shrine, NearKeep)) return;
 
         // 3. Whichever resource is furthest behind its target gets a gatherer, or holy ground toward it.
-        double foodTarget = 0.1 + Colony.Colonists * 0.004;
+        // Soldiers eat too, as they're trained: once there's a Barracks, food for a steady trickle of recruits.
+        double foodTarget = 0.1 + Colony.Colonists * 0.004 + (Count(BuildingKind.Barracks) > 0 ? 0.3 : 0);
         double woodTarget = Seconds < 300 ? 0.8 : Seconds < 1200 ? 1.6 : 2.4;
         double stoneTarget = Seconds < 150 ? 0 : Seconds < 1200 ? 0.8 : 1.4;
         double ironTarget = Seconds < 120 ? 0 : Seconds < 1200 ? 0.5 : 1.2;
@@ -102,8 +103,8 @@ public sealed class Bot
             if (Underway(kind)) continue;
             // A gatherer needs hands; reaching its ground doesn't, so holy ground moves toward it while Houses fill.
             double worthIt = kind == BuildingKind.Mine && Count(BuildingKind.Mine) == 0 ? 0.15 : 0.25; // the first Mine is worth a poor spot
-            if (free >= Rules[kind].Workers && Place(kind, s => Gather(kind, s) - Dist(s) * 0.002, minScore: worthIt)) return;
-            if (!HasSpot(kind) && Expand(Rules[kind].Gathers)) return;
+            if (free >= Rules[kind].Workers && Place(kind, s => GatherScore(kind, s), minScore: worthIt)) return;
+            if (!HasSpot(kind, worthIt) && Expand(Rules[kind].Gathers)) return;
         }
 
         if (_style == Style.Passive) return;
@@ -335,7 +336,7 @@ public sealed class Bot
         int budget = (int)Math.Min(12, spare);
         if (budget <= 0) return;
         // Never wall over the ground a Mine or Quarry needs: a lost one has to be rebuilt.
-        var tiles = Perimeter().Where(p => !p.Hole && !NearOre(p.X, p.Y, 3) && _world.CheckPlacement(wall, p.X, p.Y) == null).Select(p => (p.X, p.Y));
+        var tiles = Perimeter().Where(p => !p.Hole && !NearOre(p.X, p.Y, 1) && _world.CheckPlacement(wall, p.X, p.Y) == null).Select(p => (p.X, p.Y));
         if (_incoming.Count > 0)
         {
             var (tx, ty) = InsideRing(_incoming[0]);
@@ -421,14 +422,18 @@ public sealed class Bot
         return Place(BuildingKind.Wardstone, s => -targets.Min(p => Math.Abs(p.X - s.X) + Math.Abs(p.Y - s.Y)));
     }
 
-    /// <summary>Some legal spot on holy ground where this gatherer would collect a worthwhile amount.</summary>
-    bool HasSpot(BuildingKind kind)
+    /// <summary>
+    /// Some legal spot on holy ground where this gatherer would score over
+    /// `minScore`, scored exactly as Place scores it: a spot that passed here
+    /// but failed there once stopped a colony both building and expanding.
+    /// </summary>
+    bool HasSpot(BuildingKind kind, double minScore)
     {
         var t = _world.Terrain;
         for (int y = 0; y < t.Height; y += 2)
             for (int x = 0; x < t.Width; x += 2)
                 if (Colony.Consecrated[t.Index(x, y)] && _world.CheckPlacement(kind, x, y) is null or "not enough gold" or "not enough wood"
-                    && Gather(kind, (x, y)) >= 0.25) return true;
+                    && GatherScore(kind, (x, y)) > minScore) return true;
         return false;
     }
 
@@ -446,6 +451,8 @@ public sealed class Bot
     double Dist((int X, int Y) s) => MathF.Sqrt((s.X - _c) * (s.X - _c) + (s.Y - _c) * (s.Y - _c));
 
     double Gather(BuildingKind kind, (int X, int Y) s) => _world.EstimateGathering(kind, s.X, s.Y);
+
+    double GatherScore(BuildingKind kind, (int X, int Y) s) => Gather(kind, s) - Dist(s) * 0.002;
 
     /// <summary>
     /// Place a building at the best-scoring legal spot on holy ground. Only

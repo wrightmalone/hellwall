@@ -45,7 +45,7 @@ internal static class Abilities
     /// </summary>
     public static void Howl(World world)
     {
-        var demons = world.Rules.Demons;
+        var demons = world.Demons;
         bool any = false;
         foreach (var d in demons)
             if (d.HowlRadius > 0 && world.Tick % Math.Max(1, (int)(d.HowlSeconds * Balance.TickHz)) == 0) any = true;

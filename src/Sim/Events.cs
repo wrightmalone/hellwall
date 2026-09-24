@@ -50,6 +50,11 @@ public sealed record OutcomeChanged(int Tick, Outcome Outcome) : SimEvent(Tick);
 /// <summary>A wave is coming: where from, how many, and when.</summary>
 public sealed record WaveAnnounced(int Tick, int Number, int LandsAtTick, Side[] Sides, int Size, bool Final) : SimEvent(Tick);
 
+/// <summary>Endless: a corruption will take hold of the horde at LandsAtTick.</summary>
+public sealed record CorruptionAnnounced(int Tick, string Id, string Name, string Description, int LandsAtTick) : SimEvent(Tick);
+
+public sealed record CorruptionTook(int Tick, string Id, string Name) : SimEvent(Tick);
+
 public sealed record WaveLanded(int Tick, int Number, int Spawned, bool Final) : SimEvent(Tick);
 
 public sealed record TechResearched(int Tick, string TechId) : SimEvent(Tick);

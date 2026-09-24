@@ -48,8 +48,12 @@ internal static class HellgateSystem
     public static int Tier(World world)
     {
         int tier = 1, today = world.Day;
-        foreach (int day in world.Rules.Hellgates.TierDays)
+        var days = world.Rules.Hellgates.TierDays;
+        foreach (int day in days)
             if (today > day) tier++;
+        // Endless: past the last tier day, a tier every so many days more.
+        if (world.Survival is { Endless: true } s && days.Length > 0 && today > days[^1])
+            tier += (today - days[^1]) / Math.Max(1, s.Rules.EndlessGateTierDays);
         return tier;
     }
 
@@ -60,7 +64,7 @@ internal static class HellgateSystem
         if (world.Day <= rules.FirstBandDay) return;
         // The gates pour everything into the Convergence; after it, nothing more comes through.
         if (world.Survival is { FinalLanded: true }) return;
-        int band = rules.BandSize * Tier(world);
+        int band = (int)Math.Round(rules.BandSize * Tier(world) * CorruptionSystem.GateMultiplier(world));
         foreach (var gate in world.GateList)
         {
             if (!gate.Alive) continue;

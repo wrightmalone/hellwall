@@ -83,7 +83,6 @@ internal static class UnitSystem
     public static void TakeHits(World world)
     {
         var h = world.Horde;
-        var rules = world.Rules;
         const float m2 = MeleeRange * MeleeRange;
         var grid = world.Spatial;
         foreach (var u in world.UnitList)
@@ -99,7 +98,7 @@ internal static class UnitSystem
                         if (h.Cooldown[j] > 0 || h.Hp[j] <= 0) continue;
                         float dx = u.X - h.X[j], dy = u.Y - h.Y[j];
                         if (dx * dx + dy * dy >= m2) continue;
-                        var def = rules[h.Kind[j]];
+                        var def = world.Def(h.Kind[j]);
                         if (def.Damage <= 0) continue;
                         u.Hp -= def.Damage;
                         h.Cooldown[j] = def.Cooldown;

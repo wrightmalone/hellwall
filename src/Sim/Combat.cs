@@ -19,12 +19,11 @@ internal static class Combat
     {
         var h = world.Horde;
         var flow = world.Flow;
-        var rules = world.Rules;
         int width = world.Terrain.Width;
         for (int i = 0; i < h.Count; i++)
         {
             if (h.Cooldown[i] > 0 || h.Hp[i] <= 0) continue;
-            var kind = rules[h.Kind[i]];
+            var kind = world.Def(h.Kind[i]);
             if (kind.Damage <= 0 && kind.ExplodeDamage <= 0) continue;
             if (kind.Flies)
             {
@@ -131,7 +130,7 @@ internal static class Combat
     public static int NearestDemon(World world, float x, float y, float range, bool airOnly = false)
     {
         var h = world.Horde;
-        var demons = world.Rules.Demons;
+        var demons = world.Demons;
         if (h.Count == 0) return -1;
         var grid = world.Spatial;
         float best = range * range;

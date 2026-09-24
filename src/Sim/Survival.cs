@@ -41,6 +41,20 @@ public sealed record SurvivalRules
     /// is Imps.
     /// </summary>
     public WaveMixEntry[] Mix { get; init; } = [new() { Kind = DemonKind.Hound, FromWave = 1, Share = 0.2 }];
+
+    // Endless mode: no Convergence; waves go on, capped, with a Surge every so
+    // often, and the horde takes a corruption every few days.
+
+    /// <summary>No regular wave grows past this (the engine's budget is about 20,000 on the map).</summary>
+    public int EndlessMaxWave { get; init; } = 5000;
+    /// <summary>Every this many waves, a Surge: SurgeScale times the size, from every side.</summary>
+    public int SurgeEveryWaves { get; init; } = 6;
+    public double SurgeScale { get; init; } = 2.5;
+    public int FirstCorruptionDay { get; init; } = 12;
+    public int CorruptionEveryDays { get; init; } = 8;
+    public float CorruptionWarnSeconds { get; init; } = 60;
+    /// <summary>After the rules' last TierDay, Hellgates grow a tier every this many days.</summary>
+    public int EndlessGateTierDays { get; init; } = 20;
 }
 
 public sealed record WaveMixEntry
@@ -56,6 +70,8 @@ public sealed class PlannedWave
     public int LandsAtTick;
     public int Size;
     public bool Final;
+    /// <summary>Endless mode's periodic swell: bigger, and from every side.</summary>
+    public bool Surge;
 
     /// <summary>Chosen when the wave is announced, not before.</summary>
     public Side[] Sides = [];
@@ -74,25 +90,52 @@ public sealed class PlannedWave
 public sealed class Survival
 {
     public readonly SurvivalRules Rules;
+    /// <summary>No Convergence and no win: the run goes on until the Keep falls, and the score is the day.</summary>
+    public readonly bool Endless;
     public readonly List<PlannedWave> Waves = new();
     public bool FinalLanded;
     public int FinalLandedTick;
 
-    public Survival(SurvivalRules rules)
+    /// <summary>Endless: corruption ids taken so far, in order.</summary>
+    public readonly List<string> Corruptions = new();
+    /// <summary>Endless: the corruption announced and about to take hold, if any.</summary>
+    public string? PendingCorruption;
+    public int NextCorruptionTick;
+
+    public Survival(SurvivalRules rules, bool endless = false)
     {
         Rules = rules;
-        int ticksPerDay = (int)(rules.DaySeconds * Balance.TickHz);
+        Endless = endless;
         int n = 1;
         for (int day = rules.FirstWaveDay; day < rules.Days; day += rules.WaveEveryDays, n++)
-        {
-            Waves.Add(new PlannedWave
-            {
-                Number = n,
-                LandsAtTick = day * ticksPerDay,
-                Size = (int)Math.Round(rules.FirstWaveSize * Math.Pow(rules.WaveGrowth, n - 1)),
-            });
-        }
-        Waves.Add(new PlannedWave { Number = n, LandsAtTick = rules.Days * ticksPerDay, Size = rules.ConvergenceSize, Final = true });
+            Waves.Add(Plan(n));
+        if (!endless)
+            Waves.Add(new PlannedWave { Number = n, LandsAtTick = rules.Days * TicksPerDay, Size = rules.ConvergenceSize, Final = true });
+        NextCorruptionTick = rules.FirstCorruptionDay * TicksPerDay;
+    }
+
+    PlannedWave Plan(int n)
+    {
+        int size = (int)Math.Round(Rules.FirstWaveSize * Math.Pow(Rules.WaveGrowth, n - 1));
+        bool surge = Endless && Rules.SurgeEveryWaves > 0 && n % Rules.SurgeEveryWaves == 0;
+        if (Endless) size = Math.Min(size, Rules.EndlessMaxWave);
+        if (surge) size = (int)Math.Round(size * Rules.SurgeScale);
+        return new PlannedWave { Number = n, LandsAtTick = (Rules.FirstWaveDay + (n - 1) * Rules.WaveEveryDays) * TicksPerDay, Size = size, Surge = surge };
+    }
+
+    /// <summary>Endless: keep a couple of waves planned ahead of the clock.</summary>
+    internal void Extend(int count)
+    {
+        while (Waves.Count < count) Waves.Add(Plan(Waves.Count + 1));
+    }
+
+    internal void ExtendAhead()
+    {
+        if (!Endless) return;
+        // Landed waves are a prefix of the list, so the unlanded ones are the tail. No LINQ: this runs every tick.
+        int ahead = 0;
+        for (int i = Waves.Count - 1; i >= 0 && !Waves[i].Landed; i--) ahead++;
+        for (; ahead < 2; ahead++) Waves.Add(Plan(Waves.Count + 1));
     }
 
     public int TicksPerDay => (int)(Rules.DaySeconds * Balance.TickHz);
@@ -110,13 +153,16 @@ internal static class SurvivalSystem
     {
         var s = world.Survival;
         if (s == null) return;
+        s.ExtendAhead();
 
         foreach (var wave in s.Waves)
         {
             if (wave.Landed) continue;
             if (!wave.Announced && world.Tick >= wave.AnnounceTick(s.Rules))
             {
-                wave.Sides = wave.Final ? Enum.GetValues<Side>() : DrawSides(world, SidesFor(s.Rules, wave.Number));
+                wave.Sides = wave.Final || wave.Surge ? Enum.GetValues<Side>() : DrawSides(world, SidesFor(s.Rules, wave.Number));
+                // Corruptions that swell the tide apply from the announcement, so the size shown is the size that comes.
+                wave.Size = (int)Math.Round(wave.Size * CorruptionSystem.WaveMultiplier(world));
                 wave.Announced = true;
                 world.Emit(new WaveAnnounced(world.Tick, wave.Number, wave.LandsAtTick, wave.Sides, wave.Size, wave.Final));
             }
@@ -124,7 +170,7 @@ internal static class SurvivalSystem
             {
                 // Waves are fed by the Hellgates: fewer standing, smaller waves.
                 wave.Size = (int)Math.Round(wave.Size * HellgateSystem.WaveScale(world));
-                int spawned = Land(world, wave, s.Rules.Mix);
+                int spawned = Land(world, wave, s.Endless ? CorruptionSystem.Mix(world) : s.Rules.Mix);
                 wave.Landed = true;
                 if (wave.Final)
                 {

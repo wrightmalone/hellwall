@@ -6,6 +6,36 @@
   "possessionSpawnSeconds": 1.0,
   "startingUnits": [ { "kind": "Militia", "count": 4 } ],
 
+  "difficulties": {
+    "Easy":      { "waves": 0.7, "convergence": 0.7, "packs": 0.8, "gates": 0.7,  "start": 1.5 },
+    "Normal":    { },
+    "Hard":      { "waves": 1.2, "convergence": 1.3, "packs": 1.2, "gates": 1.25, "start": 1.0 },
+    "Nightmare": { "waves": 1.5, "convergence": 1.8, "packs": 1.5, "gates": 1.5,  "start": 0.8 }
+  },
+
+  "corruptions": [
+    { "id": "hides", "name": "Armoured Hides", "description": "Every demon has 30% more hit points.",
+      "demons": [ { "stat": "hp", "mul": 1.3 } ] },
+    { "id": "hellspeed", "name": "Hellspeed", "description": "Every demon moves 15% faster.",
+      "demons": [ { "stat": "speed", "mul": 1.15 } ] },
+    { "id": "bloodlust", "name": "Bloodlust", "description": "Every demon strikes 30% harder.",
+      "demons": [ { "stat": "damage", "mul": 1.3 } ] },
+    { "id": "wings", "name": "The Winged Host", "description": "Gargoyles swell every wave.",
+      "mix": [ { "kind": "Gargoyle", "share": 0.08 } ] },
+    { "id": "swollen", "name": "The Swollen", "description": "More Bloaters, and they burst 30% harder.",
+      "mix": [ { "kind": "Bloater", "share": 0.05 } ], "demons": [ { "kind": "Bloater", "stat": "explodeDamage", "mul": 1.3 } ] },
+    { "id": "brood", "name": "Brood Season", "description": "More Broodmothers, each carrying three more Imps.",
+      "mix": [ { "kind": "Broodmother", "share": 0.03 } ], "demons": [ { "kind": "Broodmother", "stat": "broodCount", "add": 3 } ] },
+    { "id": "howling", "name": "The Howling", "description": "More Howlers, heard further off.",
+      "mix": [ { "kind": "Howler", "share": 0.03 } ], "demons": [ { "kind": "Howler", "stat": "howlRadius", "mul": 1.3 } ] },
+    { "id": "titans", "name": "Titans", "description": "More Brutes, with 30% more hit points.",
+      "mix": [ { "kind": "Brute", "share": 0.03 } ], "demons": [ { "kind": "Brute", "stat": "hp", "mul": 1.3 } ] },
+    { "id": "opengates", "name": "Open Gates", "description": "Hellgate bands are 60% larger.",
+      "gates": 1.6 },
+    { "id": "tide", "name": "Rising Tide", "description": "Every wave is 25% larger.",
+      "waves": 1.25 }
+  ],
+
   "wilds": {
     "packs": 160, "minDistance": 20, "spacing": 8, "nearCount": 12, "farCount": 90,
     "houndChance": 0.15, "clearRadius": 10, "wakeRadius": 7
@@ -21,7 +51,9 @@
     "firstWaveDay": 6, "waveEveryDays": 3, "telegraphSeconds": 60,
     "firstWaveSize": 30, "waveGrowth": 1.24,
     "wavesPerExtraSide": 5, "maxSides": 3,
-    "convergenceSize": 9000,
+    "convergenceSize": 7000,
+    "endlessMaxWave": 5000, "surgeEveryWaves": 6, "surgeScale": 2.5,
+    "firstCorruptionDay": 12, "corruptionEveryDays": 8, "corruptionWarnSeconds": 60, "endlessGateTierDays": 20,
     "mix": [
       { "kind": "Hound",    "fromWave": 1,  "share": 0.20 },
       { "kind": "Gargoyle", "fromWave": 5,  "share": 0.06 },

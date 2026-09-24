@@ -113,6 +113,10 @@ public static class StateHash
                 h = Mix(h, (uint)w.Size);
                 foreach (var side in w.Sides) h = MixByte(h, (byte)side);
             }
+            h = MixByte(h, s.Endless ? (byte)1 : (byte)0);
+            foreach (var id in s.Corruptions) h = MixString(h, id);
+            h = MixString(h, s.PendingCorruption ?? "");
+            h = Mix(h, (uint)s.NextCorruptionTick);
         }
         // Flow field and spatial hash are pure functions of the above, so they aren't hashed.
         return h;
@@ -130,6 +134,12 @@ public static class StateHash
         h = MixByte(h, (byte)(value >> 8));
         h = MixByte(h, (byte)(value >> 16));
         return MixByte(h, (byte)(value >> 24));
+    }
+
+    static ulong MixString(ulong h, string s)
+    {
+        foreach (char ch in s) h = Mix(h, ch);
+        return MixByte(h, 0);
     }
 
     static ulong MixByte(ulong h, byte b)

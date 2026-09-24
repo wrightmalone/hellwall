@@ -10,7 +10,10 @@ public enum Outcome : byte
 /// <param name="DormantPacks">How many sleeping packs to scatter at creation. Zero keeps tests quiet.</param>
 /// <param name="Rules">Content numbers; null for the defaults shipped in rules.json.</param>
 /// <param name="Survival">Run the day clock and wave schedule. Off for tests and probes that script their own waves.</param>
-public readonly record struct WorldOptions(uint Seed, int MapSize = Balance.DefaultMapSize, int DormantPacks = 0, Rules? Rules = null, bool Survival = false);
+/// <param name="Difficulty">Scales Rules (which must be unscaled, Normal) by the level's multipliers.</param>
+/// <param name="Endless">With Survival: no Convergence, no win; waves and corruptions until the Keep falls.</param>
+/// <param name="Map">Which kind of terrain the seed grows.</param>
+public readonly record struct WorldOptions(uint Seed, int MapSize = Balance.DefaultMapSize, int DormantPacks = 0, Rules? Rules = null, bool Survival = false, Difficulty Difficulty = Difficulty.Normal, bool Endless = false, MapKind Map = MapKind.Plains);
 
 public sealed class WorldStats
 {
@@ -45,6 +48,17 @@ public sealed partial class World
 
     /// <summary>A unit's definition as it stands now: base rules plus everything researched.</summary>
     public UnitDef Def(UnitKind kind) => Tech.Units[(int)kind];
+
+    /// <summary>
+    /// Demons as they are in this run: the rules' definitions with every
+    /// corruption so far applied (endless mode). Derived from the rules and the
+    /// corruptions taken, so not saved.
+    /// </summary>
+    public DemonDef[] Demons { get; internal set; } = [];
+
+    public MapKind Map { get; }
+
+    public DemonDef Def(DemonKind kind) => Demons[(int)kind];
 
     /// <summary>1-based; counts on even without a survival schedule.</summary>
     public int Day => Tick / (int)(Rules.Survival.DaySeconds * Balance.TickHz) + 1;
@@ -110,8 +124,9 @@ public sealed partial class World
     {
         Seed = options.Seed;
         Rng = new Rng(options.Seed);
-        Rules = options.Rules ?? Rules.Default;
-        Terrain = MapGen.Generate(options.Seed, options.MapSize);
+        Rules = (options.Rules ?? Rules.Default).ForDifficulty(options.Difficulty);
+        Terrain = MapGen.Generate(options.Seed, options.MapSize, options.Map);
+        Map = options.Map;
         _occupancy = new int[Terrain.Width * Terrain.Height];
         _gateTile = new bool[Terrain.Width * Terrain.Height];
         Slow = new float[Terrain.Width * Terrain.Height];
@@ -120,8 +135,9 @@ public sealed partial class World
         Flow = new FlowField(Terrain.Width, Terrain.Height);
         Noise = new NoiseGrid(Terrain.Width, Terrain.Height);
         Spatial = new SpatialHash(Terrain.Width, Terrain.Height);
-        if (options.Survival) Survival = new Survival(Rules.Survival);
+        if (options.Survival) Survival = new Survival(Rules.Survival, options.Endless);
         Tech.Recompute(Rules);
+        Demons = Rules.Demons;
     }
 
     public static World Create(WorldOptions options)
@@ -161,6 +177,7 @@ public sealed partial class World
         WakePacks();
         HellgateSystem.Step(this, dt);
         SurvivalSystem.Step(this);
+        CorruptionSystem.Step(this);
 
         Spatial.Build(Horde);
         _spatialStale = false;
@@ -383,7 +400,7 @@ public sealed partial class World
 
     void SpawnOne(DemonKind kind, float x, float y)
     {
-        Horde.Add(kind, x, y, Rules[kind].Hp); // demons aren't researched
+        Horde.Add(kind, x, y, Def(kind).Hp);
         _spatialStale = true;
     }
 
@@ -726,7 +743,7 @@ public sealed partial class World
         for (int i = 0; i < Horde.Count; i++)
         {
             if (Horde.Hp[i] > 0) continue;
-            var def = Rules[Horde.Kind[i]];
+            var def = Def(Horde.Kind[i]);
             if (def.ExplodeDamage > 0) Combat.Explode(this, Horde.X[i], Horde.Y[i], def);
             if (def.BroodCount > 0) (broods ??= new()).Add((def.BroodKind, Horde.X[i], Horde.Y[i], def.BroodCount));
         }
@@ -784,7 +801,7 @@ public sealed partial class World
     int SpawnCluster(DemonKind kind, int cx, int cy, int count)
     {
         float radius = MathF.Sqrt(count / (MathF.PI * Balance.SpawnDensity)) + 1;
-        float hp = Rules[kind].Hp;
+        float hp = Def(kind).Hp;
         int spawned = 0;
         for (int n = 0; n < count; n++)
         {
