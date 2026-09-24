@@ -14,6 +14,7 @@ public static class Palette
         new(0.16f, 0.32f, 0.18f), // Forest
         new(0.46f, 0.44f, 0.42f), // Rock
         new(0.18f, 0.30f, 0.50f), // Water
+        new(0.55f, 0.35f, 0.30f), // Ore
     ];
 
     public static Color Building(BuildingKind kind) => kind switch
@@ -34,6 +35,7 @@ public static class Palette
         BuildingKind.StoneWall => new(0.50f, 0.50f, 0.56f),
         BuildingKind.LanceTower => new(0.28f, 0.42f, 0.70f),
         BuildingKind.Scriptorium => new(0.62f, 0.46f, 0.78f),
+        BuildingKind.Mine => new(0.45f, 0.30f, 0.25f),
         _ => Colors.Magenta,
     };
 
@@ -52,6 +54,7 @@ public static class Palette
         BuildingKind.Farm => "Farm",
         BuildingKind.LanceTower => "La",
         BuildingKind.Scriptorium => "Scr",
+        BuildingKind.Mine => "Mi",
         _ => "",
     };
 
@@ -77,6 +80,6 @@ public static class Palette
         (BuildingKind.Woodcutter, Key.Key4, "4"), (BuildingKind.Quarry, Key.Key5, "5"), (BuildingKind.Shrine, Key.Key6, "6"),
         (BuildingKind.Wardstone, Key.Key7, "7"), (BuildingKind.Wall, Key.Key8, "8"), (BuildingKind.StoneWall, Key.Key9, "9"),
         (BuildingKind.Watchtower, Key.Key0, "0"), (BuildingKind.Bombard, Key.Minus, "-"), (BuildingKind.LanceTower, Key.Equal, "="),
-        (BuildingKind.Gate, Key.G, "G"), (BuildingKind.Barracks, Key.B, "B"), (BuildingKind.Scriptorium, Key.U, "U"),
+        (BuildingKind.Mine, Key.M, "M"), (BuildingKind.Gate, Key.G, "G"), (BuildingKind.Barracks, Key.B, "B"), (BuildingKind.Scriptorium, Key.U, "U"),
     ];
 }

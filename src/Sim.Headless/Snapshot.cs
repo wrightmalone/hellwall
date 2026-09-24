@@ -28,6 +28,7 @@ public static class Snapshot
                     Tile.Grass => (92, 133, 71),
                     Tile.Forest => (41, 82, 46),
                     Tile.Rock => (117, 112, 107),
+                    Tile.Ore => (140, 90, 76),
                     _ => (46, 77, 128),
                 };
                 if (world.Colony.Consecrated[i] && world.BuildingIdAt(x, y) == 0) (r, g, b) = (r + 25, g + 25, b + 10);

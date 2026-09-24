@@ -92,13 +92,52 @@ lacks them, landward, over grass only. It helped (seed 19 is won by one
 path now), but it isn't sufficient (seed 42 is still lost). This is the
 first of what phase 5 needs.
 
+## The expansion loop (your request: bigger waves, a map to clear, an army paid for by territory)
+
+### 12. Waves about four times larger
+First wave 30 (was 20), x1.26 per wave (was x1.18), Convergence 10,000
+(was 2,500). The last regular wave is about 1,500. I first tried x4
+straight (first wave 80), and the colony lost on day 6 before it had walls.
+The growth is steeper so the late game reaches the scale while the opening stays
+survivable. To match, towers got stronger: Watchtower 20 damage every 0.5 s,
+Bombard 50 with 2.2 splash, Lance 120, Keep 4,000 hp.
+
+### 13. Iron, the Mine, and what an army costs
+There's a fifth resource, iron, mined from ore tiles by a Mine (2x2, 3 crew).
+Every soldier costs iron: Militia 5 up to Templar 20. Upkeep is gold,
+halved from my first try because the treasury drained. One small deposit
+sits 22 to 28 tiles out and is never guarded; the rich ones are 34+ tiles
+out in the wilds. Towers cost no iron, which keeps turtling possible
+but lets it plateau. That's a deliberate lever if you'd rather towers cost iron too.
+
+### 14. The wilds: 160 packs, and you can't build near one
+Packs are spread across the map (spacing 8, none within 20 tiles of the
+Keep). They grow from about 12 near home to about 90 at the edge. Placing a
+building within 10 tiles of a sleeping pack is refused ("demons sleep
+nearby: clear them first"). A pack wakes when a soldier comes within 7
+tiles or when it hears noise. The home iron and rock within 32 tiles are
+never guarded.
+
+### 15. Building no longer wakes the wilds
+Build noise radius went from 24 to 10, so construction is quieter than
+any pack's clearance. With 24, the first Houses woke the nearest packs and the
+colony died on day 1. Fighting is the loud part now.
+
+### 16. Balance changes to keep the paths even
+- The Watchtower costs no stone (seed 13 deadlocked without it).
+- Shrines supply 45 sanctity.
+- Holy Fire does 1.5 dps (was 2.5).
+- Standing Army also gives +25% unit damage.
+- The fortress plan opens with Tithes.
+- Legion takes Pitch.
+
+The result is fortress 3/8, pyre 4/8 and legion 2/8 over 8 maps (README table). Legion is a
+little behind; I'd rather wait for a playtest than tune further against the bot.
+
 ## Things I noticed that you should decide
 
-- **Scale is under-used.** Over a full run the horde peaks around 2,550 (at
-  the Convergence) while the engine carries 20,000 at 6 ms/tick. "Scale is
-  the spectacle" is a pillar; the waves could be several times larger, which
-  means rebalancing towers upward too. Probably the most important feel
-  question for a first playtest.
+- **Scale:** addressed by 12-14. The Convergence is 10,000 plus whatever
+  packs are still awake, well inside the 20k budget.
 - **Map fairness** is the next real problem, and it decides more than build
   choice does. Phase 5 should start with fairness rules and `hellwall-sim
   maps` as the tool.

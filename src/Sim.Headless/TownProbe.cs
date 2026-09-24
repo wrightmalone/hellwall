@@ -50,7 +50,7 @@ public static class TownProbe
 
     public static Result Play(uint seed, int waveSize, int seconds, bool defend, bool trace = false)
     {
-        var rules = Rules.Default.WithStartingResources(new Cost { Gold = 5000, Wood = 3000, Stone = 2000, Food = 1000 });
+        var rules = Rules.Default.WithStartingResources(new Cost { Gold = 5000, Wood = 3000, Stone = 2000, Food = 1000, Iron = 1000 });
         var world = World.Create(new WorldOptions(seed, 128, 0, rules));
         var rejected = new List<CommandRejected>();
         int wallsLost = 0, trained = 0, spawned = 0, shots = 0;

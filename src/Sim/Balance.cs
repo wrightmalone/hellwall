@@ -60,14 +60,15 @@ public static class Balance
     public const float NoiseHalfLifeSeconds = 4f;
     public const float WakeThreshold = 1f;
 
-    /// <summary>Placing a building is loud: this wakes packs within ~half the radius.</summary>
-    public const float BuildNoiseRadius = 24f;
+    /// <summary>
+    /// Placing a building makes some noise: it wakes packs within about half
+    /// this radius. Kept below the wilds' clear radius, since nothing can be
+    /// built that close to a pack anyway: building never wakes the wilds;
+    /// fighting (shots carry much further) does.
+    /// </summary>
+    public const float BuildNoiseRadius = 10f;
     public const float BuildNoiseIntensity = 2f;
 
-    public const int PackMinDistanceFromKeep = 40;
-    public const int PackMinCount = 80;
-    public const int PackMaxCount = 400;
-    public const double PackHoundChance = 0.15;
 
     /// <summary>Noise level of a shot at its source (radius comes from the weapon): enough to wake packs near it.</summary>
     public const float CombatNoiseIntensity = 2f;

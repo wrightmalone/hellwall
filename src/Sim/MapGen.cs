@@ -43,7 +43,67 @@ public static class MapGen
 
         EnsureNearby(terrain, seed, Tile.Rock, minimum: 60, blobRadius: 4, angleSalt: 0x51ED27u);
         EnsureNearby(terrain, seed, Tile.Forest, minimum: 120, blobRadius: 6, angleSalt: 0xA3B195u);
+        PlaceOre(terrain, seed);
         return terrain;
+    }
+
+    /// <summary>
+    /// Iron lies out on the map, not at home: one modest deposit 22-28 tiles
+    /// from the Keep (on the landward side, like the fairness patches) and
+    /// richer ones further out, one per 2,000 tiles or so of map. An army is
+    /// made of iron, so a bigger army means reaching further.
+    /// </summary>
+    static void PlaceOre(Terrain terrain, uint seed)
+    {
+        int c = terrain.Width / 2;
+        // The near deposit may take forest as well as grass, so it lands wherever the heading points.
+        StampPatch(terrain, c, seed ^ 0x0E0E0Eu, 22 + Lattice(seed ^ 0x0E0E0Eu, 5, 6) * 6, Tile.Ore, radius: 3, overForest: true);
+        int deposits = terrain.Width * terrain.Height / 2000;
+        for (int i = 0; i < deposits; i++)
+        {
+            int x = (int)(Lattice(seed ^ 0x0BE5u, i, 1) * terrain.Width);
+            int y = (int)(Lattice(seed ^ 0x0BE5u, i, 2) * terrain.Height);
+            int dx = x - c, dy = y - c;
+            if (dx * dx + dy * dy < 34 * 34) continue; // the rich ones are out in the wilds
+            int radius = 2 + (int)(Lattice(seed ^ 0x0BE5u, i, 3) * 2);
+            Stamp(terrain, x, y, radius, Tile.Ore);
+        }
+    }
+
+    /// <summary>A patch at `distance` from the centre, on whichever of sixteen headings crosses the most land.</summary>
+    static void StampPatch(Terrain terrain, int c, uint salt, double distance, Tile kind, int radius, bool overForest = false)
+    {
+        double start = Lattice(salt, 1, 2) * 2 * Math.PI;
+        double bestAngle = start;
+        int bestLand = -1;
+        for (int k = 0; k < 16; k++)
+        {
+            double a = start + k * Math.PI / 8;
+            int land = 0;
+            for (double d = Balance.KeepClearRadius; d <= distance + radius; d += 0.5)
+            {
+                int x = c + (int)Math.Round(Math.Cos(a) * d), y = c + (int)Math.Round(Math.Sin(a) * d);
+                if (terrain.InBounds(x, y) && terrain.Get(x, y) != Tile.Water) land++;
+            }
+            if (land > bestLand) { bestLand = land; bestAngle = a; }
+        }
+        Stamp(terrain, c + (int)Math.Round(Math.Cos(bestAngle) * distance), c + (int)Math.Round(Math.Sin(bestAngle) * distance), radius, kind, overForest);
+    }
+
+    /// <summary>Turn the grass in a disc into `kind`, leaving the Keep's clearing and every other tile alone.</summary>
+    static void Stamp(Terrain terrain, int bx, int by, int radius, Tile kind, bool overForest = false)
+    {
+        int c = terrain.Width / 2, clear = Balance.KeepClearRadius;
+        for (int y = by - radius; y <= by + radius; y++)
+            for (int x = bx - radius; x <= bx + radius; x++)
+            {
+                if (!terrain.InBounds(x, y)) continue;
+                if ((x - bx) * (x - bx) + (y - by) * (y - by) > radius * radius) continue;
+                if ((x - c) * (x - c) + (y - c) * (y - c) <= clear * clear) continue;
+                var was = terrain.Get(x, y);
+                if (was != Tile.Grass && !(overForest && was == Tile.Forest)) continue;
+                terrain.Set(x, y, kind);
+            }
     }
 
     /// <summary>

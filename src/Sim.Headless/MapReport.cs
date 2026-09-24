@@ -19,7 +19,7 @@ public static class MapReport
             var t = MapGen.Generate(seed, size);
             int c = size / 2;
             var row = new List<string> { $"seed {seed,3}" };
-            foreach (var tile in new[] { Tile.Rock, Tile.Forest })
+            foreach (var tile in new[] { Tile.Rock, Tile.Forest, Tile.Ore })
             {
                 int nearest = int.MaxValue;
                 for (int y = 0; y < size; y++)
@@ -39,6 +39,11 @@ public static class MapReport
                     }
                 row.Add($"r{r}: rock {rock,4} forest {forest,4}");
             }
+            int ore = 0;
+            for (int y = 0; y < size; y++)
+                for (int x = 0; x < size; x++)
+                    if (t.Get(x, y) == Tile.Ore) ore++;
+            row.Add($"ore tiles {ore}");
             Console.WriteLine(string.Join("   ", row));
         }
         return 0;

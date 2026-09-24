@@ -18,6 +18,7 @@ public enum BuildingKind : byte
     StoneWall,
     LanceTower,
     Scriptorium,
+    Mine,
 }
 
 public sealed class Building

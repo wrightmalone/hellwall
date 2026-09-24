@@ -23,7 +23,6 @@ namespace Hellwall.Game;
 public partial class Main : Node2D
 {
     const int MapSize = 256;
-    const int DormantPacks = 40;
     const int T = Palette.TilePx;
     const double TickSeconds = 1.0 / Balance.TickHz;
 
@@ -67,9 +66,9 @@ public partial class Main : Node2D
 
         var rules = Rules.Default;
         if (_benchSeconds > 0) rules = rules.WithBuilding(BuildingKind.Keep, k => k with { Hp = 1e9f });
-        if (_demoSeconds > 0) rules = rules.WithStartingResources(new Cost { Gold = 5000, Wood = 3000, Stone = 2000, Food = 1000 });
+        if (_demoSeconds > 0) rules = rules.WithStartingResources(new Cost { Gold = 5000, Wood = 3000, Stone = 2000, Food = 1000, Iron = 1000 });
         bool scripted = _benchSeconds > 0 || _demoSeconds > 0;
-        _world = World.Create(new WorldOptions(seed, MapSize, scripted ? 0 : DormantPacks, rules, Survival: !scripted));
+        _world = World.Create(new WorldOptions(seed, MapSize, 0, rules, Survival: !scripted)); // a survival run takes its packs from rules.json (wilds)
 
         _terrain = new Sprite2D { Texture = BuildTerrainTexture(_world.Terrain), Centered = false, Scale = new Vector2(T, T), ZIndex = -2 };
         AddChild(_terrain);

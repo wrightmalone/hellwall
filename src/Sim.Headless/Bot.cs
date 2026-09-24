@@ -24,9 +24,9 @@ public sealed class Bot
     /// <summary>Named research orders: three build paths that part ways at the exclusive tier-3 pairs.</summary>
     public static readonly Dictionary<string, string[]> Plans = new()
     {
-        ["fortress"] = ["masonry", "fletching", "pitch", "bastions", "ballistics", "artillery", "husbandry"],
+        ["fortress"] = ["tithes", "masonry", "fletching", "pitch", "bastions", "ballistics", "artillery", "husbandry"],
         ["pyre"] = ["tithes", "hallowing", "holyfire", "fletching", "pitch", "artillery", "husbandry"],
-        ["legion"] = ["tithes", "husbandry", "drill", "standingarmy", "fletching", "masonry", "ballistics"],
+        ["legion"] = ["tithes", "husbandry", "drill", "standingarmy", "fletching", "pitch", "masonry", "ballistics"],
     };
 
     readonly World _world;
@@ -87,9 +87,11 @@ public sealed class Bot
         // 3. Whichever resource is furthest behind its target gets a gatherer, or holy ground toward it.
         double foodTarget = 0.1 + Colony.Colonists * 0.004;
         double woodTarget = Seconds < 300 ? 0.8 : Seconds < 1200 ? 1.6 : 2.4;
-        double stoneTarget = Seconds < 150 ? 0 : Seconds < 1200 ? 0.5 : 1.0;
+        double stoneTarget = Seconds < 150 ? 0 : Seconds < 1200 ? 0.8 : 1.4;
+        double ironTarget = Seconds < 120 ? 0 : Seconds < 1200 ? 0.5 : 1.2;
         var wants = new List<(double Gap, BuildingKind Kind)>
         {
+            (ironTarget - net(Resource.Iron), BuildingKind.Mine),
             (foodTarget - net(Resource.Food), BuildingKind.Farm),
             (foodTarget - net(Resource.Food) - 0.01, BuildingKind.Hunter),
             (woodTarget - net(Resource.Wood), BuildingKind.Woodcutter),
@@ -97,9 +99,11 @@ public sealed class Bot
         };
         foreach (var (gap, kind) in wants.Where(w => w.Gap > 0).OrderByDescending(w => w.Gap))
         {
-            if (Underway(kind) || free < Rules[kind].Workers) continue;
-            if (Place(kind, s => Gather(kind, s) - Dist(s) * 0.002, minScore: 0.25)) return;
-            if (Expand(Rules[kind].Gathers)) return;
+            if (Underway(kind)) continue;
+            // A gatherer needs hands; reaching its ground doesn't, so holy ground moves toward it while Houses fill.
+            double worthIt = kind == BuildingKind.Mine && Count(BuildingKind.Mine) == 0 ? 0.15 : 0.25; // the first Mine is worth a poor spot
+            if (free >= Rules[kind].Workers && Place(kind, s => Gather(kind, s) - Dist(s) * 0.002, minScore: worthIt)) return;
+            if (!HasSpot(kind) && Expand(Rules[kind].Gathers)) return;
         }
 
         if (_style == Style.Passive) return;
@@ -128,6 +132,46 @@ public sealed class Bot
         Do(new OrderUnits(raiders, OrderKind.AttackMove, (int)gate.CentreX, gate.Y + Hellgate.Size + 1));
     }
 
+    /// <summary>
+    /// Clear the wilds: with no wave due soon, send the army at the nearest
+    /// sleeping pack it can beat, so the ground around it can be built on.
+    /// The next announced wave calls it home, like a raid.
+    /// </summary>
+    void Clear()
+    {
+        if (_raidGate != null) return;
+        var next = _world.Survival?.Next;
+        double untilWave = next == null ? double.MaxValue : (next.LandsAtTick - _world.Tick) / (double)Balance.TickHz;
+        int towersUp = _world.Buildings.Count(b => b.Def.Weapon != null && b.Complete);
+        if (untilWave < 90 || next is { Announced: true } || _world.Units.Count < 8 || towersUp < 4) return;
+        if (_clearing is { } current && _world.Packs.FirstOrDefault(p => p.Id == current) is { Awake: false }) return; // under way
+        _clearing = null;
+        const int homeGuard = 4;
+        int army = _world.Units.Count - homeGuard;
+        var pack = _world.Packs
+            .Where(p => !p.Awake && p.Count <= army * 1.5)
+            .Select(p => (Pack: p, D: MathF.Sqrt((p.X - _c) * (p.X - _c) + (p.Y - _c) * (p.Y - _c))))
+            .Where(p => p.D < 45)
+            .OrderBy(p => p.D)
+            .Select(p => p.Pack)
+            .FirstOrDefault();
+        if (pack == null)
+        {
+            if (Verbose && (int)Seconds % 60 == 0)
+            {
+                var near = _world.Packs.Where(p => !p.Awake).OrderBy(p => (p.X - _c) * (p.X - _c) + (p.Y - _c) * (p.Y - _c)).Take(3)
+                    .Select(p => $"{p.Count}@{MathF.Sqrt((p.X - _c) * (p.X - _c) + (p.Y - _c) * (p.Y - _c)):F0}");
+                Console.WriteLine($"      t={Seconds,5:F0}s  no pack to clear with {army} soldiers; nearest: {string.Join(", ", near)}");
+            }
+            return;
+        }
+        if (Verbose) Console.WriteLine($"      t={Seconds,5:F0}s  clearing a pack of {pack.Count} with {army}");
+        _clearing = pack.Id;
+        Do(new OrderUnits(_world.Units.OrderByDescending(u => u.Hp).Skip(homeGuard).Select(u => u.Id).ToArray(), OrderKind.AttackMove, pack.X, pack.Y));
+    }
+
+    int? _clearing;
+
     /// <summary>What defense may spend: keep enough back that a House and a Shrine are always affordable.</summary>
     bool CanSpend(Cost cost) =>
         Colony[Resource.Wood] - cost.Wood >= Rules[BuildingKind.House].Cost.Wood + 10
@@ -142,7 +186,7 @@ public sealed class Bot
         // Towers once there's a direction to face: the first wave's announcement, then steadily.
         int towers = Count(BuildingKind.Watchtower) + Count(BuildingKind.Bombard) + Count(BuildingKind.LanceTower);
         bool warned = (_world.Survival?.Waves.Any(w => w.Announced) ?? true) || _world.Horde.Count > 0;
-        int wantTowers = !warned ? 0 : 3 + (int)(Seconds / 100);
+        int wantTowers = !warned ? 0 : 3 + (int)(Seconds / 60);
         // Rich and fed: turn surplus gold into towers. Not while hungry, or the new crews starve the colony.
         bool fed = Colony.NetPerSecond[(int)Resource.Food] > 0.05 && Colony[Resource.Food] > 100;
         // All in for the end: once the Convergence is near, spend everything, fed or not.
@@ -164,15 +208,17 @@ public sealed class Bot
             if (Place(BuildingKind.Barracks, NearKeep)) return;
 
         var barracks = _world.Buildings.FirstOrDefault(b => b.Kind == BuildingKind.Barracks && b.Active);
-        int wantUnits = 6 + (int)(Seconds / 120);
+        int wantUnits = 8 + (int)(Seconds / 60);
         if (fed && Colony[Resource.Gold] > 1000) wantUnits = 80; // rich and fed: turn gold into soldiers
-        if (barracks != null && barracks.Queue.Count < 2 && _world.Units.Count + barracks.Queue.Count < wantUnits && Colony[Resource.Gold] > 120)
+        bool affordArmy = Colony.NetPerSecond[(int)Resource.Gold] > 0.5 || Colony[Resource.Gold] > 1500; // upkeep mustn't sink the colony
+        if (barracks != null && barracks.Queue.Count < 2 && _world.Units.Count + barracks.Queue.Count < wantUnits && Colony[Resource.Gold] > 120 && affordArmy)
         {
             var ranged = _world.Tech.Has("drill") ? UnitKind.Crossbowman : UnitKind.Militia;
             Do(new TrainUnit(barracks.Id, _world.Units.Count % 4 == 3 ? UnitKind.Templar : ranged));
         }
 
         Raid();
+        Clear();
 
         // Meet each wave: once it's announced, stand the garrison just inside the ring on its side.
         var next = _world.Survival?.Next;
@@ -180,6 +226,7 @@ public sealed class Bot
         {
             _lastWaveMoved = next.Number;
             _raidGate = null; // any raid is called home
+            _clearing = null; // and any clearing: pick it up again after the wave
             var units = _world.Units.Select(u => u.Id).ToArray();
             if (next.Final)
             {
@@ -269,13 +316,16 @@ public sealed class Bot
             : (Colony[Resource.Wood] - Rules[BuildingKind.House].Cost.Wood - techWood - 10) / cost.Wood;
         int budget = (int)Math.Min(12, spare);
         if (budget <= 0) return;
-        var tiles = Perimeter().Where(p => !p.Hole && _world.CheckPlacement(wall, p.X, p.Y) == null).Select(p => (p.X, p.Y));
+        // Never wall over the ground a Mine or Quarry needs: a lost one has to be rebuilt.
+        var tiles = Perimeter().Where(p => !p.Hole && !NearOre(p.X, p.Y, 3) && _world.CheckPlacement(wall, p.X, p.Y) == null).Select(p => (p.X, p.Y));
         if (_incoming.Count > 0)
         {
             var (tx, ty) = InsideRing(_incoming[0]);
             tiles = tiles.OrderBy(t => Math.Abs(t.X - tx) + Math.Abs(t.Y - ty));
         }
-        foreach (var (x, y) in tiles.Take(budget).ToList()) Do(new PlaceBuilding(wall, x, y));
+        // Every tenth tile of the ring is a Gate: soldiers have to get out to clear the wilds.
+        foreach (var (x, y) in tiles.Take(budget).ToList())
+            Do(new PlaceBuilding((x + y) % 10 == 0 && _world.CheckPlacement(BuildingKind.Gate, x, y) == null ? BuildingKind.Gate : wall, x, y));
     }
 
     List<(int X, int Y, bool Hole)>? _perimeterCache;
@@ -325,7 +375,7 @@ public sealed class Bot
     bool Expand(Tile[] wanted)
     {
         if (Underway(BuildingKind.Wardstone)) return false;
-        if (Count(BuildingKind.Wardstone) >= 3 + (int)(Seconds / 180)) return false; // expansion at a pace, not a reflex
+        if (Count(BuildingKind.Wardstone) >= 4 + (int)(Seconds / 120)) return false; // expansion at a pace, not a reflex
         var t = _world.Terrain;
         float r = Rules[BuildingKind.Wardstone].ConsecrateRadius;
         int Gain((int X, int Y) s)
@@ -351,6 +401,26 @@ public sealed class Bot
                     targets.Add((x, y));
         if (targets.Count == 0) return false;
         return Place(BuildingKind.Wardstone, s => -targets.Min(p => Math.Abs(p.X - s.X) + Math.Abs(p.Y - s.Y)));
+    }
+
+    /// <summary>Some legal spot on holy ground where this gatherer would collect a worthwhile amount.</summary>
+    bool HasSpot(BuildingKind kind)
+    {
+        var t = _world.Terrain;
+        for (int y = 0; y < t.Height; y += 2)
+            for (int x = 0; x < t.Width; x += 2)
+                if (Colony.Consecrated[t.Index(x, y)] && _world.CheckPlacement(kind, x, y) is null or "not enough gold" or "not enough wood"
+                    && Gather(kind, (x, y)) >= 0.25) return true;
+        return false;
+    }
+
+    bool NearOre(int x, int y, int r)
+    {
+        var t = _world.Terrain;
+        for (int ty = y - r; ty <= y + r; ty++)
+            for (int tx = x - r; tx <= x + r; tx++)
+                if (t.InBounds(tx, ty) && t.Get(tx, ty) is Tile.Ore or Tile.Rock) return true;
+        return false;
     }
 
     double NearKeep((int X, int Y) s) => -Dist(s);

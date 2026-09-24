@@ -84,7 +84,7 @@ public static class RunProbe
     public static Result Play(uint seed, Bot.Style style, bool trace, double snapshotAt = -1, string plan = "fortress", Rules? rules = null)
     {
         var clock = Stopwatch.StartNew();
-        var world = World.Create(new WorldOptions(seed, 256, 40, rules ?? Rules.Default, Survival: true));
+        var world = World.Create(new WorldOptions(seed, 256, 0, rules ?? Rules.Default, Survival: true));
         var bot = new Bot(world, style, plan) { Verbose = trace };
         int possessed = 0;
         int limit = (world.Rules.Survival.Days + 5) * (int)(world.Rules.Survival.DaySeconds * Balance.TickHz);
@@ -134,9 +134,9 @@ public static class RunProbe
         string farming = string.Join(",", food.Select(b => $"{(b.Kind == BuildingKind.Farm ? "F" : "H")}{(b.Active ? "" : b.Staffed ? "!" : "?")}{b.Rate * w.Colony.Power:0.00}"));
         Console.WriteLine($"      food producers [{farming}] eaten {c.Colonists * w.Rules.ColonistFoodPerSecond:0.00}/s power {c.Power:0.00}");
         Console.WriteLine(string.Create(CultureInfo.InvariantCulture,
-            $"    day {w.Day,2}  gold {c[Resource.Gold],5:F0} ({c.NetPerSecond[0]:+0.0;-0.0}) wood {c[Resource.Wood],4:F0} ({c.NetPerSecond[1]:+0.0;-0.0}) stone {c[Resource.Stone],4:F0} ({c.NetPerSecond[2]:+0.0;-0.0}) food {c[Resource.Food],4:F0} ({c.NetPerSecond[3]:+0.00;-0.00})  " +
+            $"    day {w.Day,2}  gold {c[Resource.Gold],5:F0} ({c.NetPerSecond[0]:+0.0;-0.0}) wood {c[Resource.Wood],4:F0} ({c.NetPerSecond[1]:+0.0;-0.0}) stone {c[Resource.Stone],4:F0} ({c.NetPerSecond[2]:+0.0;-0.0}) food {c[Resource.Food],4:F0} ({c.NetPerSecond[3]:+0.00;-0.00}) iron {c[Resource.Iron],4:F0} ({c.NetPerSecond[4]:+0.00;-0.00})  " +
             $"colonists {c.WorkersUsed}/{c.Colonists} sanct {c.SanctityDemand:0}/{c.SanctitySupply:0}  " +
-            $"house {Count(BuildingKind.House)} farm {Count(BuildingKind.Farm)} hunt {Count(BuildingKind.Hunter)} wood {Count(BuildingKind.Woodcutter)} quar {Count(BuildingKind.Quarry)} shrine {Count(BuildingKind.Shrine)} ward {Count(BuildingKind.Wardstone)} " +
-            $"wall {Count(BuildingKind.Wall)} tower {Count(BuildingKind.Watchtower)} bomb {Count(BuildingKind.Bombard)} units {w.Units.Count}  demons {w.Horde.Count} (asleep {w.Packs.Where(p => !p.Awake).Sum(p => p.Count)})  keep {w.Buildings.FirstOrDefault(b => b.Kind == BuildingKind.Keep)?.Hp ?? 0:0}"));
+            $"house {Count(BuildingKind.House)} farm {Count(BuildingKind.Farm)} hunt {Count(BuildingKind.Hunter)} wood {Count(BuildingKind.Woodcutter)} quar {Count(BuildingKind.Quarry)} mine {Count(BuildingKind.Mine)} shrine {Count(BuildingKind.Shrine)} ward {Count(BuildingKind.Wardstone)} " +
+            $"wall {Count(BuildingKind.Wall)} tower {Count(BuildingKind.Watchtower)} bomb {Count(BuildingKind.Bombard)} units {w.Units.Count}  demons {w.Horde.Count} (asleep {w.Packs.Where(p => !p.Awake).Sum(p => p.Count)} in {w.Packs.Count(p => !p.Awake)} packs)  keep {w.Buildings.FirstOrDefault(b => b.Kind == BuildingKind.Keep)?.Hp ?? 0:0}"));
     }
 }

@@ -133,7 +133,7 @@ public sealed partial class World
             foreach (var start in world.Rules.StartingUnits)
                 for (int i = 0; i < start.Count; i++) world.TrySpawnUnit(start.Kind, keep);
         }
-        world.ScatterPacks(options.DormantPacks);
+        world.ScatterPacks(options.DormantPacks > 0 ? options.DormantPacks : options.Survival ? world.Rules.Wilds.Packs : 0);
         return world;
     }
 
@@ -274,6 +274,7 @@ public sealed partial class World
             }
         }
         if (!FootprintConsecrated(x, y, def.W, def.H)) return "not on consecrated ground";
+        if (PackNear(x, y, def.W, def.H) != null) return "demons sleep nearby: clear them first";
         if (DemonsInRect(x, y, def.W, def.H)) return "demons in the way";
         return Colony.Shortfall(def.Cost);
     }
@@ -840,33 +841,88 @@ public sealed partial class World
         _events.Add(new HellgateClosed(Tick, gate.Id, gate.X, gate.Y));
     }
 
+    /// <summary>
+    /// Spread sleeping packs over the map: none inside MinDistance, none
+    /// closer together than Spacing, each on ground that can reach the
+    /// colony, and sized by distance from the Keep: small near home, large far out.
+    /// </summary>
     void ScatterPacks(int count)
     {
+        var wilds = Rules.Wilds;
         int centre = Terrain.Width / 2;
-        int minD2 = Balance.PackMinDistanceFromKeep * Balance.PackMinDistanceFromKeep;
-        for (int n = 0, attempts = 0; n < count && attempts < count * 200; attempts++)
+        int minD2 = wilds.MinDistance * wilds.MinDistance;
+        int spacing2 = wilds.Spacing * wilds.Spacing;
+        float farthest = MathF.Sqrt(2) * centre;
+        for (int n = 0, attempts = 0; n < count && attempts < count * 300; attempts++)
         {
             int x = Rng.NextInt(Terrain.Width);
             int y = Rng.NextInt(Terrain.Height);
             int dx = x - centre, dy = y - centre;
             if (dx * dx + dy * dy < minD2) continue;
             if (!IsWalkable(x, y) || Flow.DistAt(x, y) == FlowField.Unreachable) continue;
-            var kind = Rng.Chance(Balance.PackHoundChance) ? DemonKind.Hound : DemonKind.Imp;
-            int size = Balance.PackMinCount + Rng.NextInt(Balance.PackMaxCount - Balance.PackMinCount + 1);
-            _packs.Add(new Pack { Id = _nextId++, X = x, Y = y, Count = size, Kind = kind });
+            if (_packs.Any(p => (p.X - x) * (p.X - x) + (p.Y - y) * (p.Y - y) < spacing2)) continue;
+            if (GuardsHomeIron(x, y)) continue;
+            var kind = Rng.Chance(wilds.HoundChance) ? DemonKind.Hound : DemonKind.Imp;
+            float far = Math.Clamp((MathF.Sqrt(dx * dx + dy * dy) - wilds.MinDistance) / (farthest - wilds.MinDistance), 0, 1);
+            int size = (int)(wilds.NearCount + (wilds.FarCount - wilds.NearCount) * far * (0.7 + 0.6 * Rng.NextDouble()));
+            _packs.Add(new Pack { Id = _nextId++, X = x, Y = y, Count = Math.Max(1, size), Kind = kind });
             n++;
         }
     }
 
+    /// <summary>
+    /// The iron and stone nearest home are never guarded: no pack sits within
+    /// clearing range of ore or rock that lies within 32 tiles of the Keep.
+    /// Iron needs expansion, expansion needs clearing, clearing needs an army
+    /// and an army needs iron; the first deposits are what break that loop.
+    /// </summary>
+    bool GuardsHomeIron(int x, int y)
+    {
+        int c = Terrain.Width / 2;
+        int r = (int)Rules.Wilds.ClearRadius + 2;
+        for (int ty = Math.Max(0, y - r); ty <= Math.Min(Terrain.Height - 1, y + r); ty++)
+            for (int tx = Math.Max(0, x - r); tx <= Math.Min(Terrain.Width - 1, x + r); tx++)
+            {
+                if (Terrain.Get(tx, ty) is not (Tile.Ore or Tile.Rock)) continue;
+                if ((tx - x) * (tx - x) + (ty - y) * (ty - y) > r * r) continue;
+                if ((tx - c) * (tx - c) + (ty - c) * (ty - c) <= 32 * 32) return true;
+            }
+        return false;
+    }
+
     void WakePacks()
     {
+        float wake2 = Rules.Wilds.WakeRadius * Rules.Wilds.WakeRadius;
+        bool checkUnits = Tick % 10 == 0 && _units.Count > 0; // soldiers walk slowly; twice a second is plenty
         foreach (var pack in _packs)
         {
-            if (pack.Awake || Noise.LevelAtTile(pack.X, pack.Y) < Balance.WakeThreshold) continue;
+            if (pack.Awake) continue;
+            bool woken = Noise.LevelAtTile(pack.X, pack.Y) >= Balance.WakeThreshold;
+            if (!woken && checkUnits)
+                foreach (var u in _units)
+                {
+                    float dx = u.X - pack.X, dy = u.Y - pack.Y;
+                    if (dx * dx + dy * dy <= wake2) { woken = true; break; }
+                }
+            if (!woken) continue;
             pack.Awake = true;
             int spawned = SpawnCluster(pack.Kind, pack.X, pack.Y, pack.Count);
             _events.Add(new PackWoke(Tick, pack.Id, pack.X, pack.Y, spawned));
         }
+    }
+
+    /// <summary>The nearest sleeping pack within ClearRadius of a footprint, if any: its ground can't be built on yet.</summary>
+    public Pack? PackNear(int x, int y, int w, int h)
+    {
+        float r = Rules.Wilds.ClearRadius;
+        foreach (var p in _packs)
+        {
+            if (p.Awake) continue;
+            float ex = MathF.Max(MathF.Max(x - (p.X + 0.5f), 0), p.X + 0.5f - (x + w));
+            float ey = MathF.Max(MathF.Max(y - (p.Y + 0.5f), 0), p.Y + 0.5f - (y + h));
+            if (ex * ex + ey * ey <= r * r) return p;
+        }
+        return null;
     }
 
     /// <summary>

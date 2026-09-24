@@ -133,7 +133,7 @@ public partial class Hud : CanvasLayer
 
         string Res(Resource r) => $"{r} {colony[r]:0} ({Signed(colony.NetPerSecond[(int)r])}/s)";
         _top.Text =
-            $"{Res(Resource.Gold)}   {Res(Resource.Wood)}   {Res(Resource.Stone)}   {Res(Resource.Food)}   " +
+            $"{Res(Resource.Gold)}   {Res(Resource.Wood)}   {Res(Resource.Stone)}   {Res(Resource.Food)}   {Res(Resource.Iron)}   " +
             $"Colonists {colony.WorkersUsed}/{colony.Colonists} working   Sanctity {colony.SanctityDemand:0}/{colony.SanctitySupply:0}" +
             (colony.Power < 1 ? $"  ({colony.Power:P0} power)" : "") +
             (colony.Starving ? "   STARVING" : "");

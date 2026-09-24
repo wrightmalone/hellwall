@@ -5,7 +5,7 @@ internal static class TestWorlds
 {
     public const int C = 64;
 
-    public static readonly Cost Plenty = new() { Gold = 10000, Wood = 10000, Stone = 10000, Food = 10000 };
+    public static readonly Cost Plenty = new() { Gold = 10000, Wood = 10000, Stone = 10000, Food = 10000, Iron = 10000 };
 
     public static World Rich(Rules? rules = null, uint seed = 7)
     {

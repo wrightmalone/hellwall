@@ -13,7 +13,9 @@ namespace Hellwall.Sim;
 /// </summary>
 public sealed class Colony
 {
-    public readonly double[] Stock = new double[4];
+    public const int Resources = 5;
+
+    public readonly double[] Stock = new double[Resources];
 
     public int Colonists;
     public int WorkersUsed;
@@ -27,7 +29,7 @@ public sealed class Colony
     public bool Starving;
 
     /// <summary>Net per second over the last tick, for the HUD.</summary>
-    public readonly double[] NetPerSecond = new double[4];
+    public readonly double[] NetPerSecond = new double[Resources];
 
     /// <summary>Per tile: on connected consecrated ground.</summary>
     public readonly bool[] Consecrated;
@@ -110,7 +112,7 @@ internal static class ColonySystem
         colony.SanctityDemand = demand;
         colony.Power = demand <= 0 ? 1 : Math.Min(1, supply / demand);
 
-        Span<double> net = stackalloc double[4];
+        Span<double> net = stackalloc double[Colony.Resources];
         foreach (var b in world.BuildingList)
         {
             if (!b.Active) continue;
@@ -121,7 +123,7 @@ internal static class ColonySystem
         net[(int)Resource.Food] -= colonists * rules.ColonistFoodPerSecond;
         foreach (var u in world.UnitList) net[(int)Resource.Gold] -= u.Def.UpkeepGold;
 
-        for (int r = 0; r < 4; r++)
+        for (int r = 0; r < Colony.Resources; r++)
         {
             colony.NetPerSecond[r] = net[r];
             colony.Stock[r] = Math.Max(0, colony.Stock[r] + net[r] * dt);
@@ -216,7 +218,7 @@ internal static class ColonySystem
     static void ReassignGathering(World world)
     {
         var terrain = world.Terrain;
-        var claimed = new bool[4][];
+        var claimed = new bool[Colony.Resources][];
         foreach (var b in world.BuildingList)
         {
             if (b.Def.Produces is not { } res) continue;

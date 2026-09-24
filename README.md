@@ -8,9 +8,12 @@ are in [PLAN.md](./PLAN.md).
 a 60-day survival run with announced waves, possession and a final
 Convergence is winnable and losable. Phase 4 adds a tech tree with three
 build paths, three new demons, Stone Walls, Lance Towers, Crossbowmen, and
-Hellgates. The three paths are balanced against each other, but whole maps
-are won or lost by every path alike: map fairness is the open problem, and
-phase 5's. 20,000 demons still run at 20 Hz in ~6 ms/tick.
+Hellgates. Since then, the expansion loop: waves are about four times
+larger, demons sleep in packs across the whole map and must be cleared
+before you can build near them, and every soldier costs iron, which is mined
+from deposits out in the wilds. The three paths are balanced against each other, but
+whole maps are won or lost by every path alike, so map fairness is the open
+problem (phase 5). 20,000 demons still run at 20 Hz in ~6 ms/tick.
 
 ## Layout
 
@@ -109,9 +112,17 @@ To watch the probe's town hold a wave at 4x speed:
 60 one-minute days, on the designated map (seed 11) by default. From day 6 a wave lands every three days, each larger
 than the last and from more sides as the run goes on; each is announced a
 minute ahead with its size and direction, pinned to the edge of the screen.
-At the end of day 60 the Convergence (2,500) comes from every side at once.
-Survive it and the run is won; lose the Keep and it's over. Forty dormant
-packs (about 10,000 demons) sleep across the map until noise wakes them.
+The first wave is 30 demons, each wave after is x1.26, and the last regular
+wave is about 1,500. At the end of day 60 the Convergence (10,000) comes from every side at once.
+Survive it and the run is won; lose the Keep and it's over.
+
+**The wilds.** 160 packs sleep across the map, none within 20 tiles of the
+Keep. Near packs hold about a dozen demons and far packs about ninety.
+You can't build within 10 tiles of a sleeping pack, so growing means going
+out and clearing it. A pack wakes when a soldier comes within 7 tiles, or
+when it hears noise. Building is quiet enough that it never wakes a pack; gunfire does. The
+first iron deposit and the home rock are always left unguarded, so the
+opening never depends on a fight.
 
 **Hellgates** stand far out on the map (four of them). From day 8 each sends
 a small band at the colony every minute, bigger from day 20 and again from
@@ -144,10 +155,15 @@ that plays a loaded world against the original tick for tick.
 Every content number lives in [src/Sim/data/rules.json](src/Sim/data/rules.json).
 
 - **Buildings** cost gold, wood and stone, and take time to build.
+- **Iron** is the army's resource. Every soldier costs iron (Militia 5, Marksman
+  10, Crossbowman 15, Templar 20) and a little gold upkeep. A Mine (2x2, 3 crew)
+  works ore tiles. There is one small deposit 22 to 28 tiles out and richer
+  ones beyond 34 tiles, so a bigger army means holding more of the map.
 - **Colonists** live in Houses (and the Keep), pay a tithe, eat, and crew
   buildings first come first served. A building short of its crew is idle.
 - **Gatherers** collect from matching tiles around them: Woodcutter from
-  forest, Quarry from rock, Hunter from forest, Farm from open grass.
+  forest, Quarry from rock, Hunter from forest, Farm from open grass, Mine
+  from ore.
   Overlapping gatherers split the tiles, and tiles under buildings yield
   nothing, so farmland competes with building space.
 - **Holy ground is the power grid.** The Keep, Shrines and Wardstones
@@ -217,30 +233,27 @@ p99 9.1 ms, sim 4.8 ms/tick.
 `hellwall-sim run` plays the bot (fortress plan) on the designated map (seed
 11) and seed 3 and requires wins, and the passive bot on five maps and
 requires losses. `hellwall-sim paths` plays all three research plans. Both
-are in verify.sh. On six maps, with Hellgates and the full roster (arrows: after the
-start-fairness rule below):
+are in verify.sh. `scripts/sweep.sh` plays 8 maps x 3 paths in parallel
+(about 2 minutes). After the expansion loop (x4 waves, wilds, iron):
 
 | Seed | Fortress | Pyre | Legion |
 |---|---|---|---|
 | 3 | won | won | won |
+| 5 | won | won | lost day 63 |
+| 7 | lost | lost | lost |
 | 11 | won | won | won |
-| 5 | won | won | won (Keep 850) |
-| 7 | lost day 62 | lost day 20 | lost day 63 |
-| 19 | lost day 41 → 47 | lost day 41 → 62 | lost day 17 → **won** |
-| 42 | lost day 29 → 28 | lost day 30 → 26 | lost day 30 → 26 |
+| 13 | lost day 42 | lost day 42 | lost day 32 |
+| 19 | lost | won | lost |
+| 23 | lost day 44 | lost day 44 | lost day 38 |
+| 42 | lost day 34 | lost day 34 | lost day 34 |
 
-Every path won exactly the same three maps. The paths are even with each
-other; the map is what decided. `hellwall-sim maps` shows why: the two maps
-that collapsed early (19, 42) had no rock at all within 25 tiles of the Keep,
-so no stone, so no towers, research or Shrines.
-
-The map generator now guarantees a patch of rock and of forest 16 to 20
-tiles out, on the landward side, when the start lacks them. After that
-change: seed 19 is won by the legion path and the others reach days 47 and
-62; seed 42 (barren all round) lasts to day 26-28 instead of 11-12 but is
-still lost. Seed 7 is lost at the Convergence by every path. Making every
-generated map fair is phase 5's job; this is its first rule.
+Fortress wins 3 of 8, pyre 4 and legion 2. Just as before the expansion
+loop, the map decides more than the path: 13, 23 and 42 collapse in the
+same week whatever the path. The map generator already guarantees rock and forest 16 to 20
+tiles out on the landward side (seed 42 has neither within 25 tiles
+otherwise). Making every generated map fair is phase 5's job.
 
 The bot is a lower bound, not a target: it packs towers into blocks, builds
 over its own farmland, doesn't plan chokepoints, and only the legion plan
-raids gates.
+raids gates. It clears packs only with 8+ soldiers and 4+ towers, leaves
+a home guard of 4, and takes on packs up to 1.5x its own army.

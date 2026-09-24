@@ -10,6 +10,8 @@ public enum Resource : byte
     Wood,
     Stone,
     Food,
+    /// <summary>Mined from ore deposits out on the map; soldiers are made of it.</summary>
+    Iron,
 }
 
 public enum UnitKind : byte
@@ -27,6 +29,7 @@ public sealed class Cost
     public double Wood { get; init; }
     public double Stone { get; init; }
     public double Food { get; init; }
+    public double Iron { get; init; }
 
     public static readonly Cost None = new();
 
@@ -35,10 +38,11 @@ public sealed class Cost
         Resource.Gold => Gold,
         Resource.Wood => Wood,
         Resource.Stone => Stone,
-        _ => Food,
+        Resource.Food => Food,
+        _ => Iron,
     };
 
-    public Cost Scale(double f) => new() { Gold = Gold * f, Wood = Wood * f, Stone = Stone * f, Food = Food * f };
+    public Cost Scale(double f) => new() { Gold = Gold * f, Wood = Wood * f, Stone = Stone * f, Food = Food * f, Iron = Iron * f };
 
     public override string ToString()
     {
@@ -47,6 +51,29 @@ public sealed class Cost
             if (this[r] > 0) parts.Add($"{this[r]:0} {r.ToString().ToLowerInvariant()}");
         return parts.Count == 0 ? "free" : string.Join(", ", parts);
     }
+}
+
+/// <summary>
+/// The demons that already hold the map: sleeping packs spread across it,
+/// small near the Keep and larger further out. Nothing can be built near a
+/// sleeping pack, so expanding means clearing: bring soldiers close enough
+/// and it wakes and fights.
+/// </summary>
+public sealed record WildsRules
+{
+    /// <summary>Packs on a survival map (tests and probes ask for their own number).</summary>
+    public int Packs { get; init; } = 160;
+    public int MinDistance { get; init; } = 20;
+    /// <summary>Tiles between pack centres, at the least.</summary>
+    public int Spacing { get; init; } = 8;
+    /// <summary>Pack size at MinDistance, and at the far edge of the map; in between it grows with distance.</summary>
+    public int NearCount { get; init; } = 12;
+    public int FarCount { get; init; } = 90;
+    public double HoundChance { get; init; } = 0.15;
+    /// <summary>No building within this many tiles of a sleeping pack.</summary>
+    public float ClearRadius { get; init; } = 10;
+    /// <summary>A soldier this close wakes a sleeping pack.</summary>
+    public float WakeRadius { get; init; } = 7;
 }
 
 public sealed record StartingUnit
@@ -175,6 +202,8 @@ public sealed class Rules
 
     public HellgateRules Hellgates { get; private init; } = new();
 
+    public WildsRules Wilds { get; private init; } = new();
+
     public TechDef[] Techs { get; private init; } = [];
 
     public TechDef Tech(string id) => Techs.FirstOrDefault(t => t.Id == id) ?? throw new KeyNotFoundException($"no tech '{id}'");
@@ -205,6 +234,7 @@ public sealed class Rules
         public StartingUnit[] StartingUnits { get; init; } = [];
         public SurvivalRules Survival { get; init; } = new();
         public HellgateRules Hellgates { get; init; } = new();
+        public WildsRules Wilds { get; init; } = new();
         public TechDef[] Techs { get; init; } = [];
         public Dictionary<BuildingKind, BuildingDef> Buildings { get; init; } = new();
         public Dictionary<UnitKind, UnitDef> Units { get; init; } = new();
@@ -232,6 +262,7 @@ public sealed class Rules
             StartingUnits = file.StartingUnits,
             Survival = file.Survival,
             Hellgates = file.Hellgates,
+            Wilds = file.Wilds,
             Techs = file.Techs,
             Buildings = Dense(file.Buildings, "building"),
             Units = Dense(file.Units, "unit"),
@@ -273,6 +304,13 @@ public sealed class Rules
         return Copy(r => r.Hellgates = gates);
     }
 
+    /// <summary>A copy with different wilds (sleeping packs).</summary>
+    public Rules WithWilds(Func<WildsRules, WildsRules> change)
+    {
+        var wilds = change(Wilds);
+        return Copy(r => r.Wilds = wilds);
+    }
+
     /// <summary>A copy with a different survival schedule (short runs for tests, tuning sweeps).</summary>
     public Rules WithSurvival(Func<SurvivalRules, SurvivalRules> change)
     {
@@ -287,11 +325,12 @@ public sealed class Rules
         public DemonDef[] Demons = [];
         public SurvivalRules Survival = new();
         public HellgateRules Hellgates = new();
+        public WildsRules Wilds = new();
     }
 
     Rules Copy(Action<Builder> change)
     {
-        var b = new Builder { StartingResources = StartingResources, Buildings = Buildings, Demons = Demons, Survival = Survival, Hellgates = Hellgates };
+        var b = new Builder { StartingResources = StartingResources, Buildings = Buildings, Demons = Demons, Survival = Survival, Hellgates = Hellgates, Wilds = Wilds };
         change(b);
         return new Rules
         {
@@ -303,6 +342,7 @@ public sealed class Rules
             StartingUnits = StartingUnits,
             Survival = b.Survival,
             Hellgates = b.Hellgates,
+            Wilds = b.Wilds,
             Techs = Techs,
             Buildings = b.Buildings,
             Units = Units,
@@ -313,7 +353,7 @@ public sealed class Rules
     }
 
     static string Describe(Builder b) =>
-        JsonSerializer.Serialize(new { b.StartingResources, b.Buildings, b.Demons, b.Survival, b.Hellgates }, Options);
+        JsonSerializer.Serialize(new { b.StartingResources, b.Buildings, b.Demons, b.Survival, b.Hellgates, b.Wilds }, Options);
 
     static T[] Dense<TKey, T>(Dictionary<TKey, T> map, string what) where TKey : struct, Enum
     {

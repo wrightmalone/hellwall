@@ -6,6 +6,8 @@ public enum Tile : byte
     Forest,
     Rock,
     Water,
+    /// <summary>An iron deposit: walkable, not buildable, worked by a Mine.</summary>
+    Ore,
 }
 
 /// <summary>Row-major tile grid. Plain data so it hashes and serializes trivially.</summary>
@@ -33,5 +35,5 @@ public sealed class Terrain
     public static bool IsBuildable(Tile tile) => tile == Tile.Grass;
 
     /// <summary>Demons cross grass and forest (forest costs double in the flow field); rock and water block.</summary>
-    public static bool IsWalkable(Tile tile) => tile is Tile.Grass or Tile.Forest;
+    public static bool IsWalkable(Tile tile) => tile is Tile.Grass or Tile.Forest or Tile.Ore;
 }
