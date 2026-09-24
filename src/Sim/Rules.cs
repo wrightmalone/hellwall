@@ -119,6 +119,18 @@ public sealed record DemonDef
     public float Damage { get; init; }
     /// <summary>Seconds between attacks.</summary>
     public float Cooldown { get; init; }
+
+    /// <summary>Crosses walls and terrain in a straight line, heading for the nearest building.</summary>
+    public bool Flies { get; init; }
+
+    /// <summary>
+    /// Bursts, rather than striking, when it reaches a building, and also bursts
+    /// when killed: ExplodeDamage to every building and soldier within
+    /// ExplodeRadius tiles. Kill it before it reaches the wall, and not in the
+    /// middle of your own soldiers.
+    /// </summary>
+    public float ExplodeDamage { get; init; }
+    public float ExplodeRadius { get; init; }
 }
 
 /// <summary>
@@ -219,7 +231,7 @@ public sealed class Rules
     /// <summary>A copy in which no demon does any damage: for testing how the horde moves.</summary>
     public Rules Harmless()
     {
-        var demons = Demons.Select(d => d with { Damage = 0 }).ToArray();
+        var demons = Demons.Select(d => d with { Damage = 0, ExplodeDamage = 0 }).ToArray();
         return Copy(r => r.Demons = demons);
     }
 

@@ -24,6 +24,16 @@ internal static class Combat
         for (int i = 0; i < h.Count; i++)
         {
             if (h.Cooldown[i] > 0 || h.Hp[i] <= 0) continue;
+            var kind = rules[h.Kind[i]];
+            if (kind.Damage <= 0 && kind.ExplodeDamage <= 0) continue;
+            if (kind.Flies)
+            {
+                // A flier strikes whatever building it's over or beside.
+                int fid = world.BuildingWithinReach(h.X[i], h.Y[i], Balance.DemonReach, skipWalls: true);
+                if (fid == 0) continue;
+                Strike(world, h, i, kind, fid);
+                continue;
+            }
             int tx = (int)h.X[i], ty = (int)h.Y[i];
             int t = ty * width + tx;
             float dx = flow.DirX[t], dy = flow.DirY[t];
@@ -37,11 +47,39 @@ internal static class Combat
             float ex = MathF.Max(MathF.Max(bx - h.X[i], 0), h.X[i] - (bx + 1));
             float ey = MathF.Max(MathF.Max(by - h.Y[i], 0), h.Y[i] - (by + 1));
             if (ex * ex + ey * ey > Balance.DemonReach * Balance.DemonReach) continue;
-            var def = rules[h.Kind[i]];
-            if (def.Damage <= 0) continue; // harmless (test and probe rules): makes no attacks at all, so possesses nothing
-            world.DemonHitsBuilding(id, def.Damage);
-            h.Cooldown[i] = def.Cooldown;
+            if (kind.Damage <= 0 && kind.ExplodeDamage <= 0) continue; // harmless (test and probe rules): makes no attacks at all, so possesses nothing
+            Strike(world, h, i, kind, id);
         }
+    }
+
+    /// <summary>One demon's attack on one building: a blow, or, for a Bloater, bursting against it.</summary>
+    static void Strike(World world, Horde h, int i, DemonDef def, int buildingId)
+    {
+        if (def.ExplodeDamage > 0)
+        {
+            h.Hp[i] = 0; // bursts; the explosion itself is resolved with the dead
+            return;
+        }
+        world.DemonHitsBuilding(buildingId, def.Damage);
+        h.Cooldown[i] = def.Cooldown;
+    }
+
+    /// <summary>A Bloater's burst: flat damage to every building and soldier in the radius. Batters; never possesses.</summary>
+    public static void Explode(World world, float x, float y, DemonDef def)
+    {
+        float r = def.ExplodeRadius;
+        foreach (var b in world.BuildingList)
+        {
+            float ex = MathF.Max(MathF.Max(b.X - x, 0), x - (b.X + b.W));
+            float ey = MathF.Max(MathF.Max(b.Y - y, 0), y - (b.Y + b.H));
+            if (ex * ex + ey * ey <= r * r) b.Hp -= def.ExplodeDamage;
+        }
+        foreach (var u in world.UnitList)
+        {
+            float dx = u.X - x, dy = u.Y - y;
+            if (dx * dx + dy * dy <= r * r) u.Hp -= def.ExplodeDamage;
+        }
+        world.Emit(new DemonBurst(world.Tick, x, y, r));
     }
 
     public static void TowersFire(World world, float dt)

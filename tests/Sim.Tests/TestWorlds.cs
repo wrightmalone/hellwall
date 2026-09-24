@@ -18,7 +18,7 @@ internal static class TestWorlds
     public static Rules Dummies(Rules? rules = null)
     {
         var r = rules ?? Rules.Default;
-        foreach (var kind in Enum.GetValues<DemonKind>()) r = r.WithDemon(kind, d => d with { Speed = 0, Damage = 0 });
+        foreach (var kind in Enum.GetValues<DemonKind>()) r = r.WithDemon(kind, d => d with { Speed = 0, Damage = 0, ExplodeDamage = 0 });
         return r;
     }
 

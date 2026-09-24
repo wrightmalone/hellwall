@@ -10,7 +10,16 @@
     "firstWaveDay": 6, "waveEveryDays": 3, "telegraphSeconds": 60,
     "firstWaveSize": 20, "waveGrowth": 1.18,
     "wavesPerExtraSide": 5, "maxSides": 3,
-    "convergenceSize": 2500, "houndShare": 0.2
+    "convergenceSize": 2500,
+    "mix": [
+      { "kind": "Hound",    "fromWave": 1,  "share": 0.20 }
+    ],
+    "_mixWithNewKinds": [
+      { "kind": "Hound",    "fromWave": 1,  "share": 0.20 },
+      { "kind": "Gargoyle", "fromWave": 5,  "share": 0.06 },
+      { "kind": "Bloater",  "fromWave": 7,  "share": 0.04 },
+      { "kind": "Brute",    "fromWave": 10, "share": 0.02 }
+    ]
   },
 
   "buildings": {
@@ -58,6 +67,9 @@
   "demons": {
     "Imp":   { "hp": 40, "speed": 2.0, "damage": 8, "cooldown": 1.0 },
     "Hound": { "hp": 25, "speed": 3.6, "damage": 5, "cooldown": 0.7 },
-    "Thrall": { "hp": 60, "speed": 2.2, "damage": 10, "cooldown": 1.0 }
+    "Thrall": { "hp": 60, "speed": 2.2, "damage": 10, "cooldown": 1.0 },
+    "Gargoyle": { "hp": 50, "speed": 2.6, "damage": 7, "cooldown": 1.0, "flies": true },
+    "Bloater": { "hp": 160, "speed": 1.2, "damage": 0, "cooldown": 1.0, "explodeDamage": 150, "explodeRadius": 1.8 },
+    "Brute": { "hp": 700, "speed": 1.4, "damage": 60, "cooldown": 1.5 }
   }
 }

@@ -551,9 +551,55 @@ public sealed partial class World
         return ordered == 0 ? "no such units" : null;
     }
 
+    /// <summary>
+    /// The nearest point on the nearest building a flier would go for
+    /// (anything but walls, gates and what the horde already holds).
+    /// Recomputed per flier per tick rather than cached: fliers are few, and
+    /// it keeps them free of state.
+    /// </summary>
+    internal (float X, float Y, bool Found) NearestFlierTarget(float x, float y)
+    {
+        float best = float.MaxValue, bx = 0, by = 0;
+        foreach (var b in _buildings)
+        {
+            if (!b.IsDemonTarget) continue;
+            float px = Math.Clamp(x, b.X, b.X + b.W), py = Math.Clamp(y, b.Y, b.Y + b.H);
+            float dx = px - x, dy = py - y;
+            float d2 = dx * dx + dy * dy;
+            if (d2 < best) { best = d2; bx = px; by = py; }
+        }
+        return (bx, by, best < float.MaxValue);
+    }
+
+    /// <summary>A building whose footprint lies within reach of a point, checking the tile under it and its neighbours.</summary>
+    internal int BuildingWithinReach(float x, float y, float reach, bool skipWalls)
+    {
+        int cx = (int)x, cy = (int)y;
+        for (int oy = -1; oy <= 1; oy++)
+            for (int ox = -1; ox <= 1; ox++)
+            {
+                int id = BuildingIdAt(cx + ox, cy + oy);
+                if (id == 0) continue;
+                var b = _buildingById[id];
+                if (skipWalls && !b.IsDemonTarget) continue;
+                float ex = MathF.Max(MathF.Max(b.X - x, 0), x - (b.X + b.W));
+                float ey = MathF.Max(MathF.Max(b.Y - y, 0), y - (b.Y + b.H));
+                if (ex * ex + ey * ey <= reach * reach) return id;
+            }
+        return 0;
+    }
+
     /// <summary>Remove everything that died this tick, report it, and check for defeat.</summary>
     void ResolveDeaths()
     {
+        // Bloaters burst as they die, however they died, before anything else is counted.
+        for (int i = 0; i < Horde.Count; i++)
+        {
+            if (Horde.Hp[i] > 0) continue;
+            var def = Rules[Horde.Kind[i]];
+            if (def.ExplodeDamage > 0) Combat.Explode(this, Horde.X[i], Horde.Y[i], def);
+        }
+
         int killed = Horde.RemoveDead();
         if (killed > 0)
         {

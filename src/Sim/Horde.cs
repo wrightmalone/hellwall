@@ -6,6 +6,12 @@ public enum DemonKind : byte
     Hound,
     /// <summary>A colonist or soldier the horde has taken.</summary>
     Thrall,
+    /// <summary>Flies straight over walls and terrain to the nearest building.</summary>
+    Gargoyle,
+    /// <summary>Slow and swollen; bursts on reaching a building or on dying, battering everything near.</summary>
+    Bloater,
+    /// <summary>Siege: slow, very tough, hits buildings hard.</summary>
+    Brute,
 }
 
 /// <summary>
@@ -154,6 +160,17 @@ internal static class HordeSystem
             h.Cooldown[i] = MathF.Max(0, h.Cooldown[i] - dt);
 
             float vx, vy;
+            if (def.Flies)
+            {
+                // Fliers ignore the flow field, walls and the crowd: straight at the nearest building.
+                var (tx, ty, found) = world.NearestFlierTarget(x, y);
+                if (!found) { h.VX[i] = h.VY[i] = 0; continue; }
+                float fdx = tx - x, fdy = ty - y;
+                float fd = MathF.Sqrt(fdx * fdx + fdy * fdy);
+                h.VX[i] = fd > 1e-4f ? fdx / fd * speed : 0;
+                h.VY[i] = fd > 1e-4f ? fdy / fd * speed : 0;
+                continue;
+            }
             if (h.ChaseD2[i] < float.MaxValue && h.ChaseD2[i] > UnitSystem.MeleeRange * UnitSystem.MeleeRange * 0.5f)
             {
                 // A soldier nearby: go for it instead of the colony.
@@ -252,6 +269,12 @@ internal static class HordeSystem
         {
             float x = h.X[i];
             float y = h.Y[i];
+            if (demons[(int)h.Kind[i]].Flies)
+            {
+                h.X[i] = Math.Clamp(x + h.VX[i] * dt, 0f, world.Terrain.Width - 0.001f);
+                h.Y[i] = Math.Clamp(y + h.VY[i] * dt, 0f, world.Terrain.Height - 0.001f);
+                continue;
+            }
             int tx = (int)x, ty = (int)y;
             // A demon already standing somewhere blocked may always move, so it can walk out.
             bool free = !world.IsWalkable(tx, ty);

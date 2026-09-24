@@ -27,7 +27,19 @@ public sealed record SurvivalRules
     /// <summary>The final wave, from every side at once.</summary>
     public int ConvergenceSize { get; init; } = 4000;
 
-    public double HoundShare { get; init; } = 0.2;
+    /// <summary>
+    /// What each wave is made of, beyond Imps: a kind joins from a given wave
+    /// number and takes that share of every wave after. Whatever's left over
+    /// is Imps.
+    /// </summary>
+    public WaveMixEntry[] Mix { get; init; } = [new() { Kind = DemonKind.Hound, FromWave = 1, Share = 0.2 }];
+}
+
+public sealed record WaveMixEntry
+{
+    public DemonKind Kind { get; init; }
+    public int FromWave { get; init; } = 1;
+    public double Share { get; init; }
 }
 
 public sealed class PlannedWave
@@ -101,7 +113,7 @@ internal static class SurvivalSystem
             }
             if (wave.Announced && world.Tick >= wave.LandsAtTick)
             {
-                int spawned = Land(world, wave, s.Rules.HoundShare);
+                int spawned = Land(world, wave, s.Rules.Mix);
                 wave.Landed = true;
                 if (wave.Final) s.FinalLanded = true;
                 world.Emit(new WaveLanded(world.Tick, wave.Number, spawned, wave.Final));
@@ -128,15 +140,21 @@ internal static class SurvivalSystem
         return chosen.ToArray();
     }
 
-    static int Land(World world, PlannedWave wave, double houndShare)
+    static int Land(World world, PlannedWave wave, WaveMixEntry[] mix)
     {
         int spawned = 0;
         for (int i = 0; i < wave.Sides.Length; i++)
         {
             int share = wave.Size / wave.Sides.Length + (i < wave.Size % wave.Sides.Length ? 1 : 0);
-            int hounds = (int)(share * houndShare);
-            spawned += world.SpawnAtEdge(wave.Sides[i], DemonKind.Imp, share - hounds);
-            spawned += world.SpawnAtEdge(wave.Sides[i], DemonKind.Hound, hounds);
+            int imps = share;
+            foreach (var m in mix)
+            {
+                if (wave.Number < m.FromWave) continue;
+                int n = Math.Min(imps, (int)Math.Round(share * m.Share));
+                spawned += world.SpawnAtEdge(wave.Sides[i], m.Kind, n);
+                imps -= n;
+            }
+            spawned += world.SpawnAtEdge(wave.Sides[i], DemonKind.Imp, imps);
         }
         return spawned;
     }

@@ -35,6 +35,9 @@ public partial class HordeRenderer : Node2D
             {
                 DemonKind.Hound => (0.55f, new Color(1.0f, 0.55f, 0.15f)),
                 DemonKind.Thrall => (0.62f, new Color(0.72f, 0.45f, 0.85f)),
+                DemonKind.Gargoyle => (0.6f, new Color(0.55f, 0.65f, 0.75f)),
+                DemonKind.Bloater => (0.95f, new Color(0.55f, 0.75f, 0.20f)),
+                DemonKind.Brute => (0.9f, new Color(0.45f, 0.05f, 0.05f)),
                 _ => (0.62f, new Color(0.85f, 0.12f, 0.10f)),
             };
             var mesh = new MultiMesh
