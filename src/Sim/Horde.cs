@@ -11,8 +11,10 @@ public enum DemonKind : byte
 /// by slot. No per-unit objects, so a tick over 20k demons is a few linear
 /// passes over contiguous memory and allocates nothing.
 ///
-/// Slots have no stable identity yet; that arrives with combat and deaths in
-/// phase 2 (swap-remove plus an id array).
+/// Slots have no stable identity: nothing outside a tick holds on to one.
+/// The dead are removed at the end of each tick by an order-preserving
+/// compaction, so slot order (which some rules tie-break on) stays the order
+/// demons were spawned in.
 /// </summary>
 public sealed class Horde
 {
@@ -31,6 +33,18 @@ public sealed class Horde
     public float[] VX;
     public float[] VY;
     public DemonKind[] Kind;
+    public float[] Hp;
+
+    /// <summary>Seconds until this demon can attack again.</summary>
+    public float[] Cooldown;
+
+    /// <summary>
+    /// Scratch, rebuilt every tick: the nearest soldier within chase radius
+    /// (ChaseD2 is float.MaxValue when none). Derived, so not hashed.
+    /// </summary>
+    public float[] ChaseX;
+    public float[] ChaseY;
+    public float[] ChaseD2;
 
     public Horde(int capacity = 1024)
     {
@@ -41,9 +55,14 @@ public sealed class Horde
         VX = new float[capacity];
         VY = new float[capacity];
         Kind = new DemonKind[capacity];
+        Hp = new float[capacity];
+        Cooldown = new float[capacity];
+        ChaseX = new float[capacity];
+        ChaseY = new float[capacity];
+        ChaseD2 = new float[capacity];
     }
 
-    internal void Add(DemonKind kind, float x, float y)
+    internal void Add(DemonKind kind, float x, float y, float hp)
     {
         if (Count == X.Length) Grow(Count * 2);
         int i = Count++;
@@ -51,6 +70,35 @@ public sealed class Horde
         Y[i] = PrevY[i] = y;
         VX[i] = VY[i] = 0;
         Kind[i] = kind;
+        Hp[i] = hp;
+        Cooldown[i] = 0;
+        ChaseD2[i] = float.MaxValue;
+    }
+
+    /// <summary>Drop every demon at or below zero hp, keeping the survivors in order. Returns how many died.</summary>
+    internal int RemoveDead()
+    {
+        int write = 0;
+        for (int read = 0; read < Count; read++)
+        {
+            if (Hp[read] <= 0) continue;
+            if (write != read)
+            {
+                X[write] = X[read];
+                Y[write] = Y[read];
+                PrevX[write] = PrevX[read];
+                PrevY[write] = PrevY[read];
+                VX[write] = VX[read];
+                VY[write] = VY[read];
+                Kind[write] = Kind[read];
+                Hp[write] = Hp[read];
+                Cooldown[write] = Cooldown[read];
+            }
+            write++;
+        }
+        int dead = Count - write;
+        Count = write;
+        return dead;
     }
 
     void Grow(int capacity)
@@ -62,6 +110,11 @@ public sealed class Horde
         Array.Resize(ref VX, capacity);
         Array.Resize(ref VY, capacity);
         Array.Resize(ref Kind, capacity);
+        Array.Resize(ref Hp, capacity);
+        Array.Resize(ref Cooldown, capacity);
+        Array.Resize(ref ChaseX, capacity);
+        Array.Resize(ref ChaseY, capacity);
+        Array.Resize(ref ChaseD2, capacity);
     }
 }
 
@@ -73,7 +126,8 @@ public sealed class Horde
 /// </summary>
 internal static class HordeSystem
 {
-    public static void Step(World world)
+    /// <summary>Move the horde. The caller has already built the spatial hash and marked chase targets.</summary>
+    public static void Move(World world)
     {
         var h = world.Horde;
         int n = h.Count;
@@ -81,7 +135,7 @@ internal static class HordeSystem
 
         Array.Copy(h.X, h.PrevX, n);
         Array.Copy(h.Y, h.PrevY, n);
-        world.Spatial.Build(h);
+        var demons = world.Rules.Demons;
 
         var flow = world.Flow;
         var grid = world.Spatial;
@@ -93,11 +147,29 @@ internal static class HordeSystem
         {
             float x = h.X[i];
             float y = h.Y[i];
-            float speed = Balance.DemonSpeed(h.Kind[i]);
+            var def = demons[(int)h.Kind[i]];
+            float speed = def.Speed;
+            h.Cooldown[i] = MathF.Max(0, h.Cooldown[i] - dt);
 
-            var (fx, fy, arrived) = flow.Sample(x, y);
-            float vx = arrived ? 0 : fx * speed;
-            float vy = arrived ? 0 : fy * speed;
+            float vx, vy;
+            if (h.ChaseD2[i] < float.MaxValue && h.ChaseD2[i] > UnitSystem.MeleeRange * UnitSystem.MeleeRange * 0.5f)
+            {
+                // A soldier nearby: go for it instead of the colony.
+                float cdx = h.ChaseX[i] - x, cdy = h.ChaseY[i] - y;
+                float inv = speed / MathF.Sqrt(h.ChaseD2[i]);
+                vx = cdx * inv;
+                vy = cdy * inv;
+            }
+            else if (h.ChaseD2[i] < float.MaxValue)
+            {
+                vx = vy = 0; // in its face: stand and fight
+            }
+            else
+            {
+                var (fx, fy, arrived) = flow.Sample(x, y);
+                vx = arrived ? 0 : fx * speed;
+                vy = arrived ? 0 : fy * speed;
+            }
 
             // Separation: push away from overlapping neighbours in the 3x3
             // cells around us, capped so a dense crowd can't go quadratic.

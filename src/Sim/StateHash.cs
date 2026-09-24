@@ -21,6 +21,8 @@ public static class StateHash
         h = Mix(h, world.Seed);
         h = Mix(h, world.Rng.State);
         h = Mix(h, (uint)world.Outcome);
+        h = Mix(h, (uint)world.Rules.Hash);
+        h = Mix(h, (uint)(world.Rules.Hash >> 32));
         h = Mix(h, (uint)world.Terrain.Width);
         h = Mix(h, (uint)world.Terrain.Height);
         foreach (var tile in world.Terrain.Tiles) h = MixByte(h, (byte)tile);
@@ -31,6 +33,31 @@ public static class StateHash
             h = Mix(h, (uint)b.Kind);
             h = Mix(h, (uint)b.X);
             h = Mix(h, (uint)b.Y);
+            h = Mix(h, Bits(b.Hp));
+            h = Mix(h, Bits(b.Built));
+            h = MixByte(h, (byte)((b.Complete ? 1 : 0) | (b.OnGround ? 2 : 0) | (b.Staffed ? 4 : 0)));
+            h = Mix(h, Bits(b.Cooldown));
+            h = Mix(h, Bits(b.TrainProgress));
+            h = Mix(h, (uint)b.Queue.Count);
+            foreach (var q in b.Queue) h = MixByte(h, (byte)q);
+        }
+
+        var colony = world.Colony;
+        foreach (var stock in colony.Stock) h = Mix64(h, BitConverter.DoubleToInt64Bits(stock));
+        h = MixByte(h, colony.Starving ? (byte)1 : (byte)0);
+
+        h = Mix(h, (uint)world.Units.Count);
+        foreach (var u in world.Units)
+        {
+            h = Mix(h, (uint)u.Id);
+            h = MixByte(h, (byte)u.Kind);
+            h = Mix(h, Bits(u.X));
+            h = Mix(h, Bits(u.Y));
+            h = Mix(h, Bits(u.Hp));
+            h = Mix(h, Bits(u.Cooldown));
+            h = MixByte(h, (byte)u.Order);
+            h = Mix(h, (uint)u.DestX);
+            h = Mix(h, (uint)u.DestY);
         }
 
         var horde = world.Horde;
@@ -42,6 +69,8 @@ public static class StateHash
             h = Mix(h, Bits(horde.VX[i]));
             h = Mix(h, Bits(horde.VY[i]));
             h = MixByte(h, (byte)horde.Kind[i]);
+            h = Mix(h, Bits(horde.Hp[i]));
+            h = Mix(h, Bits(horde.Cooldown[i]));
         }
 
         h = Mix(h, (uint)world.Packs.Count);
@@ -63,6 +92,8 @@ public static class StateHash
     public static string Hex(World world) => Compute(world).ToString("x16");
 
     static uint Bits(float f) => (uint)BitConverter.SingleToInt32Bits(f);
+
+    static ulong Mix64(ulong h, long v) => Mix(Mix(h, (uint)v), (uint)(v >> 32));
 
     static ulong Mix(ulong h, uint value)
     {

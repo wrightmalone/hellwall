@@ -1,0 +1,50 @@
+{
+  "startingResources": { "gold": 400, "wood": 220, "stone": 80, "food": 60 },
+  "colonistGoldPerSecond": 0.12,
+  "colonistFoodPerSecond": 0.03,
+  "refundFraction": 0.5,
+
+  "buildings": {
+    "Keep":       { "size": [3, 3], "hp": 1600, "buildSeconds": 0,  "housing": 8,  "gold": 1.0,
+                    "sanctitySupply": 40, "consecrateRadius": 12 },
+    "House":      { "size": [2, 2], "hp": 250,  "buildSeconds": 6,  "cost": { "gold": 30, "wood": 20 },
+                    "housing": 6 },
+    "Woodcutter": { "size": [2, 2], "hp": 250,  "buildSeconds": 8,  "cost": { "gold": 40, "wood": 10 },
+                    "workers": 3, "sanctityUse": 2,
+                    "produces": "Wood", "perTile": 0.025, "gatherRadius": 4, "gathers": ["Forest"] },
+    "Quarry":     { "size": [2, 2], "hp": 300,  "buildSeconds": 10, "cost": { "gold": 50, "wood": 30 },
+                    "workers": 3, "sanctityUse": 2,
+                    "produces": "Stone", "perTile": 0.025, "gatherRadius": 4, "gathers": ["Rock"] },
+    "Hunter":     { "size": [2, 2], "hp": 200,  "buildSeconds": 6,  "cost": { "gold": 25, "wood": 15 },
+                    "workers": 2, "sanctityUse": 1,
+                    "produces": "Food", "perTile": 0.004, "gatherRadius": 5, "gathers": ["Grass", "Forest"] },
+    "Shrine":     { "size": [2, 2], "hp": 300,  "buildSeconds": 10, "cost": { "gold": 60, "stone": 20 },
+                    "workers": 2, "sanctitySupply": 30, "consecrateRadius": 6 },
+    "Wardstone":  { "size": [1, 1], "hp": 120,  "buildSeconds": 4,  "cost": { "gold": 15, "stone": 5 },
+                    "consecrateRadius": 5 },
+    "Wall":       { "size": [1, 1], "hp": 400,  "buildSeconds": 2,  "cost": { "wood": 3 } },
+    "Gate":       { "size": [1, 1], "hp": 500,  "buildSeconds": 4,  "cost": { "wood": 8, "stone": 2 } },
+    "Watchtower": { "size": [2, 2], "hp": 400,  "buildSeconds": 8,  "cost": { "gold": 40, "wood": 30 },
+                    "workers": 2, "sanctityUse": 3,
+                    "weapon": { "range": 7, "damage": 14, "cooldown": 0.6, "noise": 14 } },
+    "Bombard":    { "size": [2, 2], "hp": 500,  "buildSeconds": 12, "cost": { "gold": 90, "stone": 40 },
+                    "workers": 3, "sanctityUse": 6,
+                    "weapon": { "range": 8, "damage": 40, "cooldown": 2.5, "splash": 1.6, "noise": 30 } },
+    "Barracks":   { "size": [3, 3], "hp": 600,  "buildSeconds": 15, "cost": { "gold": 100, "wood": 60 },
+                    "workers": 4, "sanctityUse": 4, "trains": ["Militia", "Marksman", "Templar"] }
+  },
+
+  "units": {
+    "Militia":  { "hp": 80,  "speed": 2.6, "trainSeconds": 6,  "cost": { "gold": 20 },             "upkeepGold": 0.05,
+                  "weapon": { "range": 5,   "damage": 10, "cooldown": 0.8, "noise": 10 } },
+    "Marksman": { "hp": 50,  "speed": 2.4, "trainSeconds": 10, "cost": { "gold": 45 },             "upkeepGold": 0.10,
+                  "weapon": { "range": 9,   "damage": 45, "cooldown": 2.0, "noise": 6 } },
+    "Templar":  { "hp": 320, "speed": 2.2, "trainSeconds": 12, "cost": { "gold": 60, "food": 10 }, "upkeepGold": 0.15,
+                  "weapon": { "range": 1.4, "damage": 28, "cooldown": 1.0, "splash": 0.8, "noise": 8 } }
+  },
+
+  "demons": {
+    "Imp":   { "hp": 40, "speed": 2.0, "damage": 8, "cooldown": 1.0 },
+    "Hound": { "hp": 25, "speed": 3.6, "damage": 5, "cooldown": 0.7 }
+  }
+}

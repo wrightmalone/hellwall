@@ -14,23 +14,8 @@ public static class Balance
     /// <summary>Radius of guaranteed grass around the map centre, where the Keep goes.</summary>
     public const int KeepClearRadius = 12;
 
-    public static (int W, int H) Footprint(BuildingKind kind) => kind switch
-    {
-        BuildingKind.Keep => (3, 3),
-        BuildingKind.House => (2, 2),
-        BuildingKind.Wall => (1, 1),
-        _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, null),
-    };
 
-    // --- Horde movement ---
-
-    /// <summary>Tiles per second.</summary>
-    public static float DemonSpeed(DemonKind kind) => kind switch
-    {
-        DemonKind.Imp => 2.0f,
-        DemonKind.Hound => 3.6f,
-        _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, null),
-    };
+    // --- Horde movement (content numbers such as speed live in rules.json) ---
 
     /// <summary>Body radius in tiles; two demons closer than twice this push apart.</summary>
     public const float DemonRadius = 0.3f;
@@ -56,6 +41,13 @@ public static class Balance
     public const int CostDiagonal = 14;
     public const int ForestCostMultiplier = 2;
 
+    /// <summary>
+    /// For demons, stepping through a wall or gate costs this many ordinary
+    /// steps: the horde walks around a wall when a way round is shorter than
+    /// ~30 tiles, and breaks through it otherwise.
+    /// </summary>
+    public const int WallCostMultiplier = 30;
+
     /// <summary>Flow cost at or below which a demon is in striking distance of a building (adjacent).</summary>
     public const int ArriveDistance = 14;
 
@@ -73,6 +65,9 @@ public static class Balance
     public const int PackMinCount = 80;
     public const int PackMaxCount = 400;
     public const double PackHoundChance = 0.15;
+
+    /// <summary>Noise level of a shot at its source (radius comes from the weapon): enough to wake packs near it.</summary>
+    public const float CombatNoiseIntensity = 2f;
 
     /// <summary>Spawned demons are scattered over a disc holding about this many per tile.</summary>
     public const float SpawnDensity = 1.2f;

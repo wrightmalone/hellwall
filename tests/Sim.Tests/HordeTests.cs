@@ -1,16 +1,18 @@
 namespace Hellwall.Sim.Tests;
 
 /// <summary>
-/// Horde behaviour at test scale (128 map, hundreds of demons). The 20k
-/// performance gate is `hellwall-sim bench`, run by scripts/verify.sh.
+/// Horde movement at test scale (128 map, hundreds of demons), with harmless
+/// demons so the colony survives to be walked to. Combat has its own tests;
+/// the 20k performance gate is `hellwall-sim bench`, run by scripts/verify.sh.
 /// </summary>
 public class HordeTests
 {
     const int C = Balance.DefaultMapSize / 2;
 
-    static World NewWorld(int packs = 0)
+    static World NewWorld(int packs = 0, bool harmless = true)
     {
-        var world = World.Create(new WorldOptions(7, Balance.DefaultMapSize, packs));
+        var rules = harmless ? Rules.Default.Harmless() : Rules.Default;
+        var world = World.Create(new WorldOptions(7, Balance.DefaultMapSize, packs, rules));
         world.DrainEvents();
         return world;
     }
@@ -67,7 +69,7 @@ public class HordeTests
     }
 
     [Fact]
-    public void AWalledPocketIsUnreachable()
+    public void AWalledPocketIsReachedOnlyThroughAWall()
     {
         var world = NewWorld();
         // A closed 5x5 box of walls in the Keep's clearing; its 3x3 inside is sealed off.
@@ -78,8 +80,16 @@ public class HordeTests
                     box.Add(new PlaceBuilding(BuildingKind.Wall, x, y));
         Apply(world, box);
 
-        Assert.Equal(FlowField.Unreachable, world.Flow.DistAt(70, 60));
-        Assert.NotEqual(FlowField.Unreachable, world.Flow.DistAt(74, 60));
+        // Cheapest tile just outside the box's walls, against the centre of its inside.
+        int outside = int.MaxValue;
+        for (int y = 57; y <= 63; y++)
+            for (int x = 67; x <= 73; x++)
+                if (x == 67 || x == 73 || y == 57 || y == 63) outside = Math.Min(outside, world.Flow.DistAt(x, y));
+        int inside = world.Flow.DistAt(70, 60);
+        Assert.NotEqual(FlowField.Unreachable, inside);
+        // Getting in costs at least one wall's worth of detour.
+        Assert.True(inside - outside >= Balance.CostStraight * Balance.WallCostMultiplier,
+            $"inside {inside}, outside {outside}: the pocket is reachable without breaking a wall");
     }
 
     [Fact]
@@ -99,27 +109,70 @@ public class HordeTests
     }
 
     [Fact]
-    public void DemonsFlowAroundWallsAndInThroughTheGap()
+    public void DemonsFlowInThroughAGapRatherThanBreakingTheWall()
     {
         var world = NewWorld();
-        Apply(world, Scenarios.WallRing(world, 8, Side.East));
+        Apply(world, Scenarios.WallRing(world, 8, Side.West));
         var tile = world.FindReachableTileNear(C - 40, C, 20);
         Assert.NotNull(tile);
         Apply(world, [new SpawnDemons(DemonKind.Imp, tile.Value.X, tile.Value.Y, 300)]);
 
-        for (int t = 0; t < 120 * Balance.TickHz; t++)
+        for (int t = 0; t < 90 * Balance.TickHz; t++)
         {
             world.Step();
             if (t % 10 == 0) AssertNobodyInsideBlockedTiles(world);
         }
 
+        Assert.True(CountInsideRing(world, 8) >= 270, "demons didn't get inside the ring through its west gap");
+    }
+
+    [Fact]
+    public void DemonsWalkRoundAShortWall()
+    {
+        var world = NewWorld();
+        // A 9-tile wall across the approach from the west: going round is a few tiles.
+        var wall = Enumerable.Range(C - 4, 9).Select(y => (Command)new PlaceBuilding(BuildingKind.Wall, C - 6, y)).ToList();
+        Apply(world, wall);
+        var tile = world.FindReachableTileNear(C - 40, C, 20);
+        Apply(world, [new SpawnDemons(DemonKind.Imp, tile!.Value.X, tile.Value.Y, 200)]);
+
+        for (int t = 0; t < 60 * Balance.TickHz; t++) world.Step();
+
+        int near = 0;
+        for (int i = 0; i < world.Horde.Count; i++)
+            if (world.Flow.DistAt((int)world.Horde.X[i], (int)world.Horde.Y[i]) <= 100) near++;
+        Assert.True(near >= 180, $"only {near}/200 reached the Keep round a short wall");
+    }
+
+    [Fact]
+    public void DemonsBreakThroughASealedRing()
+    {
+        var world = NewWorld(harmless: false);
+        Apply(world, Scenarios.WallRing(world, 8)); // no gaps
+        var tile = world.FindReachableTileNear(C - 40, C, 20);
+        Apply(world, [new SpawnDemons(DemonKind.Imp, tile!.Value.X, tile.Value.Y, 300)]);
+
+        var destroyed = new List<BuildingDestroyed>();
+        for (int t = 0; t < 120 * Balance.TickHz && world.Outcome == Outcome.Running; t++)
+        {
+            world.Step();
+            destroyed.AddRange(world.DrainEvents().OfType<BuildingDestroyed>());
+        }
+
+        Assert.Contains(destroyed, d => d.Kind == BuildingKind.Wall);
+        // Once through, they reach the Keep and kill it: breaching means something.
+        Assert.Equal(Outcome.Lost, world.Outcome);
+    }
+
+    static int CountInsideRing(World world, int radius)
+    {
         int inside = 0;
         for (int i = 0; i < world.Horde.Count; i++)
         {
             float x = world.Horde.X[i], y = world.Horde.Y[i];
-            if (x > C - 8 && x < C + 8 && y > C - 8 && y < C + 8) inside++;
+            if (x > C - radius && x < C + radius && y > C - radius && y < C + radius) inside++;
         }
-        Assert.True(inside >= 270, $"only {inside}/300 got inside the ring through its east gap");
+        return inside;
     }
 
     [Fact]

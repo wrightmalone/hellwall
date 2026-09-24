@@ -14,7 +14,7 @@ public class PlacementTests
     public void CreationAnnouncesTheKeep()
     {
         var world = World.Create(new WorldOptions(7));
-        var placed = Assert.IsType<BuildingPlaced>(Assert.Single(world.DrainEvents()));
+        var placed = Assert.Single(world.DrainEvents().OfType<BuildingPlaced>());
         Assert.Equal(BuildingKind.Keep, placed.Kind);
     }
 
@@ -80,7 +80,7 @@ public class PlacementTests
         var world = NewWorld();
         var placed = Run(world, new PlaceBuilding(BuildingKind.House, 68, 62)).OfType<BuildingPlaced>().Single();
 
-        Assert.IsType<BuildingRemoved>(Assert.Single(Run(world, new Demolish(placed.BuildingId))));
+        Assert.Single(Run(world, new Demolish(placed.BuildingId)).OfType<BuildingRemoved>());
         Assert.Equal(0, world.BuildingIdAt(68, 62));
 
         var keepId = world.Buildings[0].Id;

@@ -49,6 +49,11 @@ internal sealed class SpatialHash
         for (int i = 0; i < n; i++) Items[_cursor[CellOf(horde.X[i], horde.Y[i])]++] = i;
     }
 
+    /// <summary>Inclusive tile range covering a square of the given radius around a point, clamped to the map.</summary>
+    public (int X0, int X1, int Y0, int Y1) CellRange(float x, float y, float radius) =>
+        (Math.Max(0, (int)(x - radius)), Math.Min(Width - 1, (int)(x + radius)),
+         Math.Max(0, (int)(y - radius)), Math.Min(Height - 1, (int)(y + radius)));
+
     int CellOf(float x, float y)
     {
         int tx = Math.Clamp((int)x, 0, Width - 1);

@@ -32,6 +32,10 @@ echo "seed 7: $a | seed 7 again: $b | seed 8: $c"
 step "horde bench (20k demons, headless)"
 dotnet src/Sim.Headless/bin/Release/net10.0/hellwall-sim.dll bench
 
+# Phase 2 gate: a walled town holds a wave that an undefended one doesn't, on five seeds.
+step "town probe (defended holds, undefended falls)"
+dotnet src/Sim.Headless/bin/Release/net10.0/hellwall-sim.dll town
+
 if [[ $RUN_GODOT == 1 ]]; then
   step "godot: build C# and boot the main scene"
   mkdir -p out

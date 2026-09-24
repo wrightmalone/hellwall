@@ -85,4 +85,28 @@ public static class Scenarios
         }
         return commands;
     }
+
+    /// <summary>
+    /// A wave of `count` demons from the middle of one map edge, `inset` tiles
+    /// in, snapped to ground that can reach the colony. One in five is a Hound.
+    /// </summary>
+    public static List<Command> Wave(World world, Side side, int count, int inset = 6)
+    {
+        int size = world.Terrain.Width, c = size / 2;
+        var (x, y) = side switch
+        {
+            Side.North => (c, inset),
+            Side.South => (c, size - 1 - inset),
+            Side.West => (inset, c),
+            _ => (size - 1 - inset, c),
+        };
+        var tile = world.FindReachableTileNear(x, y, maxRadius: 30);
+        if (tile == null) return [];
+        int hounds = count / 5;
+        return
+        [
+            new SpawnDemons(DemonKind.Imp, tile.Value.X, tile.Value.Y, count - hounds),
+            new SpawnDemons(DemonKind.Hound, tile.Value.X, tile.Value.Y, hounds),
+        ];
+    }
 }

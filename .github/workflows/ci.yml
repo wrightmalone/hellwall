@@ -26,3 +26,7 @@ jobs:
           a=$(run 7); b=$(run 7); c=$(run 8)
           echo "$a / $b / $c"
           [ "$a" = "$b" ] && [ "$a" != "$c" ]
+      - name: Horde bench and town probe
+        run: |
+          dotnet src/Sim.Headless/bin/Release/net10.0/hellwall-sim.dll bench
+          dotnet src/Sim.Headless/bin/Release/net10.0/hellwall-sim.dll town

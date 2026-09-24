@@ -1,14 +1,18 @@
 namespace Hellwall.Sim;
 
 /// <summary>
-/// One shared route map for the whole horde, instead of a path per demon.
+/// A shared route map: Dijkstra outward from a set of source tiles, then each
+/// tile points at its cheapest neighbour, so any number of walkers cost the
+/// same pathing as one. Two uses:
 ///
-/// Dijkstra from every tile of a target building (Keep, House) outward
-/// through walkable ground, then each tile points at its cheapest neighbour.
-/// A demon only has to sample the tile it stands on, so 20k demons cost the
-/// same pathing as one. Walls are obstacles, not targets: the horde flows
-/// around them to whatever they protect. Breaching a sealed wall comes with
-/// combat in phase 2.
+/// Demons: sources are every tile of every building that isn't a wall or
+/// gate. Walls and gates are passable at WallCostMultiplier times the normal
+/// cost, so the horde walks round a wall when that's short and otherwise its
+/// route runs through the wall. A demon whose next tile holds a building
+/// attacks it (Combat.DemonsAttackBuildings), which is all breaching is.
+///
+/// Humans: the source is one ordered destination; soldiers pass gates and
+/// nothing else built.
 ///
 /// Rebuilt whenever buildings change. A full rebuild on a 256x256 map is
 /// cheap enough for now; `bench` reports its cost, and if it grows, the plan
@@ -29,12 +33,13 @@ public sealed class FlowField
     public readonly float[] DirY;
 
     // Padded working grids, (Width + 2) x (Height + 2), border blocked.
+    readonly bool[] _open;
     readonly bool[] _walk;
     readonly byte[] _cost;
     readonly int[] _dist;
 
-    /// <summary>Ring size for Dial's algorithm: a power of two above the largest single step (diagonal forest, 28).</summary>
-    const int Buckets = 32;
+    /// <summary>Ring size for Dial's algorithm: a power of two above the largest single step (a diagonal into a wall).</summary>
+    const int Buckets = 512;
 
     readonly int[][] _bucket;
     readonly int[] _bucketCount = new int[Buckets];
@@ -51,21 +56,31 @@ public sealed class FlowField
         DirX = new float[width * height];
         DirY = new float[width * height];
         int padded = (width + 2) * (height + 2);
+        _open = new bool[padded];
         _walk = new bool[padded];
         _cost = new byte[padded];
         _dist = new int[padded];
-        if (Balance.CostDiagonal * Balance.ForestCostMultiplier >= Buckets)
+        if (Balance.CostDiagonal * Math.Max(Balance.ForestCostMultiplier, Balance.WallCostMultiplier) >= Buckets)
             throw new InvalidOperationException($"largest flow step must stay below {Buckets} for Dial's algorithm; raise Buckets");
         _bucket = new int[Buckets][];
         for (int i = 0; i < Buckets; i++) _bucket[i] = new int[256];
     }
 
-    public static bool IsTarget(BuildingKind kind) => kind is BuildingKind.Keep or BuildingKind.House;
+    /// <summary>What the horde heads for: everything built except walls and gates, which it paths through.</summary>
+    public static bool IsTarget(BuildingKind kind) => kind is not (BuildingKind.Wall or BuildingKind.Gate);
 
-    public void Build(World world)
+    /// <summary>The demon field: toward every target building, through walls at a cost.</summary>
+    public void Build(World world) => Build(world, human: false, 0, 0);
+
+    /// <summary>A soldier field: toward one tile, through gates but no other buildings.</summary>
+    public void BuildHuman(World world, int destX, int destY) => Build(world, human: true, destX, destY);
+
+    void Build(World world, bool human, int destX, int destY)
     {
         // Padded copies (one tile of blocked border) so the hot loops below
         // need no bounds checks: every neighbour of an interior cell exists.
+        // _open is ground a walker can stand on; _walk is what the search may
+        // expand into, which for demons also includes walls, at a cost.
         int pw = Width + 2;
         var terrain = world.Terrain;
         for (int y = 0; y < Height; y++)
@@ -73,9 +88,13 @@ public sealed class FlowField
             for (int x = 0; x < Width; x++)
             {
                 int p = (y + 1) * pw + x + 1;
-                bool walk = world.IsWalkable(x, y);
-                _walk[p] = walk;
-                _cost[p] = (byte)(!walk ? 0 : terrain.Get(x, y) == Tile.Forest ? Balance.ForestCostMultiplier : 1);
+                bool open = human ? world.IsHumanWalkable(x, y) : world.IsWalkable(x, y);
+                bool wall = !human && !open && world.IsWallAt(x, y);
+                _open[p] = open;
+                _walk[p] = open || wall;
+                _cost[p] = (byte)(wall ? Balance.WallCostMultiplier
+                    : !open ? 0
+                    : terrain.Get(x, y) == Tile.Forest ? Balance.ForestCostMultiplier : 1);
             }
         }
 
@@ -87,17 +106,30 @@ public sealed class FlowField
         Array.Fill(_dist, Unreachable);
         Array.Clear(_bucketCount);
         int pending = 0;
-        foreach (var b in world.Buildings)
+        if (human)
         {
-            if (!IsTarget(b.Kind)) continue;
-            for (int y = b.Y; y < b.Y + b.H; y++)
-                for (int x = b.X; x < b.X + b.W; x++)
-                {
-                    int p = (y + 1) * pw + x + 1;
-                    _dist[p] = 0;
-                    Push(0, p);
-                    pending++;
-                }
+            if (destX >= 0 && destY >= 0 && destX < Width && destY < Height)
+            {
+                int p = (destY + 1) * pw + destX + 1;
+                _dist[p] = 0;
+                Push(0, p);
+                pending++;
+            }
+        }
+        else
+        {
+            foreach (var b in world.BuildingList)
+            {
+                if (!IsTarget(b.Kind)) continue;
+                for (int y = b.Y; y < b.Y + b.H; y++)
+                    for (int x = b.X; x < b.X + b.W; x++)
+                    {
+                        int p = (y + 1) * pw + x + 1;
+                        _dist[p] = 0;
+                        Push(0, p);
+                        pending++;
+                    }
+            }
         }
 
         Span<int> offset = [1, -1, pw, -pw, pw + 1, -pw + 1, pw - 1, -pw - 1];
@@ -122,7 +154,7 @@ public sealed class FlowField
                     else
                     {
                         // No corner cutting: a diagonal step needs both orthogonal tiles open.
-                        if (!_walk[p + Ox[k]] || !_walk[p + Oy[k] * pw]) continue;
+                        if (!_open[p + Ox[k]] || !_open[p + Oy[k] * pw]) continue;
                         step = Balance.CostDiagonal;
                     }
                     int nd = cur + step * _cost[np];
@@ -151,7 +183,7 @@ public sealed class FlowField
                 int bk = -1;
                 for (int k = 0; k < 8; k++)
                 {
-                    if (k >= 4 && (!_walk[p + Ox[k]] || !_walk[p + Oy[k] * pw])) continue;
+                    if (k >= 4 && (!_open[p + Ox[k]] || !_open[p + Oy[k] * pw])) continue;
                     int nd = _dist[p + offset[k]];
                     if (nd < best)
                     {
@@ -215,6 +247,7 @@ public sealed class FlowField
     bool Accumulate(int x, int y, float weight, ref float sx, ref float sy)
     {
         if (x < 0 || y < 0 || x >= Width || y >= Height) return false;
+        if (!_open[(y + 1) * (Width + 2) + x + 1]) return false; // a wall has a direction, but nobody stands on it
         int i = y * Width + x;
         float dx = DirX[i], dy = DirY[i];
         sx += dx * weight;

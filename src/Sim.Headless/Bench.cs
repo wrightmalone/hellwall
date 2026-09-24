@@ -16,8 +16,8 @@ namespace Hellwall.Headless;
 ///   walls     no demon ever inside a wall, building, rock or water
 ///   crowding  no tile ever holds more than --max-density demons (default 12)
 ///   stuck     at most --max-stuck (default 1%) of demons made no progress
-///             over the final 30s while the tile their flow points into had
-///             room. Waiting behind a full tile is a queue, which is correct;
+///             over the final 30s while the tile their flow points into was
+///             uncrowded. Waiting behind a crowd is a queue, which is correct;
 ///             pressing against rock with open ground ahead is a bug.
 ///
 /// "Arrived" can't be a gate: two 3-tile gaps can't admit 20k demons in any
@@ -43,7 +43,12 @@ public static class Bench
         bool trace = args.ContainsKey("trace");
         if (ticks <= StallWindowTicks) throw new ArgumentException($"--ticks must exceed the {StallWindowTicks}-tick stall window");
 
-        var world = World.Create(new WorldOptions(seed, size));
+        // An unkillable Keep: the bench measures a horde at full strength, and a
+        // fallen Keep ends the game, which would stop the clock on a world with
+        // nothing left to do. Walls can still be breached, so breaches and the
+        // flow rebuilds they cause are part of what's timed.
+        var rules = Rules.Default.WithBuilding(BuildingKind.Keep, k => k with { Hp = 1e9f });
+        var world = World.Create(new WorldOptions(seed, size, 0, rules));
         foreach (var c in Scenarios.WallRing(world, Scenarios.BenchRingRadius, Side.East, Side.West)) world.Enqueue(c);
         world.Step();
         // A rejected wall is a hole in the ring, and the horde would stream through it
@@ -96,7 +101,11 @@ public static class Bench
         {
             if (end[i] <= AtColony) { atColony++; continue; }
             if (end[i] < distAtWindowStart![i]) continue;
-            if (HasRoomAhead(world, perTile, h.X[i], h.Y[i])) stuck++;
+            if (HasRoomAhead(world, perTile, h.X[i], h.Y[i]))
+            {
+                stuck++;
+                if (args.ContainsKey("stuck") && stuck <= 12) DescribeStuck(world, perTile, i);
+            }
             else queued++;
         }
         double stuckFraction = stuck / (double)Math.Max(1, spawned);
@@ -113,9 +122,10 @@ public static class Bench
         Console.WriteLine($"flow_ms   {F(flowMs)} warm full rebuild   gate <={F(flowGateMs)}");
         Console.WriteLine($"crowding  densest tile {densest} demons   gate <={maxDensity}");
         Console.WriteLine($"stuck     {stuck} ({F(stuckFraction * 100)}%) no progress in 30s with room ahead   gate <={F(maxStuck * 100)}%");
-        Console.WriteLine($"queued    {queued} no progress in 30s, waiting behind a full tile (informational)");
+        Console.WriteLine($"queued    {queued} no progress in 30s, waiting behind a crowd (informational)");
         Console.WriteLine($"walls     {intrusions} demon-ticks inside blocked tiles   gate 0");
         Console.WriteLine($"at colony {atColony}/{spawned} within {AtColony / 10} path-tiles (informational)");
+        Console.WriteLine($"combat    {world.Stats.BuildingsLost} buildings destroyed, outcome {world.Outcome} (informational)");
         Console.WriteLine($"gc        {gcs} gen0 collections, {allocated / 1024} KiB allocated during {ticks} ticks (informational)");
         Console.WriteLine($"hash={StateHash.Hex(world)}");
 
@@ -126,6 +136,7 @@ public static class Bench
         Gate(densest <= maxDensity, "crowd piled up");
         Gate(stuckFraction <= maxStuck, "demons stuck with room to move");
         Gate(intrusions == 0, "demons inside blocked tiles");
+        Gate(world.Outcome == Outcome.Running, "the world stopped, so the timings cover a finished game");
         return ok ? 0 : 1;
     }
 
@@ -143,14 +154,30 @@ public static class Bench
         return best;
     }
 
-    /// <summary>The tile this demon's flow direction points into is walkable and under the density cap.</summary>
+    /// <summary>
+    /// The tile this demon's flow direction points into is walkable and
+    /// uncrowded. Uncrowded means below ComfortDensity, where crowd pressure
+    /// starts pushing back, not below the hard cap: a demon at the tail of a
+    /// queue whose next tile holds 5 is held back by the queue, correctly.
+    /// </summary>
     static bool HasRoomAhead(World world, int[] perTile, float x, float y)
     {
         var (fx, fy, _) = world.Flow.Sample(x, y);
         if (fx == 0 && fy == 0) return false;
         int ax = (int)(x + MathF.Sign(fx) * (MathF.Abs(fx) > 0.38f ? 1 : 0));
         int ay = (int)(y + MathF.Sign(fy) * (MathF.Abs(fy) > 0.38f ? 1 : 0));
-        return world.IsWalkable(ax, ay) && perTile[ay * world.Terrain.Width + ax] < Balance.MaxDensity;
+        return world.IsWalkable(ax, ay) && perTile[ay * world.Terrain.Width + ax] < Balance.ComfortDensity;
+    }
+
+    static void DescribeStuck(World world, int[] perTile, int i)
+    {
+        var h = world.Horde;
+        int tx = (int)h.X[i], ty = (int)h.Y[i];
+        int t = ty * world.Terrain.Width + tx;
+        var (fx, fy, arrived) = world.Flow.Sample(h.X[i], h.Y[i]);
+        string Around(int ox, int oy) => world.IsWalkable(tx + ox, ty + oy) ? perTile[(ty + oy) * world.Terrain.Width + tx + ox].ToString() : "#";
+        Console.WriteLine(FormattableString.Invariant(
+            $"  stuck {h.Kind[i]} at ({h.X[i]:F2},{h.Y[i]:F2}) {world.Terrain.Get(tx, ty)} dist={world.Flow.DistAt(tx, ty)} tiledir=({world.Flow.DirX[t]:F2},{world.Flow.DirY[t]:F2}) sample=({fx:F2},{fy:F2}) v=({h.VX[i]:F2},{h.VY[i]:F2}) cd={h.Cooldown[i]:F2}  n={Around(0, -1)} s={Around(0, 1)} w={Around(-1, 0)} e={Around(1, 0)} here={perTile[t]}"));
     }
 
     static int[] Distances(World world)

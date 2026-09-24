@@ -20,3 +20,25 @@ public sealed record PackWoke(int Tick, int PackId, int X, int Y, int Count) : S
 
 /// <summary>For the client and, later, audio: where something was loud.</summary>
 public sealed record NoiseMade(int Tick, float X, float Y, float Radius) : SimEvent(Tick);
+
+public sealed record BuildingCompleted(int Tick, int BuildingId, BuildingKind Kind) : SimEvent(Tick);
+
+public sealed record BuildingDestroyed(int Tick, int BuildingId, BuildingKind Kind, int X, int Y) : SimEvent(Tick);
+
+/// <summary>The holy grid changed shape; the client should repaint consecrated ground.</summary>
+public sealed record ConsecrationChanged(int Tick) : SimEvent(Tick);
+
+public sealed record UnitTrained(int Tick, int UnitId, UnitKind Kind, int BarracksId) : SimEvent(Tick);
+
+public sealed record UnitDied(int Tick, int UnitId, UnitKind Kind, float X, float Y) : SimEvent(Tick);
+
+/// <summary>One per tick with kills, not one per demon: a Bombard volley can kill dozens.</summary>
+public sealed record DemonsKilled(int Tick, int Count) : SimEvent(Tick);
+
+/// <summary>
+/// A shot the player's side fired, so the client can draw it. Damage is
+/// resolved instantly; there are no projectiles in the sim.
+/// </summary>
+public sealed record ShotFired(int Tick, float FromX, float FromY, float ToX, float ToY, float Splash, bool FromUnit) : SimEvent(Tick);
+
+public sealed record OutcomeChanged(int Tick, Outcome Outcome) : SimEvent(Tick);

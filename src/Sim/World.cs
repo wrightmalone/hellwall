@@ -1,12 +1,5 @@
 namespace Hellwall.Sim;
 
-public enum BuildingKind : byte
-{
-    Keep,
-    House,
-    Wall,
-}
-
 public enum Outcome : byte
 {
     Running,
@@ -14,20 +7,16 @@ public enum Outcome : byte
     Won,
 }
 
-public sealed class Building
-{
-    public int Id;
-    public BuildingKind Kind;
-
-    /// <summary>Top-left tile of the footprint.</summary>
-    public int X;
-    public int Y;
-    public int W;
-    public int H;
-}
-
 /// <param name="DormantPacks">How many sleeping packs to scatter at creation. Zero keeps tests quiet.</param>
-public readonly record struct WorldOptions(uint Seed, int MapSize = Balance.DefaultMapSize, int DormantPacks = 0);
+/// <param name="Rules">Content numbers; null for the defaults shipped in rules.json.</param>
+public readonly record struct WorldOptions(uint Seed, int MapSize = Balance.DefaultMapSize, int DormantPacks = 0, Rules? Rules = null);
+
+public sealed class WorldStats
+{
+    public int DemonsKilled;
+    public int BuildingsLost;
+    public int UnitsLost;
+}
 
 /// <summary>
 /// The whole simulation state and its fixed-rate step. Plain data plus the
@@ -39,11 +28,17 @@ public sealed class World
     public int Tick { get; private set; }
     public uint Seed { get; }
     public Rng Rng { get; }
+    public Rules Rules { get; }
     public Terrain Terrain { get; }
     public Outcome Outcome { get; private set; } = Outcome.Running;
+    public Colony Colony { get; }
+    public WorldStats Stats { get; } = new();
 
     /// <summary>Ordered by id, ascending. Hashing and iteration rely on that.</summary>
     public IReadOnlyList<Building> Buildings => _buildings;
+
+    /// <summary>Ordered by id, ascending.</summary>
+    public IReadOnlyList<Unit> Units => _units;
 
     public Horde Horde { get; } = new();
     public FlowField Flow { get; }
@@ -52,10 +47,24 @@ public sealed class World
     /// <summary>Ordered by id, ascending.</summary>
     public IReadOnlyList<Pack> Packs => _packs;
 
+    /// <summary>
+    /// The concrete lists, for the systems. foreach over an IReadOnlyList
+    /// boxes its enumerator, which would allocate every tick.
+    /// </summary>
+    internal List<Building> BuildingList => _buildings;
+    internal List<Unit> UnitList => _units;
+
     internal SpatialHash Spatial { get; }
+    internal bool NetworkDirty { get; private set; } = true;
 
     readonly List<Building> _buildings = new();
+    readonly Dictionary<int, Building> _buildingById = new();
+    readonly List<Unit> _units = new();
     readonly List<Pack> _packs = new();
+
+    /// <summary>Soldier route maps by destination tile, shared by every unit sent there; rebuilt when buildings change.</summary>
+    readonly Dictionary<int, FlowField> _humanFields = new();
+    readonly List<FlowField> _spareFields = new();
 
     /// <summary>Building id per tile, 0 for empty.</summary>
     readonly int[] _occupancy;
@@ -65,15 +74,17 @@ public sealed class World
     int _nextId = 1;
     bool _flowDirty = true;
 
-    /// <summary>Demons were added since the spatial hash was last built.</summary>
+    /// <summary>The horde changed (spawns, deaths) since the spatial hash was last built.</summary>
     bool _spatialStale;
 
     World(WorldOptions options)
     {
         Seed = options.Seed;
         Rng = new Rng(options.Seed);
+        Rules = options.Rules ?? Rules.Default;
         Terrain = MapGen.Generate(options.Seed, options.MapSize);
         _occupancy = new int[Terrain.Width * Terrain.Height];
+        Colony = new Colony(Terrain.Width * Terrain.Height, Rules.StartingResources);
         Flow = new FlowField(Terrain.Width, Terrain.Height);
         Noise = new NoiseGrid(Terrain.Width, Terrain.Height);
         Spatial = new SpatialHash(Terrain.Width, Terrain.Height);
@@ -82,10 +93,12 @@ public sealed class World
     public static World Create(WorldOptions options)
     {
         var world = new World(options);
-        var (w, h) = Balance.Footprint(BuildingKind.Keep);
+        var def = world.Rules[BuildingKind.Keep];
         int centre = options.MapSize / 2;
-        string? reason = world.TryPlace(BuildingKind.Keep, centre - w / 2, centre - h / 2, makeNoise: false);
-        if (reason != null) throw new InvalidOperationException($"Keep could not be placed: {reason}");
+        var keep = world.AddBuilding(BuildingKind.Keep, centre - def.W / 2, centre - def.H / 2);
+        keep.Complete = true;
+        keep.Built = def.BuildSeconds;
+        ColonySystem.RecomputeNetwork(world);
         world.EnsureFlow();
         world.ScatterPacks(options.DormantPacks);
         return world;
@@ -93,16 +106,29 @@ public sealed class World
 
     public void Enqueue(Command command) => _pending.Add(command);
 
-    /// <summary>Advance one tick: drain commands, then run systems.</summary>
+    /// <summary>Advance one tick.</summary>
     public void Step()
     {
         if (Outcome != Outcome.Running) return;
+        const float dt = 1f / Balance.TickHz;
+
         ApplyCommands();
+        ColonySystem.Step(this, dt);
         EnsureFlow();
+        RebuildHumanFieldsIfNeeded();
         Noise.Decay();
         WakePacks();
-        HordeSystem.Step(this);
+
+        Spatial.Build(Horde);
         _spatialStale = false;
+        UnitSystem.MarkChase(this);
+        HordeSystem.Move(this);
+        UnitSystem.TakeHits(this);
+        Combat.DemonsAttackBuildings(this);
+        UnitSystem.Step(this, dt);
+        Combat.TowersFire(this, dt);
+
+        ResolveDeaths();
         Tick++;
     }
 
@@ -126,28 +152,82 @@ public sealed class World
         return drained;
     }
 
+    internal void Emit(SimEvent e) => _events.Add(e);
+
+    internal void MarkNetworkDirty() => NetworkDirty = true;
+
+    internal void ClearNetworkDirty() => NetworkDirty = false;
+
     public int BuildingIdAt(int x, int y) => Terrain.InBounds(x, y) ? _occupancy[Terrain.Index(x, y)] : 0;
+
+    public Building? BuildingById(int id) => _buildingById.GetValueOrDefault(id);
+
+    public Unit? UnitById(int id)
+    {
+        foreach (var u in _units) if (u.Id == id) return u;
+        return null;
+    }
 
     /// <summary>Demons can stand here: walkable terrain with no building on it.</summary>
     public bool IsWalkable(int x, int y) =>
         Terrain.InBounds(x, y) && Terrain.IsWalkable(Terrain.Get(x, y)) && _occupancy[Terrain.Index(x, y)] == 0;
 
+    /// <summary>Soldiers can stand here: like demons, but they pass through gates.</summary>
+    public bool IsHumanWalkable(int x, int y)
+    {
+        if (!Terrain.InBounds(x, y) || !Terrain.IsWalkable(Terrain.Get(x, y))) return false;
+        int id = _occupancy[Terrain.Index(x, y)];
+        return id == 0 || _buildingById[id].Kind == BuildingKind.Gate;
+    }
+
+    internal bool IsWallAt(int x, int y)
+    {
+        int id = BuildingIdAt(x, y);
+        return id != 0 && _buildingById[id].IsWallLike;
+    }
+
+    public bool FootprintConsecrated(int x, int y, int w, int h)
+    {
+        if (x < 0 || y < 0 || x + w > Terrain.Width || y + h > Terrain.Height) return false;
+        for (int ty = y; ty < y + h; ty++)
+            for (int tx = x; tx < x + w; tx++)
+                if (!Colony.Consecrated[Terrain.Index(tx, ty)]) return false;
+        return true;
+    }
+
     /// <summary>Why a building can't go here, or null if it can. Lets the client preview placement.</summary>
     public string? CheckPlacement(BuildingKind kind, int x, int y)
     {
-        var (w, h) = Balance.Footprint(kind);
-        if (kind == BuildingKind.Keep && _buildings.Count > 0) return "only one Keep";
-        if (x < 0 || y < 0 || x + w > Terrain.Width || y + h > Terrain.Height) return "out of bounds";
-        for (int ty = y; ty < y + h; ty++)
+        if (kind == BuildingKind.Keep) return "only one Keep";
+        var def = Rules[kind];
+        if (x < 0 || y < 0 || x + def.W > Terrain.Width || y + def.H > Terrain.Height) return "out of bounds";
+        for (int ty = y; ty < y + def.H; ty++)
         {
-            for (int tx = x; tx < x + w; tx++)
+            for (int tx = x; tx < x + def.W; tx++)
             {
                 if (!Terrain.IsBuildable(Terrain.Get(tx, ty))) return "terrain not buildable";
                 if (_occupancy[Terrain.Index(tx, ty)] != 0) return "tile occupied";
             }
         }
-        if (DemonsInRect(x, y, w, h)) return "demons in the way";
-        return null;
+        if (!FootprintConsecrated(x, y, def.W, def.H)) return "not on consecrated ground";
+        if (DemonsInRect(x, y, def.W, def.H)) return "demons in the way";
+        return Colony.Shortfall(def.Cost);
+    }
+
+    /// <summary>What a gatherer placed here would collect per second at full sanctity, for the placement preview.</summary>
+    public double EstimateGathering(BuildingKind kind, int x, int y)
+    {
+        var def = Rules[kind];
+        if (def.Produces == null) return 0;
+        var claimed = new bool[Terrain.Width * Terrain.Height];
+        foreach (var b in _buildings)
+            if (b.Complete && b.Def.Produces == def.Produces)
+                ColonySystem.CountGatherable(this, b.Def, b.CentreX, b.CentreY, claimed, claim: true);
+        // Once built it stands on its own footprint, which then can't be gathered.
+        for (int ty = y; ty < y + def.H; ty++)
+            for (int tx = x; tx < x + def.W; tx++)
+                if (Terrain.InBounds(tx, ty)) claimed[Terrain.Index(tx, ty)] = true;
+        return ColonySystem.CountGatherable(this, def, x + def.W / 2f, y + def.H / 2f, claimed, claim: false) * def.PerTile;
     }
 
     /// <summary>
@@ -158,19 +238,47 @@ public sealed class World
     public (int X, int Y)? FindReachableTileNear(int x, int y, int maxRadius)
     {
         EnsureFlow();
+        return FindTileNear(x, y, maxRadius, (tx, ty) => IsWalkable(tx, ty) && Flow.DistAt(tx, ty) != FlowField.Unreachable);
+    }
+
+    static (int X, int Y)? FindTileNear(int x, int y, int maxRadius, Func<int, int, bool> ok)
+    {
         for (int r = 0; r <= maxRadius; r++)
-        {
             for (int dy = -r; dy <= r; dy++)
-            {
                 for (int dx = -r; dx <= r; dx++)
                 {
                     if (Math.Max(Math.Abs(dx), Math.Abs(dy)) != r) continue;
-                    int tx = x + dx, ty = y + dy;
-                    if (IsWalkable(tx, ty) && Flow.DistAt(tx, ty) != FlowField.Unreachable) return (tx, ty);
+                    if (ok(x + dx, y + dy)) return (x + dx, y + dy);
                 }
-            }
-        }
         return null;
+    }
+
+    internal void DamageBuilding(int id, float damage)
+    {
+        if (_buildingById.TryGetValue(id, out var b)) b.Hp -= damage;
+    }
+
+    /// <summary>Put a trained unit on the nearest open tile beside its Barracks. False if there's no room yet.</summary>
+    internal bool TrySpawnUnit(UnitKind kind, Building barracks)
+    {
+        var tile = FindTileNear((int)barracks.CentreX, barracks.Y + barracks.H, 6, IsHumanWalkable);
+        if (tile == null) return false;
+        var def = Rules[kind];
+        var u = new Unit
+        {
+            Id = _nextId++,
+            Kind = kind,
+            Def = def,
+            X = tile.Value.X + 0.5f,
+            Y = tile.Value.Y + 0.5f,
+            Hp = def.Hp,
+            Order = OrderKind.Idle,
+        };
+        u.PrevX = u.X;
+        u.PrevY = u.Y;
+        _units.Add(u);
+        Emit(new UnitTrained(Tick, u.Id, kind, barracks.Id));
+        return true;
     }
 
     void EnsureFlow()
@@ -178,6 +286,45 @@ public sealed class World
         if (!_flowDirty) return;
         Flow.Build(this);
         _flowDirty = false;
+    }
+
+    bool _humanFieldsDirty;
+
+    void RebuildHumanFieldsIfNeeded()
+    {
+        // Release fields nobody is using any more.
+        if (_humanFields.Count > 0)
+        {
+            var inUse = new HashSet<FlowField>();
+            foreach (var u in _units) if (u.Field != null) inUse.Add(u.Field);
+            foreach (var key in _humanFields.Keys.ToList())
+            {
+                if (inUse.Contains(_humanFields[key])) continue;
+                _spareFields.Add(_humanFields[key]);
+                _humanFields.Remove(key);
+            }
+        }
+        if (!_humanFieldsDirty) return;
+        _humanFieldsDirty = false;
+        foreach (var (key, field) in _humanFields) field.BuildHuman(this, key % Terrain.Width, key / Terrain.Width);
+    }
+
+    FlowField HumanFieldTo(int x, int y)
+    {
+        int key = Terrain.Index(x, y);
+        if (_humanFields.TryGetValue(key, out var field)) return field;
+        if (_spareFields.Count > 0)
+        {
+            field = _spareFields[^1];
+            _spareFields.RemoveAt(_spareFields.Count - 1);
+        }
+        else
+        {
+            field = new FlowField(Terrain.Width, Terrain.Height);
+        }
+        field.BuildHuman(this, x, y);
+        _humanFields[key] = field;
+        return field;
     }
 
     void ApplyCommands()
@@ -192,42 +339,77 @@ public sealed class World
     {
         string? reason = command switch
         {
-            PlaceBuilding p => TryPlace(p.Kind, p.X, p.Y, makeNoise: true),
+            PlaceBuilding p => TryPlace(p.Kind, p.X, p.Y),
             Demolish d => TryDemolish(d.BuildingId),
             SpawnDemons s => TrySpawn(s),
             MakeNoise m => TryNoise(m.X + 0.5f, m.Y + 0.5f, m.Radius, m.Intensity),
+            TrainUnit t => TryTrain(t),
+            OrderUnits o => TryOrder(o),
             _ => "unknown command",
         };
         if (reason != null) _events.Add(new CommandRejected(Tick, reason, command));
     }
 
-    string? TryPlace(BuildingKind kind, int x, int y, bool makeNoise)
+    string? TryPlace(BuildingKind kind, int x, int y)
     {
         string? reason = CheckPlacement(kind, x, y);
         if (reason != null) return reason;
 
-        var (w, h) = Balance.Footprint(kind);
-        var building = new Building { Id = _nextId++, Kind = kind, X = x, Y = y, W = w, H = h };
-        _buildings.Add(building);
-        Stamp(building, building.Id);
-        _flowDirty = true;
-        _events.Add(new BuildingPlaced(Tick, building.Id, kind, x, y));
-        if (makeNoise) TryNoise(x + w / 2f, y + h / 2f, Balance.BuildNoiseRadius, Balance.BuildNoiseIntensity);
+        var def = Rules[kind];
+        Colony.Pay(def.Cost);
+        var building = AddBuilding(kind, x, y);
+        if (def.BuildSeconds <= 0)
+        {
+            building.Complete = true;
+            MarkNetworkDirty();
+        }
+        TryNoise(x + def.W / 2f, y + def.H / 2f, Balance.BuildNoiseRadius, Balance.BuildNoiseIntensity);
         return null;
+    }
+
+    Building AddBuilding(BuildingKind kind, int x, int y)
+    {
+        var def = Rules[kind];
+        var building = new Building { Id = _nextId++, Kind = kind, Def = def, X = x, Y = y, W = def.W, H = def.H, Hp = def.Hp };
+        _buildings.Add(building);
+        _buildingById[building.Id] = building;
+        Stamp(building, building.Id);
+        OnLayoutChanged();
+        _events.Add(new BuildingPlaced(Tick, building.Id, kind, x, y));
+        return building;
     }
 
     string? TryDemolish(int id)
     {
-        int index = _buildings.FindIndex(b => b.Id == id);
-        if (index < 0) return "no such building";
-        var building = _buildings[index];
+        if (!_buildingById.TryGetValue(id, out var building)) return "no such building";
         if (building.Kind == BuildingKind.Keep) return "the Keep cannot be demolished";
-
-        _buildings.RemoveAt(index);
-        Stamp(building, 0);
-        _flowDirty = true;
+        // Full refund for something not yet finished, a fraction once it's standing.
+        Colony.Refund(building.Def.Cost, building.Complete ? Rules.RefundFraction : 1);
+        RefundQueue(building);
+        RemoveBuilding(building);
         _events.Add(new BuildingRemoved(Tick, building.Id, building.Kind));
         return null;
+    }
+
+    void RemoveBuilding(Building building)
+    {
+        _buildings.Remove(building);
+        _buildingById.Remove(building.Id);
+        Stamp(building, 0);
+        OnLayoutChanged();
+        MarkNetworkDirty();
+    }
+
+    void RefundQueue(Building building)
+    {
+        foreach (var kind in building.Queue) Colony.Refund(Rules[kind].Cost, 1);
+        building.Queue.Clear();
+    }
+
+    void OnLayoutChanged()
+    {
+        _flowDirty = true;
+        _humanFieldsDirty = true;
     }
 
     string? TrySpawn(SpawnDemons s)
@@ -248,6 +430,83 @@ public sealed class World
         return null;
     }
 
+    string? TryTrain(TrainUnit t)
+    {
+        if (!_buildingById.TryGetValue(t.BarracksId, out var b)) return "no such building";
+        if (Array.IndexOf(b.Def.Trains, t.Kind) < 0) return $"{b.Kind} can't train {t.Kind}";
+        if (!b.Complete) return "still under construction";
+        var cost = Rules[t.Kind].Cost;
+        string? shortfall = Colony.Shortfall(cost);
+        if (shortfall != null) return shortfall;
+        Colony.Pay(cost);
+        b.Queue.Add(t.Kind);
+        return null;
+    }
+
+    string? TryOrder(OrderUnits o)
+    {
+        if (o.UnitIds.Length == 0) return "no units";
+        FlowField? field = null;
+        int dx = o.X, dy = o.Y;
+        if (o.Order is OrderKind.Move or OrderKind.AttackMove)
+        {
+            // Aim at the nearest tile a soldier can actually stand on.
+            var tile = FindTileNear(o.X, o.Y, 6, IsHumanWalkable);
+            if (tile == null) return "no walkable ground there";
+            (dx, dy) = tile.Value;
+            field = HumanFieldTo(dx, dy);
+        }
+        int ordered = 0;
+        foreach (var id in o.UnitIds)
+        {
+            var u = UnitById(id);
+            if (u == null) continue;
+            u.Order = o.Order;
+            u.DestX = dx;
+            u.DestY = dy;
+            u.Field = field;
+            ordered++;
+        }
+        return ordered == 0 ? "no such units" : null;
+    }
+
+    /// <summary>Remove everything that died this tick, report it, and check for defeat.</summary>
+    void ResolveDeaths()
+    {
+        int killed = Horde.RemoveDead();
+        if (killed > 0)
+        {
+            Stats.DemonsKilled += killed;
+            _spatialStale = true;
+            _events.Add(new DemonsKilled(Tick, killed));
+        }
+
+        for (int i = _units.Count - 1; i >= 0; i--)
+        {
+            var u = _units[i];
+            if (u.Hp > 0) continue;
+            _units.RemoveAt(i);
+            Stats.UnitsLost++;
+            _events.Add(new UnitDied(Tick, u.Id, u.Kind, u.X, u.Y));
+        }
+
+        // Iterate a snapshot: removing a Wardstone can darken buildings but never kills them.
+        for (int i = _buildings.Count - 1; i >= 0; i--)
+        {
+            var b = _buildings[i];
+            if (b.Hp > 0) continue;
+            RefundQueue(b);
+            RemoveBuilding(b);
+            Stats.BuildingsLost++;
+            _events.Add(new BuildingDestroyed(Tick, b.Id, b.Kind, b.X, b.Y));
+            if (b.Kind == BuildingKind.Keep)
+            {
+                Outcome = Outcome.Lost;
+                _events.Add(new OutcomeChanged(Tick, Outcome));
+            }
+        }
+    }
+
     /// <summary>
     /// Scatter demons over a disc around a tile centre, sized so the crowd
     /// starts at about SpawnDensity per tile. Returns how many found ground.
@@ -255,6 +514,7 @@ public sealed class World
     int SpawnCluster(DemonKind kind, int cx, int cy, int count)
     {
         float radius = MathF.Sqrt(count / (MathF.PI * Balance.SpawnDensity)) + 1;
+        float hp = Rules[kind].Hp;
         int spawned = 0;
         for (int n = 0; n < count; n++)
         {
@@ -265,7 +525,7 @@ public sealed class World
                 float x = cx + 0.5f + MathF.Cos(angle) * r;
                 float y = cy + 0.5f + MathF.Sin(angle) * r;
                 if (x < 0 || y < 0 || !IsWalkable((int)x, (int)y)) continue;
-                Horde.Add(kind, x, y);
+                Horde.Add(kind, x, y, hp);
                 spawned++;
                 break;
             }

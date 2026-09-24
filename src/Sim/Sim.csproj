@@ -23,6 +23,11 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!-- Default rules ship inside the assembly: the sim does no IO. -->
+    <EmbeddedResource Include="data/rules.json" LogicalName="Hellwall.Sim.rules.json" />
+  </ItemGroup>
+
+  <ItemGroup>
     <InternalsVisibleTo Include="Hellwall.Sim.Tests" />
   </ItemGroup>
 </Project>

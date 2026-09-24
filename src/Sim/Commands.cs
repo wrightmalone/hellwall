@@ -24,3 +24,9 @@ public sealed record SpawnDemons(DemonKind Kind, int X, int Y, int Count) : Comm
 
 /// <summary>Debug and scenario: a noise pulse, as a stand-in for combat until phase 2.</summary>
 public sealed record MakeNoise(int X, int Y, float Radius, float Intensity) : Command;
+
+/// <summary>Queue a unit at a Barracks. Paid for when queued; refunded if the Barracks is lost.</summary>
+public sealed record TrainUnit(int BarracksId, UnitKind Kind) : Command;
+
+/// <summary>Order soldiers to a tile. They share one route map for the order.</summary>
+public sealed record OrderUnits(int[] UnitIds, OrderKind Order, int X, int Y) : Command;

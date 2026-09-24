@@ -184,7 +184,8 @@ public partial class Main : Node2D
 
         // Placement ghost: green where it would succeed, red otherwise.
         var (tx, ty) = HoveredTile();
-        var (w, h) = Balance.Footprint(_armed);
+        var def = _world.Rules[_armed];
+        int w = def.W, h = def.H;
         bool ok = _world.CheckPlacement(_armed, tx, ty) == null;
         DrawRect(new Rect2(tx * TilePx, ty * TilePx, w * TilePx, h * TilePx), ok ? new Color(0.3f, 1f, 0.3f, 0.45f) : new Color(1f, 0.25f, 0.25f, 0.45f));
     }

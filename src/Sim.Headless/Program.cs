@@ -9,6 +9,7 @@ using Hellwall.Sim;
 // same hash played the same game; scripts/verify.sh relies on that.
 
 if (args.Length > 0 && args[0] == "bench") return Bench.Run(ParseArgs(args[1..]));
+if (args.Length > 0 && args[0] == "town") return TownProbe.Run(ParseArgs(args[1..]));
 
 var args_ = ParseArgs(args);
 if (args_.ContainsKey("help"))
@@ -16,6 +17,9 @@ if (args_.ContainsKey("help"))
     Console.WriteLine("""
         hellwall-sim bench [--units=20000 --size=256 --ticks=2400 --gate-ms=12 --seed=7]
           the phase 1 performance gate; exits 1 on failure
+
+        hellwall-sim town [--wave=200 --seconds=240 --seeds=3,7,11,19,42 --trace]
+          the phase 2 gate: a walled town holds a wave an undefended one doesn't
 
         hellwall-sim [options]
           --seed=<n>        world seed (default 7)
