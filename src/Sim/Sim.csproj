@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!--
+    THE PORTABLE HALF. No Godot reference, ever: a Godot type in here fails to
+    compile, which is the whole enforcement mechanism. BannedSymbols.txt adds
+    the ambient-nondeterminism ban on top (clocks, System.Random, randomized
+    hashing, IO, threads). Both are checked by tests/Sim.Tests/PortabilityTests.
+  -->
+  <PropertyGroup>
+    <AssemblyName>Hellwall.Sim</AssemblyName>
+    <RootNamespace>Hellwall.Sim</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.CodeAnalysis.BannedApiAnalyzers" Version="3.3.4" PrivateAssets="all" />
+    <AdditionalFiles Include="BannedSymbols.txt" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="Hellwall.Sim.Tests" />
+  </ItemGroup>
+</Project>

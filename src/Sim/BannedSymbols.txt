@@ -1,0 +1,17 @@
+T:System.Random;Use Hellwall.Sim.Rng, owned by the World
+P:System.DateTime.Now;The sim has no clock but World.Tick
+P:System.DateTime.UtcNow;The sim has no clock but World.Tick
+P:System.DateTimeOffset.Now;The sim has no clock but World.Tick
+P:System.DateTimeOffset.UtcNow;The sim has no clock but World.Tick
+P:System.Environment.TickCount;The sim has no clock but World.Tick
+P:System.Environment.TickCount64;The sim has no clock but World.Tick
+T:System.Diagnostics.Stopwatch;Time the sim from the host, not from inside it
+M:System.Guid.NewGuid;Ids come from World's counter
+T:System.HashCode;Randomized per process; use StateHash (FNV-1a)
+M:System.String.GetHashCode;Randomized per process; use StateHash (FNV-1a)
+T:System.Threading.Tasks.Parallel;Threads break determinism; parallelize in the host if ever
+T:System.Threading.Tasks.Task;Threads break determinism; parallelize in the host if ever
+T:System.Threading.Thread;Threads break determinism; parallelize in the host if ever
+T:System.Console;The sim reports through SimEvents, not stdout
+T:System.IO.File;The sim does no IO; the host loads data and passes it in
+T:System.IO.Directory;The sim does no IO; the host loads data and passes it in

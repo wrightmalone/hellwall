@@ -1,0 +1,14 @@
+{
+  "name": "smoke",
+  "commands": [
+    { "tick": 0,   "type": "place", "kind": "House", "x": 68, "y": 62 },
+    { "tick": 0,   "type": "place", "kind": "House", "x": 68, "y": 65 },
+    { "tick": 20,  "type": "place", "kind": "House", "x": 58, "y": 62 },
+    { "tick": 40,  "type": "place", "kind": "Wall",  "x": 60, "y": 58 },
+    { "tick": 40,  "type": "place", "kind": "Wall",  "x": 61, "y": 58 },
+    { "tick": 40,  "type": "place", "kind": "Wall",  "x": 62, "y": 58 },
+    { "tick": 60,  "type": "place", "kind": "House", "x": 68, "y": 62 },
+    { "tick": 200, "type": "demolish", "id": 3 },
+    { "tick": 220, "type": "demolish", "id": 1 }
+  ]
+}

@@ -1,0 +1,7 @@
+bin/
+obj/
+out/
+.godot/
+*.user
+.DS_Store
+game/export/

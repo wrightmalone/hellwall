@@ -1,0 +1,15 @@
+<Project Sdk="Godot.NET.Sdk/4.7.2">
+  <!--
+    The Godot consumer of Hellwall.Sim. Everything here is rendering and input;
+    game rules belong in src/Sim, where the headless harness can reach them.
+  -->
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <EnableDynamicLoading>true</EnableDynamicLoading>
+    <RootNamespace>Hellwall.Game</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../src/Sim/Sim.csproj" />
+  </ItemGroup>
+</Project>

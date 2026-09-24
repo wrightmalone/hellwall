@@ -1,0 +1,28 @@
+name: ci
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  sim:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+      # The Godot project needs the engine to build, so CI covers the sim,
+      # the harness and determinism; Godot is checked locally by verify.sh.
+      - name: Build sim, harness, tests
+        run: |
+          dotnet build src/Sim.Headless -c Release --nologo
+          dotnet build tests/Sim.Tests -c Release --nologo
+      - name: Test
+        run: dotnet test tests/Sim.Tests -c Release --no-build --nologo
+      - name: Cross-process determinism
+        run: |
+          run() { dotnet src/Sim.Headless/bin/Release/net10.0/hellwall-sim.dll --seed="$1" --ticks=2400 --script=src/Sim.Headless/scripts/smoke.json | grep '^hash='; }
+          a=$(run 7); b=$(run 7); c=$(run 8)
+          echo "$a / $b / $c"
+          [ "$a" = "$b" ] && [ "$a" != "$c" ]
