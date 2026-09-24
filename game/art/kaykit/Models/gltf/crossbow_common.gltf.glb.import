@@ -3,13 +3,13 @@
 importer="scene"
 importer_version=1
 type="PackedScene"
-uid="uid://dematl70qu2j"
-path="res://.godot/imported/shield-round.glb-da3ea0f43f5e14e11115329908e550bc.scn"
+uid="uid://dlhs74c45oopi"
+path="res://.godot/imported/crossbow_common.gltf.glb-649a78dc1abc5aec9656ede91b0ef732.scn"
 
 [deps]
 
-source_file="res://art/kenney3d/mini-dungeon/shield-round.glb"
-dest_files=["res://.godot/imported/shield-round.glb-da3ea0f43f5e14e11115329908e550bc.scn"]
+source_file="res://art/kaykit/Models/gltf/crossbow_common.gltf.glb"
+dest_files=["res://.godot/imported/crossbow_common.gltf.glb-649a78dc1abc5aec9656ede91b0ef732.scn"]
 
 [params]
 

@@ -3,13 +3,13 @@
 importer="scene"
 importer_version=1
 type="PackedScene"
-uid="uid://ct6dyw83pni1v"
-path="res://.godot/imported/weapon-sword.glb-e5f37fd96c5471a3ab586c7e0c9f2fab.scn"
+uid="uid://bfnnh0ljbaqff"
+path="res://.godot/imported/character_rogue.gltf-51e56f8ff3f2ecb944875d2aea00dce0.scn"
 
 [deps]
 
-source_file="res://art/kenney3d/mini-dungeon/weapon-sword.glb"
-dest_files=["res://.godot/imported/weapon-sword.glb-e5f37fd96c5471a3ab586c7e0c9f2fab.scn"]
+source_file="res://art/kaykit/Models/Characters/gltf/character_rogue.gltf"
+dest_files=["res://.godot/imported/character_rogue.gltf-51e56f8ff3f2ecb944875d2aea00dce0.scn"]
 
 [params]
 

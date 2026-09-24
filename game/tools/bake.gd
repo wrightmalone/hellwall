@@ -14,16 +14,19 @@ const ORTHO := 1.35
 const LOOK_Y := 0.45
 
 const MD := "res://art/kenney3d/mini-dungeon/"
+const KK := "res://art/kaykit/Models/Characters/gltf/"
+const KW := "res://art/kaykit/Models/gltf/"
 const GY := "res://art/kenney3d/graveyard-kit/"
 
 # name, model, tint for the body (null: none), scale, [weapon right, item left]
 var variants := [
-	["unit-militia", MD + "character-human.glb", Color(0.62, 0.45, 0.3), 1.0, [MD + "weapon-spear.glb", ""]],
-	["unit-marksman", MD + "character-human.glb", Color(0.35, 0.62, 0.3), 1.0, [MD + "weapon-spear.glb", ""]],
-	["unit-templar", MD + "character-human.glb", Color(0.92, 0.92, 0.95), 1.08, [MD + "weapon-sword.glb", MD + "shield-rectangle.glb"]],
-	["unit-crossbowman", MD + "character-human.glb", Color(0.3, 0.45, 0.85), 1.0, [MD + "weapon-spear.glb", MD + "shield-round.glb"]],
-	["unit-chaplain", GY + "character-keeper.glb", Color(1.0, 0.9, 0.55), 1.0, ["", ""]],
-	["unit-outrider", MD + "character-human.glb", Color(0.85, 0.25, 0.25), 1.12, [MD + "weapon-sword.glb", MD + "shield-round.glb"]],
+	# Soldiers: KayKit's Dungeon Pack people (flat-coloured, no tint needed), half scale to match the Kenney demons.
+	["unit-militia", KK + "character_rogue.gltf", null, 0.5, [KW + "dagger_common.gltf.glb", ""]],
+	["unit-marksman", KK + "character_rogue.gltf", null, 0.5, [KW + "crossbow_common.gltf.glb", ""]],
+	["unit-templar", KK + "character_knight.gltf", null, 0.52, [KW + "sword_common.gltf.glb", KW + "shield_common.gltf.glb"]],
+	["unit-crossbowman", KK + "character_knight.gltf", null, 0.5, [KW + "crossbow_common.gltf.glb", KW + "shield_common.gltf.glb"]],
+	["unit-chaplain", KK + "character_mage.gltf", null, 0.5, [KW + "staff_common.gltf.glb", ""]],
+	["unit-outrider", KK + "character_barbarian.gltf", null, 0.55, [KW + "axe_common.gltf.glb", ""]],
 	["demon-imp", MD + "character-orc.glb", Color(1.0, 0.35, 0.3), 0.85, ["", ""]],
 	["demon-hound", GY + "character-skeleton.glb", Color(0.32, 0.26, 0.28), 0.8, ["", ""]],
 	["demon-thrall", GY + "character-zombie.glb", null, 1.0, ["", ""]],
@@ -66,8 +69,11 @@ func _initialize():
 	bake.call_deferred()
 
 func bake():
+	# `-- unit` (or any prefix) bakes only the sheets whose names start with it.
+	var only := OS.get_cmdline_user_args()[0] if OS.get_cmdline_user_args().size() > 0 else ""
 	for v in variants:
-		await bake_one(v)
+		if v[0].begins_with(only):
+			await bake_one(v)
 	# Where the ground origin lands in a cell: the game anchors each figure's feet there.
 	var feet := camera.unproject_position(Vector3.ZERO)
 	var meta := FileAccess.open("res://art/baked/sheets.json", FileAccess.WRITE)
@@ -83,16 +89,23 @@ func bake_one(v):
 		tint(model, v[2], v[0].begins_with("demon"))
 	attach(model, v[4][0], "arm-right")
 	attach(model, v[4][1], "arm-left")
-	var player: AnimationPlayer = model.find_children("*", "AnimationPlayer", true, false)[0]
-	player.play("walk")
-	var length := player.current_animation_length
+	# Kenney's characters come with a walk; KayKit's don't, so theirs is made from their parts below.
+	var players = model.find_children("*", "AnimationPlayer", true, false)
+	var player: AnimationPlayer = players[0] if players.size() > 0 else null
+	var length := 1.0
+	if player:
+		player.play("walk")
+		length = player.current_animation_length
 	var sheet := Image.create(CELL * FRAMES, CELL * 8, false, Image.FORMAT_RGBA8)
 	for d in 8:
 		var a := d * PI / 4.0
 		# Sim +x is 3D +X, sim +y is 3D +Z; the models face +Z.
 		model.rotation.y = atan2(cos(a), sin(a))
 		for f in FRAMES:
-			player.seek(length * f / FRAMES, true)
+			if player:
+				player.seek(length * f / FRAMES, true)
+			else:
+				stride(model, v[3], TAU * f / FRAMES)
 			await RenderingServer.frame_post_draw
 			await RenderingServer.frame_post_draw
 			var img := viewport.get_texture().get_image()
@@ -102,6 +115,19 @@ func bake_one(v):
 	print("baked ", v[0])
 	model.queue_free()
 	await process_frame
+
+# A walk for models with no animation (KayKit's): arms swing from the
+# shoulder in opposition, the whole figure bobs twice a stride and sways.
+func stride(model: Node3D, size: float, phase: float):
+	var swing := sin(phase) * 0.7
+	for n in model.find_children("*", "Node3D", true, false):
+		var lower := String(n.name).to_lower()
+		if lower.ends_with("armleft") or lower.ends_with("arnleft"):
+			n.rotation.x = swing
+		elif lower.ends_with("armright"):
+			n.rotation.x = -swing
+	model.position.y = absf(sin(phase)) * 0.06 * size
+	model.rotation.z = sin(phase) * 0.05
 
 # Recolour the model toward a tint: soldiers keep their faces (the head is
 # left alone), demons are recoloured head to foot.
@@ -132,11 +158,29 @@ func attach(model: Node3D, path: String, limb: String):
 		skeletons[0].add_child(hold)
 		hold.add_child(prop)
 	else:
-		var nodes = model.find_children(limb, "Node3D", true, false)
-		if nodes.size() == 0:
+		# Kenney graveyard limbs are named like the bones; KayKit's are character_<who>ArmLeft/Right.
+		var wanted := limb.replace("-", "").to_lower()
+		var found: Node3D = null
+		for n in model.find_children("*", "Node3D", true, false):
+			var lower := String(n.name).to_lower()
+			if lower == limb or lower.ends_with(wanted) or (wanted == "armleft" and lower.ends_with("arnleft")):
+				found = n
+				break
+		if found == null:
 			prop.free()
 			return
-		nodes[0].add_child(prop)
+		found.add_child(prop)
+		if path.begins_with(KW):
+			# KayKit props are made for these hands: at the end of the arm, pointing forward.
+			if path.contains("shield"):
+				# Strapped to the forearm, facing out from the body.
+				prop.position = Vector3(0.12, -0.3, 0.02)
+				prop.rotation_degrees = Vector3(0, 90, 0)
+			else:
+				# Gripped at the end of the arm and held up in front, clear of the body.
+				prop.position = Vector3(0, -0.42, 0.1)
+				prop.rotation_degrees = Vector3(115, 0, 0)
+			return
 	prop.scale = Vector3.ONE * 0.7
 	prop.position = Vector3(0.25 if limb == "arm-left" else -0.25, -0.05, 0.05)
 

@@ -3,13 +3,13 @@
 importer="scene"
 importer_version=1
 type="PackedScene"
-uid="uid://nij5mw6vngyd"
-path="res://.godot/imported/shield-rectangle.glb-727a8b4c27ce8fce15419b624f3df538.scn"
+uid="uid://cdd7c1insfux0"
+path="res://.godot/imported/axe_common.gltf.glb-e062c21d17e28e0f2b41a628e8a1d3b1.scn"
 
 [deps]
 
-source_file="res://art/kenney3d/mini-dungeon/shield-rectangle.glb"
-dest_files=["res://.godot/imported/shield-rectangle.glb-727a8b4c27ce8fce15419b624f3df538.scn"]
+source_file="res://art/kaykit/Models/gltf/axe_common.gltf.glb"
+dest_files=["res://.godot/imported/axe_common.gltf.glb-e062c21d17e28e0f2b41a628e8a1d3b1.scn"]
 
 [params]
 

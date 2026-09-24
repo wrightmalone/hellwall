@@ -3,13 +3,13 @@
 importer="scene"
 importer_version=1
 type="PackedScene"
-uid="uid://ch3iboe0hq5xr"
-path="res://.godot/imported/character-human.glb-50b392a59f6106c8d10721d5fbcfeef2.scn"
+uid="uid://ca8xq7bc7mmt3"
+path="res://.godot/imported/shield_common.gltf.glb-ca589eecbea08e4596a896639fc8529a.scn"
 
 [deps]
 
-source_file="res://art/kenney3d/mini-dungeon/character-human.glb"
-dest_files=["res://.godot/imported/character-human.glb-50b392a59f6106c8d10721d5fbcfeef2.scn"]
+source_file="res://art/kaykit/Models/gltf/shield_common.gltf.glb"
+dest_files=["res://.godot/imported/shield_common.gltf.glb-ca589eecbea08e4596a896639fc8529a.scn"]
 
 [params]
 

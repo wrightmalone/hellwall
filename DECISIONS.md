@@ -325,6 +325,30 @@ or the Keep, extruded and shaded by face, so a line reads as one wall. Timber is
 palisade with stakes. Stone is taller and grey, with merlons. A gate has a timber door
 on each face.
 
+### 38. Soldiers are KayKit's people (you downloaded KayKit and Quaternius packs)
+Of the four packs in Downloads, only KayKit Dungeon Pack 1.0 has characters
+(knight, rogue, mage, barbarian, plus their weapons). The Dungeon 1.1 free pack
+and Halloween Bits are props; the Quaternius Stylized Nature MegaKit is trees,
+bushes and rocks. All CC0.
+
+The six soldier types are four bodies told apart by weapon:
+
+| Soldier | Model and weapon |
+|---|---|
+| Militia | rogue, dagger |
+| Marksman | rogue, crossbow |
+| Templar | knight, sword and shield |
+| Crossbowman | knight, crossbow |
+| Chaplain | mage, staff |
+| Outrider | barbarian, axe |
+
+KayKit's people have no animation, so the baker makes a walk from their parts: the arms swing from the
+shoulder, and the body bobs and sways.
+
+Demons stay on Kenney's models: none of the four packs has monsters.
+Quaternius Ultimate Monsters is still the pack that would fix that. The nature kit
+could replace the terrain trees and rocks later.
+
 ## Things I noticed that you should decide
 
 - **Scale:** addressed by 12-14 and 21. The Convergence is 9,000 plus whatever

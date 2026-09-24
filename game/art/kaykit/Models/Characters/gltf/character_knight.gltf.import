@@ -3,13 +3,13 @@
 importer="scene"
 importer_version=1
 type="PackedScene"
-uid="uid://vddbbrtrw3kt"
-path="res://.godot/imported/weapon-spear.glb-3ec515bec2f99c8a2fd2630fdee0205c.scn"
+uid="uid://ceu5hfpgf6ppr"
+path="res://.godot/imported/character_knight.gltf-96ec5da1b6d7cf21af7a7dd6bd70ffd0.scn"
 
 [deps]
 
-source_file="res://art/kenney3d/mini-dungeon/weapon-spear.glb"
-dest_files=["res://.godot/imported/weapon-spear.glb-3ec515bec2f99c8a2fd2630fdee0205c.scn"]
+source_file="res://art/kaykit/Models/Characters/gltf/character_knight.gltf"
+dest_files=["res://.godot/imported/character_knight.gltf-96ec5da1b6d7cf21af7a7dd6bd70ffd0.scn"]
 
 [params]
 
