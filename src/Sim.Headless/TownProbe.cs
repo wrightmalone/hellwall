@@ -68,21 +68,16 @@ public static class TownProbe
         if (defend && extra is { } k) Do([new PlaceBuilding(k, 57, 61), new PlaceBuilding(k, 70, 61)]);
 
         int waveTick = 60 * Balance.TickHz;
-        bool trainedQueued = false;
+        // The garrison, fed to the Barracks as its queue has room (it holds Balance.QueueLimit).
+        var garrison = new Queue<UnitKind>(Enumerable.Repeat(UnitKind.Militia, 6).Concat(Enumerable.Repeat(UnitKind.Templar, 2)).Concat(Enumerable.Repeat(UnitKind.Marksman, 2)));
         for (int t = 0; t < seconds * Balance.TickHz && world.Outcome == Outcome.Running; t++)
         {
-            if (defend && !trainedQueued)
+            if (defend && garrison.Count > 0 && world.Buildings.FirstOrDefault(b => b.Kind == BuildingKind.Barracks && b.Complete) is { } barracks)
             {
-                var barracks = world.Buildings.FirstOrDefault(b => b.Kind == BuildingKind.Barracks && b.Complete);
-                if (barracks != null)
-                {
-                    var queue = new List<Command>();
-                    for (int i = 0; i < 6; i++) queue.Add(new TrainUnit(barracks.Id, UnitKind.Militia));
-                    for (int i = 0; i < 2; i++) queue.Add(new TrainUnit(barracks.Id, UnitKind.Templar));
-                    for (int i = 0; i < 2; i++) queue.Add(new TrainUnit(barracks.Id, UnitKind.Marksman));
-                    Do(queue);
-                    trainedQueued = true;
-                }
+                var queue = new List<Command>();
+                for (int room = Balance.QueueLimit - barracks.Queue.Count; room > 0 && garrison.Count > 0; room--)
+                    queue.Add(new TrainUnit(barracks.Id, garrison.Dequeue()));
+                if (queue.Count > 0) Do(queue);
             }
             if (t == waveTick)
             {

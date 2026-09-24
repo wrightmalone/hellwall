@@ -67,6 +67,8 @@ public partial class Minimap : Control
     partial class Overlay : Control
     {
         public Minimap Map = null!;
+        readonly Dictionary<int, float> _lastHp = new();
+        readonly Dictionary<int, (Vector2 At, float Life)> _pings = new();
 
         public override void _Draw()
         {
@@ -93,6 +95,40 @@ public partial class Minimap : Control
 
             foreach (var u in world.Units)
                 DrawRect(new Rect2(u.X * s, u.Y * s, 1.5f, 1.5f), new Color(0.5f, 0.9f, 1));
+
+            // Where waves are coming from: a red arrow on each announced side.
+            if (world.Survival is { } sv)
+                foreach (var wave in sv.Waves)
+                {
+                    if (!wave.Announced || wave.Landed) continue;
+                    foreach (var side in wave.Sides)
+                    {
+                        Vector2 at = side switch
+                        {
+                            Hellwall.Sim.Side.North => new(Px / 2f, 7), Hellwall.Sim.Side.South => new(Px / 2f, Px - 7),
+                            Hellwall.Sim.Side.West => new(7, Px / 2f), _ => new(Px - 7, Px / 2f),
+                        };
+                        var inward = (new Vector2(Px / 2f, Px / 2f) - at).Normalized();
+                        var across = new Vector2(-inward.Y, inward.X);
+                        DrawColoredPolygon([at + inward * 7, at - inward * 4 + across * 6, at - inward * 4 - across * 6], new Color(1, 0.25f, 0.2f));
+                    }
+                }
+
+            // Pings where buildings are taking damage, so a fight off screen is seen.
+            foreach (var b in world.Buildings)
+            {
+                if (_lastHp.TryGetValue(b.Id, out float was) && b.Hp < was - 0.01f) _pings[b.Id] = (new Vector2(b.CentreX, b.CentreY), 1.5f);
+                _lastHp[b.Id] = b.Hp;
+            }
+            foreach (var id in _pings.Keys.ToList())
+            {
+                var (at, life) = _pings[id];
+                life -= (float)GetProcessDeltaTime();
+                if (life <= 0) { _pings.Remove(id); continue; }
+                _pings[id] = (at, life);
+                float r = 3 + (1.5f - life) * 6;
+                DrawArc(at * s, r, 0, Mathf.Tau, 16, new Color(1, 0.3f, 0.2f, life / 1.5f), 1.5f);
+            }
 
             // The camera's view.
             var cam = Map.Camera;

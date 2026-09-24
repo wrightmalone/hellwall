@@ -388,6 +388,26 @@ horrific, which reads well at 30 px but is a tone question for the commissioned 
 - **Self-test:** `--selftest=controls` runs A-then-click through Godot's own input and checks
   the order. verify.sh runs it.
 
+### 42. The HUD redesign (your brief: my proposal, with the army on the Barracks)
+
+| Place | What's there |
+|---|---|
+| Top strip | Every resource with an icon and its rate, workers, and a sanctity meter that goes red on a shortfall. Speed and help on the right. |
+| Top right | The threat card: the day, the next wave (grey until it's sighted, then red with a countdown), its size and sides, and a timeline of the whole run with each wave on it and the Convergence at the end. Hellgates, and in endless the corruptions. |
+| Top left | Alerts: possessions, breaches, packs stirring, the next wave, research, gates, Thralls rising. Each is a card that moves the camera there; repeats fold into a count. |
+| Bottom left | The minimap, now with red arrows on the sides waves are coming from and pings where buildings are being hit. |
+| Bottom centre | The command card, which changes with the selection. Nothing selected: four build tabs (Town, Holy, Walls, Towers). A Barracks: its army, its queue and its rally point. A Scriptorium: research. Soldiers: their groups and orders. |
+| Bottom right | The inspector, with the demolish or purge button. |
+
+Everything is placeholder-styled (dark iron, gold for holy, red for threat). Icons use art already in the game: tower pieces for buildings, baked frames for soldiers, and baked KayKit props plus our own trees, rocks and crystals for resources.
+
+### 43. Training queues and rally points (you asked)
+- **Queue:** each Barracks has its own queue of up to eight, so several Barracks train at once.
+  Clicking a queued soldier cancels it for a full refund. Shift-click queues five.
+- **Rally point:** with a Barracks selected, right-click the ground to set it. New soldiers
+  attack-move there as they come out.
+- **In the sim:** both are commands (CancelTraining, SetRally), saved (format 5) and hashed.
+
 ## Things I noticed that you should decide
 
 - **Scale:** addressed by 12-14 and 21. The Convergence is 9,000 plus whatever

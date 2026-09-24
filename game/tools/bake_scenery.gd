@@ -20,7 +20,11 @@ var items := [
 	["rock-1", "Rock_Medium_1", 0.55, Vector2i(170, 140), 0], ["rock-2", "Rock_Medium_2", 0.6, Vector2i(170, 140), 70],
 	["rock-3", "Rock_Medium_3", 0.5, Vector2i(170, 140), 140], ["rock-4", "Rock_Medium_1", 0.5, Vector2i(170, 140), 220],
 	["tuft-1", "Grass_Common_Short", 0.22, Vector2i(110, 80), 0], ["tuft-2", "Flower_3_Group", 0.22, Vector2i(110, 80), 0],
-	["tuft-3", "Flower_4_Group", 0.22, Vector2i(110, 80), 90], ["tuft-4", "Grass_Common_Short", 0.28, Vector2i(110, 80), 120],
+	["tuft-3", "Flower_4_Group", 0.22, Vector2i(110, 80), 90],
+	# HUD resource icons (framed tight, not at terrain scale): KayKit Dungeon props.
+	["icon-gold", "res://art/kaykit/Models/gltf/coinsMedium.gltf.glb", 1.0, Vector2i(64, 64), 20],
+	["icon-food", "res://art/kaykit/Models/gltf/plateFull.gltf.glb", 0.8, Vector2i(64, 64), 20],
+	["icon-holy", "res://art/kaykit/Models/gltf/artifact.gltf.glb", 1.0, Vector2i(64, 64), 20], ["tuft-4", "Grass_Common_Short", 0.28, Vector2i(110, 80), 120],
 ]
 
 var viewport: SubViewport
@@ -62,16 +66,18 @@ func bake():
 func bake_one(it) -> Array:
 	var size: Vector2i = it[3]
 	viewport.size = size
-	camera.size = size.y / PX_PER_UNIT
+	var icon: bool = it[0].begins_with("icon")
+	camera.size = it[2] * 1.25 if icon else size.y / PX_PER_UNIT
 	# Look at a point above the base so the model fills the canvas; its base then lands low in the image.
-	var target := Vector3(0, it[2] * 0.42, 0)
+	var target := Vector3(0, it[2] * (0.5 if icon else 0.42), 0)
 	var pitch := deg_to_rad(30.0)
 	var dir := Vector3(1, 0, 1).normalized() * cos(pitch) + Vector3(0, sin(pitch), 0)
 	camera.look_at_from_position(target + dir * 20.0, target)
-	var model: Node3D = load(N + it[1] + ".gltf").instantiate()
+	var path: String = it[1] if it[1].begins_with("res://") else N + it[1] + ".gltf"
+	var model: Node3D = load(path).instantiate()
 	viewport.add_child(model)
 	model.rotation_degrees.y = it[4]
-	fit(model, it[2])
+	fit(model, it[2], icon)
 	await RenderingServer.frame_post_draw
 	await RenderingServer.frame_post_draw
 	var img := viewport.get_texture().get_image()
@@ -83,7 +89,7 @@ func bake_one(it) -> Array:
 	return [base.x, base.y]
 
 # Scale to `height` tiles tall (a tile is one unit), base on the ground.
-func fit(model: Node3D, height: float):
+func fit(model: Node3D, height: float, by_largest := false):
 	var box := AABB()
 	var first := true
 	for m in model.find_children("*", "MeshInstance3D", true, false):
@@ -92,6 +98,7 @@ func fit(model: Node3D, height: float):
 		first = false
 	if first:
 		return
-	var k := height / box.size.y
+	# Icons fit their largest side (a plate is flat); scenery fits its height.
+	var k := height / (maxf(box.size.y, maxf(box.size.x, box.size.z)) if by_largest else box.size.y)
 	model.scale *= k
 	model.position = Vector3(-(box.position.x + box.size.x / 2) * k, -box.position.y * k, -(box.position.z + box.size.z / 2) * k)

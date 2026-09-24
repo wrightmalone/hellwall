@@ -238,6 +238,16 @@ public partial class WorldView : Node2D
                 if (u.Hp < u.Def.Hp) Bar(p + new Vector2(-10, -Art.UnitSize - 5), 20, u.Hp / u.Def.Hp, new Color(0.3f, 1, 0.3f));
             }
 
+            // The selected Barracks' rally point: a line from its door and a flag.
+            if (state.SelectedBuilding is { } rs && world.BuildingById(rs) is { RallyX: >= 0 } rally)
+            {
+                var from = Iso.P(rally.CentreX, rally.CentreY);
+                var to = Iso.P(rally.RallyX + 0.5f, rally.RallyY + 0.5f);
+                DrawDashedLine(from, to, new Color(UiKit.Gold, 0.8f), 1.5f, 6);
+                DrawLine(to, to - new Vector2(0, 22), UiKit.Text, 2);
+                DrawColoredPolygon([to - new Vector2(0, 22), to + new Vector2(12, -18), to - new Vector2(0, 14)], UiKit.Gold);
+            }
+
             if (state.SelectedBuilding is { } sb && world.BuildingById(sb) is { Def.Weapon: { } w } tower)
                 Iso.Ellipse(this, new Vector2(tower.CentreX, tower.CentreY), w.Range, new Color(1, 1, 1, 0.4f), 1);
             if (state.SelectedBuilding is { } sb2 && world.BuildingById(sb2) is { Def.SlowRadius: > 0 } bell)

@@ -114,14 +114,8 @@ public partial class Main : Node2D
         _camera = new Camera2D { Position = Iso.P(MapSize / 2f, MapSize / 2f), Zoom = new Vector2(1.1f, 1.1f) };
         AddChild(_camera);
 
-        _minimap = new Minimap { World = _world, Camera = _camera, MoveCamera = p => _camera.Position = p };
-        _hud = new Hud { World = _world, State = _state, Send = Send, Minimap = _minimap, NewRun = NewRun };
-        AddChild(_hud);
-        if (!scripted && !options.ContainsKey("autoplay") && !options.ContainsKey("selftest") && Coach.Enabled)
-        {
-            _coach = new Coach { World = _world };
-            _hud.AddChild(_coach);
-        }
+        _withCoach = !scripted && !options.ContainsKey("autoplay") && !options.ContainsKey("selftest") && Coach.Enabled;
+        BuildHud();
 
         if (_benchSeconds > 0) StartBenchAssault();
         if (_demoSeconds > 0) StartDemo();
@@ -151,6 +145,44 @@ public partial class Main : Node2D
     }
 
     void Send(Command command) => _world.Enqueue(command);
+
+    bool _withCoach;
+
+    /// <summary>The screen-space UI for the current world: at the start, and after a quickload.</summary>
+    void BuildHud()
+    {
+        _hud?.QueueFree();
+        _minimap = new Minimap { World = _world, Camera = _camera, MoveCamera = p => _camera.Position = p };
+        _hud = new Hud
+        {
+            World = _world, State = _state, Send = Send, Minimap = _minimap, NewRun = NewRun,
+            JumpTo = tile => _camera.Position = Iso.P(tile),
+            Speed = () => (_paused ? "PAUSED  ·  " : "") + $"{Speeds[_speed]}x  ·  F1 help",
+            Order = OrderSelected,
+        };
+        AddChild(_hud);
+        if (_withCoach)
+        {
+            _coach = new Coach { World = _world };
+            _hud.AddChild(_coach);
+        }
+    }
+
+    /// <summary>The command card's order buttons, the same as their keys.</summary>
+    void OrderSelected(string order)
+    {
+        if (_state.SelectedUnits.Count == 0) return;
+        switch (order)
+        {
+            case "attack":
+                _state.AttackMoveArmed = true;
+                _state.Armed = null;
+                Input.SetDefaultCursorShape(Input.CursorShape.Cross);
+                break;
+            case "hold": Send(new OrderUnits(_state.SelectedUnits.ToArray(), OrderKind.Hold, 0, 0)); break;
+            case "stop": Send(new OrderUnits(_state.SelectedUnits.ToArray(), OrderKind.Idle, 0, 0)); break;
+        }
+    }
 
     bool _swallowRelease;
 
@@ -284,6 +316,7 @@ public partial class Main : Node2D
         {
             _coach?.See(e);
             _sound.See(e);
+            _hud.Alerts.See(e);
             switch (e)
             {
                 case CommandRejected r: _state.Say($"Can't: {r.Reason}"); break;
@@ -292,19 +325,10 @@ public partial class Main : Node2D
                     _terrainView!.RepaintHoly();
                     _minimap.Repaint();
                     break;
-                case BuildingDestroyed b: _state.Say($"{b.Kind} destroyed"); break;
-                case UnitTrained u: _state.Say($"{u.Kind} ready"); break;
-                case UnitDied u: _state.Say($"{u.Kind} killed"); break;
-                case PackWoke p: _state.Say($"A pack of {p.Count} stirs"); break;
-                case BuildingPossessed p: _state.Say($"{p.Kind} POSSESSED: {p.Occupants} turning. [X] to purge it"); break;
-                case WaveAnnounced w: _state.Say(w.Final ? $"THE CONVERGENCE: {w.Size} from every side" : $"Wave {w.Number}: {w.Size} from the {string.Join(" and ", w.Sides)}"); break;
                 case WaveLanded w: _state.Say(w.Final ? "The Convergence is here." : $"Wave {w.Number} has arrived"); break;
-                case TechResearched t: _state.Say($"Researched {_world.Rules.Tech(t.TechId).Name}"); break;
-                case HellgateClosed: _state.Say($"A Hellgate is closed: waves will be smaller ({_world.Gates.Count(g => g.Alive)} still open)"); break;
                 case DemonBurst d: _state.Bursts.Add((d, 0)); break;
                 case DemonHowled h: _state.Howls.Add((h, 0)); break;
                 case OutcomeChanged o: _state.Say(o.Outcome == Outcome.Lost ? $"The Keep has fallen on day {_world.Day}." : "Victory."); break;
-                case CorruptionAnnounced c: _state.Say($"CORRUPTION: {c.Name}. {c.Description}"); break;
                 case CorruptionTook c: _state.Say($"The horde is corrupted: {c.Name}"); break;
             }
         }
@@ -360,6 +384,8 @@ public partial class Main : Node2D
             case InputEventMouseButton { Pressed: true, ButtonIndex: MouseButton.Right } mb:
                 if (_state.AttackMoveArmed) DisarmAttackMove();
                 else if (_state.Armed != null) _state.Armed = null;
+                else if (_state.SelectedUnits.Count == 0 && _state.SelectedBuilding is { } rb && _world.BuildingById(rb) is { Def.Trains.Length: > 0 })
+                    Send(new SetRally(rb, _state.HoveredTile.X, _state.HoveredTile.Y));
                 else if (_state.SelectedUnits.Count > 0)
                     Send(new OrderUnits(_state.SelectedUnits.ToArray(), mb.ShiftPressed ? OrderKind.Move : OrderKind.AttackMove, _state.HoveredTile.X, _state.HoveredTile.Y));
                 else _state.SelectedBuilding = null;
@@ -430,6 +456,7 @@ public partial class Main : Node2D
                 _state.Say($"Speed {Speeds[_speed]}x");
                 break;
             case Key.F1: _hud.ToggleHelp(); break;
+            case Key.F3: _hud.ShowDebug = !_hud.ShowDebug; break;
             case Key.F5: QuickSave(); break;
             case Key.F9: QuickLoad(); break;
             case Key.X or Key.Delete when selected != null:
@@ -479,9 +506,7 @@ public partial class Main : Node2D
             _world = loaded;
             BuildViews();
             MoveChild(_horde, -1);
-            _hud.World = loaded;
-            _minimap.World = loaded;
-            _minimap.Repaint();
+            BuildHud();
             _state.SelectedUnits.Clear();
             _state.SelectedBuilding = null;
             _state.Armed = null;

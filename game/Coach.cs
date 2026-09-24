@@ -105,6 +105,6 @@ public partial class Coach : PanelContainer
         Visible = _current != null && World.Outcome == Outcome.Running;
         if (_current != null) _text.Text = _current.Text();
         var screen = GetViewport().GetVisibleRect().Size;
-        Position = new Vector2(screen.X - Size.X - 10, 130);
+        Position = new Vector2(screen.X - Size.X - 8, 170); // below the threat card
     }
 }
