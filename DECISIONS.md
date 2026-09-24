@@ -179,13 +179,80 @@ The plan said three workshops. There's still one Scriptorium; the three paths
 come from tech exclusivity instead. Splitting it is easy later if the
 playtest wants research to cost space.
 
+## Phase 5 (you said "start phase 5")
+
+### 24. Fairness is a measured budget over reachable land
+Map fairness was the lead problem, so I started there. `hellwall-sim maps` now measures what a start
+can reach over land within 30 steps; a lake between the Keep and a quarry
+counts as out of reach. Against the bot's results, reachable rock alone
+separated the maps: every map lost early had under 50, and every map won had over
+110. The generator now stamps patches on reachable ground until a start has
+130 rock, 250 forest and 20 iron. Rock and iron may be stamped over forest,
+and iron over rock (iron goes first). This replaced the old fixed-distance
+patches. On the same 8 seeds, wins went from 10/24 to 17-19/24 in one step (before the Convergence changed). A test
+checks the minimums on 16 seeds of every map kind.
+
+### 25. Four kinds of map, not a new generator
+Plains, Lakes, Highlands and Wildwood are the same noise with different
+water, rock and forest thresholds, and the fairness pass runs on all of
+them. They play differently: Highlands favours fortress, Wildwood legion,
+and Lakes is the hardest (see README). A real procedural generator (rivers, ridgelines, placed
+chokepoints) is the obvious next step when the playtest asks for more variety.
+
+### 26. Difficulty scales numbers, never rules
+Easy, Normal, Hard and Nightmare multiply wave, Convergence, pack and Hellgate
+band sizes and starting resources, from Normal (rules.json as written, so
+tests and probes are untouched). Saves record the level. Normal's
+Convergence is 7,000 (it was 9,000): on fair maps nearly every run reaches
+the Convergence, and at 9,000 the bot won about 9/24. The bot is a lower bound on a
+player. At 7,000 it won 16/24 on the maps of the time, and 11/24 on the final
+generator; I've left it rather than chase the bot. Hard (x1.3, about 9,100) wins 8/24,
+Nightmare 1/24, Easy 20/24.
+
+### 27. Endless: corruptions, Surges, and a score
+Endless mode has no Convergence and no win; the score is the day the Keep
+falls.
+- **Waves:** they grow as in survival but cap at 5,000, and every sixth is a
+  Surge (x2.5, every side).
+- **Hellgates:** they gain a tier every 20 days past day 40.
+- **Corruptions:** every 8 days from day 12 one is drawn from ten, without repeats until
+  all have come, then they stack.
+
+The bot falls between day 42 and day 72 depending on seed, and no two seeds
+draw the same order. The phase 5 exit criterion is that endless runs vary by seed,
+and a verify step checks it. Endless difficulty isn't tuned yet: I don't know how long you'd
+want a good endless run to last. That's a playtest question.
+
+### 28. Verify gates on rates, not on two named maps
+The old gates required wins on seeds 11 and 3. With runs decided at the
+Convergence, one change to the maps or the bot flipped them, several times
+this session, without the game getting better or worse. The gate is now
+the 8-map sweep:
+- every path wins at least 2 of 8 and averages day 55 or later;
+- 9 or more of the 24 runs are won;
+- no path leads another by more than 4 wins.
+
+The passive bot must still lose on five maps. The bench retries once
+before failing, because its p95 moves several milliseconds when the machine is busy.
+
+### 29. Bot fixes found by the fairness work
+Each of these had been costing whole maps:
+- The bot's "is there a spot?" check scored gatherer spots differently from where it
+  actually builds. A spot could pass the check and fail the build, and the colony
+  then neither built nor expanded.
+- Soldiers cost food, but the bot's food target didn't count them.
+- Ring walls skipped 3 tiles around rock, leaving holes exactly where the fair
+  patches sit. Now it's only the tiles right beside rock.
+- `run` ignored `--plan`, so every trace I took of pyre or legion was
+  really fortress.
+
 ## Things I noticed that you should decide
 
 - **Scale:** addressed by 12-14 and 21. The Convergence is 9,000 plus whatever
   packs are still awake, well inside the 20k budget.
-- **Map fairness** is the next real problem, and it decides more than build
-  choice does. Phase 5 should start with fairness rules and `hellwall-sim
-  maps` as the tool.
+- **Map fairness:** addressed by 24. What remains are bot weaknesses on
+  particular maps (Highlands seed 13: it never reaches the ridge beside it).
+- **How long should a good endless run last?** Today the bot falls around day 60.
 - **Controls:** number keys arm buildings, so control groups are Ctrl+N to
   set and Alt+N to recall. Worth revisiting in the UX pass.
 

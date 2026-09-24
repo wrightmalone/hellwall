@@ -12,6 +12,11 @@ namespace Hellwall.Game;
 ///
 /// Command-line (after `--`):
 ///   --seed=N             world seed
+///   --map=Kind           plains, lakes, highlands or wildwood
+///   --difficulty=Level   easy, normal, hard or nightmare
+///   --endless            endless mode (no Convergence; corruptions)
+///   --menu               show the new-game menu even though other flags were given
+///   With none of the above (and not headless), the new-game menu comes first.
 ///   --screenshot=path    save a frame after warm-up (or at the end of --bench/--demo), then quit
 ///   --bench[=seconds]    spawn the 20k edge assault, run for N seconds (default 20),
 ///                        print frame and sim timings, then quit
@@ -27,6 +32,10 @@ public partial class Main : Node2D
     const double TickSeconds = 1.0 / Balance.TickHz;
 
     World _world = null!;
+    bool _started;
+    /// <summary>The unscaled rules the run was made from: a quickload rescales them to the save's difficulty.</summary>
+    Rules _baseRules = Rules.Default;
+    Dictionary<string, string> _options = new();
     Sprite2D _terrain = null!;
     readonly ClientState _state = new();
     static readonly string SavePath = ProjectSettings.GlobalizePath("user://quicksave.hwsave");
@@ -60,8 +69,23 @@ public partial class Main : Node2D
 
     public override void _Ready()
     {
-        var options = ParseUserArgs();
-        uint seed = options.TryGetValue("seed", out var s) ? uint.Parse(s) : 11u; // the designated map: fair to every build path today
+        _options = ParseUserArgs();
+        var o = _options;
+        var setup = new GameSetup(
+            o.TryGetValue("seed", out var s) ? uint.Parse(s) : 11u,
+            o.TryGetValue("map", out var m) ? Enum.Parse<MapKind>(m, ignoreCase: true) : MapKind.Plains,
+            o.TryGetValue("difficulty", out var d) ? Enum.Parse<Difficulty>(d, ignoreCase: true) : Difficulty.Normal,
+            o.ContainsKey("endless"));
+        // Any flag that sets up a run (and every headless boot, which is verify.sh) skips the menu.
+        bool flagged = new[] { "seed", "map", "difficulty", "endless", "autoplay", "bench", "demo", "skip", "screenshot" }.Any(o.ContainsKey);
+        if ((flagged || DisplayServer.GetName() == "headless") && !o.ContainsKey("menu")) Begin(setup);
+        else AddChild(new NewGameMenu { Initial = setup, Start = Begin });
+    }
+
+    void Begin(GameSetup setup)
+    {
+        var options = _options;
+        uint seed = setup.Seed;
         _screenshotPath = options.GetValueOrDefault("screenshot");
         if (options.TryGetValue("bench", out var b)) _benchSeconds = b == "true" ? 20 : double.Parse(b);
         if (options.TryGetValue("demo", out var d)) _demoSeconds = d == "true" ? 130 : double.Parse(d);
@@ -70,7 +94,9 @@ public partial class Main : Node2D
         if (_benchSeconds > 0) rules = rules.WithBuilding(BuildingKind.Keep, k => k with { Hp = 1e9f });
         if (_demoSeconds > 0) rules = rules.WithStartingResources(new Cost { Gold = 5000, Wood = 3000, Stone = 2000, Food = 1000, Iron = 1000 });
         bool scripted = _benchSeconds > 0 || _demoSeconds > 0;
-        _world = World.Create(new WorldOptions(seed, MapSize, 0, rules, Survival: !scripted)); // a survival run takes its packs from rules.json (wilds)
+        _baseRules = rules;
+        // A survival run takes its packs from rules.json (wilds).
+        _world = World.Create(new WorldOptions(seed, MapSize, 0, rules, Survival: !scripted, Difficulty: setup.Difficulty, Endless: setup.Endless && !scripted, Map: setup.Map));
 
         _terrain = new Sprite2D { Texture = BuildTerrainTexture(_world.Terrain), Centered = false, Scale = new Vector2(T, T), ZIndex = -2 };
         AddChild(_terrain);
@@ -108,13 +134,20 @@ public partial class Main : Node2D
             _state.SelectedBuilding = _world.Buildings.FirstOrDefault(b => b.Kind == kindToInspect)?.Id;
 
         // scripts/verify.sh looks for this line: the engine banner alone doesn't prove the C# scene ran.
-        GD.Print($"hellwall: world ready seed={_world.Seed} hash={StateHash.Hex(_world)}");
+        GD.Print($"hellwall: world ready seed={_world.Seed} map={_world.Map} difficulty={_world.Rules.Difficulty} endless={_world.Survival?.Endless ?? false} hash={StateHash.Hex(_world)}");
+        _started = true;
     }
 
     void Send(Command command) => _world.Enqueue(command);
 
     public override void _Process(double delta)
     {
+        if (!_started)
+        {
+            // --menu --screenshot=path: a picture of the menu itself.
+            if (_options.TryGetValue("screenshot", out var shot) && ++_frames == 30) { _screenshotPath = shot; SaveScreenshotAndQuit(); }
+            return;
+        }
         if (_paused)
         {
             _world.FlushCommands();
@@ -182,7 +215,9 @@ public partial class Main : Node2D
                 case HellgateClosed: _state.Say($"A Hellgate is closed: waves will be smaller ({_world.Gates.Count(g => g.Alive)} still open)"); break;
                 case DemonBurst d: _state.Bursts.Add((d, 0)); break;
                 case DemonHowled h: _state.Howls.Add((h, 0)); break;
-                case OutcomeChanged o: _state.Say(o.Outcome == Outcome.Lost ? "The Keep has fallen." : "Victory."); break;
+                case OutcomeChanged o: _state.Say(o.Outcome == Outcome.Lost ? $"The Keep has fallen on day {_world.Day}." : "Victory."); break;
+                case CorruptionAnnounced c: _state.Say($"CORRUPTION: {c.Name}. {c.Description}"); break;
+                case CorruptionTook c: _state.Say($"The horde is corrupted: {c.Name}"); break;
             }
         }
     }
@@ -199,6 +234,7 @@ public partial class Main : Node2D
 
     public override void _UnhandledInput(InputEvent @event)
     {
+        if (!_started) return;
         switch (@event)
         {
             case InputEventMouseButton { ButtonIndex: MouseButton.Left } mb:
@@ -329,7 +365,7 @@ public partial class Main : Node2D
         }
         try
         {
-            var loaded = World.Load(System.IO.File.ReadAllBytes(SavePath), _world.Rules);
+            var loaded = World.Load(System.IO.File.ReadAllBytes(SavePath), _baseRules);
             _world = loaded;
             _view.World = loaded;
             _hud.World = loaded;

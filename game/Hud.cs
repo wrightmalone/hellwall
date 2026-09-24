@@ -159,7 +159,7 @@ public partial class Hud : CanvasLayer
         if (World.Outcome != Outcome.Running)
         {
             _banner.Visible = true;
-            _banner.Text = World.Outcome == Outcome.Lost ? "The Keep has fallen" : "The colony endures";
+            _banner.Text = World.Outcome == Outcome.Lost ? (World.Survival is { Endless: true } ? $"The Keep has fallen on day {World.Day}" : "The Keep has fallen") : "The colony endures";
             _banner.Size = new Vector2(screen.X, 60);
             _banner.Position = new Vector2(0, screen.Y * 0.4f);
         }
@@ -188,11 +188,21 @@ public partial class Hud : CanvasLayer
         {
             var next = s.Next;
             string upcoming = next == null ? "All waves have come."
-                : next.Announced ? $"{(next.Final ? "CONVERGENCE" : $"Wave {next.Number}")}: {next.Size} in {Clock((next.LandsAtTick - World.Tick) / (double)Balance.TickHz)}"
+                : next.Announced ? $"{(next.Final ? "CONVERGENCE" : next.Surge ? $"SURGE (wave {next.Number})" : $"Wave {next.Number}")}: {next.Size} in {Clock((next.LandsAtTick - World.Tick) / (double)Balance.TickHz)}"
                 : $"Next wave: day {s.DayAt(next.LandsAtTick) - 1} ({Clock((next.AnnounceTick(s.Rules) - World.Tick) / (double)Balance.TickHz)} until it's sighted)";
             int open = World.Gates.Count(g => g.Alive);
             string gates = World.Gates.Count == 0 ? "" : $"\nHellgates open: {open} of {World.Gates.Count} (waves at {HellgateScale():P0})";
-            _clock.Text = $"Day {Math.Min(World.Day, s.Rules.Days)} of {s.Rules.Days}\n{upcoming}{gates}";
+            string level = World.Rules.Difficulty == Difficulty.Normal ? "" : $" · {World.Rules.Difficulty}";
+            string day = s.Endless ? $"Day {World.Day} · endless{level}" : $"Day {Math.Min(World.Day, s.Rules.Days)} of {s.Rules.Days}{level}";
+            string corruption = "";
+            if (s.Endless)
+            {
+                if (s.PendingCorruption is { } pending)
+                    corruption += $"\nCORRUPTION in {Clock((s.NextCorruptionTick - World.Tick) / (double)Balance.TickHz)}: {World.Rules.Corruption(pending).Name}";
+                if (s.Corruptions.Count > 0)
+                    corruption += $"\nThe horde: {string.Join(", ", s.Corruptions.Select(id => World.Rules.Corruption(id).Name))}";
+            }
+            _clock.Text = $"{day}\n{upcoming}{gates}{corruption}";
 
             foreach (var wave in s.Waves)
             {

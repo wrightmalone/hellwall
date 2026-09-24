@@ -4,17 +4,21 @@ A colony-survival RTS: a walled human settlement against demon hordes, where
 one breach can cascade into losing everything. The plan, pillars and roadmap
 are in [PLAN.md](./PLAN.md).
 
-**Status: phase 4 (depth) mostly done.** The clone is complete (phase 3):
-a 60-day survival run with announced waves, possession and a final
-Convergence is winnable and losable. Phase 4 adds a tech tree with three
-build paths, three new demons, Stone Walls, Lance Towers, Crossbowmen, and
-Hellgates, and the roster the plan asks for: 6 units, 6 towers and 8 demon
-types. Since then, the expansion loop: waves are about four times
-larger, demons sleep in packs across the whole map and must be cleared
-before you can build near them, and every soldier costs iron, which is mined
-from deposits out in the wilds. The three paths are balanced against each other, but
-whole maps are won or lost by every path alike, so map fairness is the open
-problem (phase 5). 20,000 demons still run at 20 Hz in ~6 ms/tick.
+**Status: phase 5 (the mutation) under way.**
+- **Phase 3 (the clone):** a 60-day survival run, winnable and losable.
+- **Phase 4 (depth):**
+  - a tech tree with three build paths
+  - 6 units, 6 towers and 8 demon types
+  - Hellgates
+  - the expansion loop: sleeping packs to clear, and iron mined out in the wilds to pay for an army
+- **Phase 5 so far:**
+  - every map is measured and topped up until its start is fair
+  - four kinds of map: Plains, Lakes, Highlands, Wildwood
+  - four difficulty levels
+  - an endless mode in which the horde takes a new corruption every eight days
+  - a new-game menu
+
+20,000 demons still run at 20 Hz in about 6 ms per tick.
 
 ## Layout
 
@@ -67,6 +71,26 @@ dotnet run -c Release --project src/Sim.Headless -- town
 
 Add `--trace` to see the defended town's towers, crews and Keep every 5 s.
 
+Balance, headless (verify.sh gates on it): every research path on 8 maps,
+in parallel, about 2 minutes. `MAP=lakes` and `DIFFICULTY=hard` pick the
+kind of map and the difficulty:
+
+```bash
+scripts/sweep.sh
+```
+
+Endless mode: how long the bot lasts on each seed, and what the horde became:
+
+```bash
+dotnet run -c Release --project src/Sim.Headless -- endless --seeds=3,11,42
+```
+
+What each start offers within reach (`--map=highlands` for another kind):
+
+```bash
+dotnet run -c Release --project src/Sim.Headless -- maps
+```
+
 The phase 3 gate, headless (also run by verify.sh, about a minute):
 
 ```bash
@@ -89,11 +113,13 @@ Headless harness:
 dotnet run --project src/Sim.Headless -- --seed=7 --ticks=2400 --script=src/Sim.Headless/scripts/smoke.json --out=out/smoke.csv
 ```
 
-Run the game:
+Run the game (the new-game menu picks the mode, difficulty, map and seed):
 
 ```bash
 /Applications/Godot_mono.app/Contents/MacOS/Godot --path game
 ```
+
+Or skip the menu with flags: `--seed=N --map=lakes --difficulty=hard --endless`.
 
 Or open `game/project.godot` in the Godot editor and press F5. To watch the
 bot play a whole run (Tab to speed up, Esc to take over):
@@ -108,13 +134,49 @@ To watch the probe's town hold a wave at 4x speed:
 /Applications/Godot_mono.app/Contents/MacOS/Godot --path game -- --demo
 ```
 
+## Modes, maps and difficulty
+
+- **Survival:** 60 days, then the Convergence. Survive it to win.
+- **Endless:** no Convergence and no victory. Your score is the day the Keep falls.
+  - Waves keep coming, capped at 5,000.
+  - Every sixth wave is a **Surge**, two and a half times as large and from every side.
+  - Hellgates grow a tier every 20 days.
+  - Every eight days from day 12, the horde takes a **corruption**, announced a
+    minute ahead and kept for the rest of the run. There are ten, drawn without
+    repeats until all have come:
+    - Armoured Hides
+    - Hellspeed
+    - Bloodlust
+    - The Winged Host
+    - The Swollen
+    - Brood Season
+    - The Howling
+    - Titans
+    - Open Gates
+    - Rising Tide
+
+  Corruptions are data in `rules.json`, so new ones need no code.
+- **Maps.** Four kinds grow from the same noise with different thresholds:
+  - **Plains:** open ground.
+  - **Lakes:** water everywhere. The land runs between lakes, with chokepoints and little room.
+  - **Highlands:** rock ridges and passes.
+  - **Wildwood:** dense forest.
+- **Fair starts.** Every start is measured over land from the Keep (a lake in the way
+  puts what's beyond it out of reach). The generator stamps patches on
+  reachable ground until the start has at least 130 rock, 250 forest and 20
+  iron within 30 steps. Every map the bot used to lose early had under 50
+  reachable rock.
+- **Difficulty:** Easy, Normal, Hard or Nightmare. Each scales wave, Convergence, pack and
+  Hellgate band sizes, and starting resources, from Normal (which is `rules.json` as written).
+  Only the numbers change, never the rules.
+
 ## A survival run
 
 60 one-minute days, on the designated map (seed 11) by default. From day 6 a wave lands every three days, each larger
 than the last and from more sides as the run goes on; each is announced a
 minute ahead with its size and direction, pinned to the edge of the screen.
 The first wave is 30 demons, each wave after is x1.24, and the last regular
-wave is about 1,330. At the end of day 60 the Convergence (9,000) comes from every side at once.
+wave is about 1,330. At the end of day 60 the Convergence (7,000 at Normal) comes from every side at once.
 Survive it and the run is won; lose the Keep and it's over.
 
 **The wilds.** 160 packs sleep across the map, none within 20 tiles of the
@@ -248,29 +310,37 @@ p99 9.1 ms, sim 4.8 ms/tick.
 
 ## Bot results
 
-`hellwall-sim run` plays the bot (fortress plan) on the designated map (seed
-11) and seed 3 and requires wins, and the passive bot on five maps and
-requires losses. `hellwall-sim paths` plays all three research plans. Both
-are in verify.sh. `scripts/sweep.sh` plays 8 maps x 3 paths in parallel
-(about 2 minutes). With the full phase 4 roster (6 units, 6 towers, 8 demons):
+`scripts/sweep.sh` plays the bot's three research plans on 8 maps, 24 runs,
+in parallel. verify.sh gates on its rates:
+- every path wins at least 2 of 8 and averages day 55 or later;
+- 9 or more of the 24 runs are won;
+- no path leads another by more than 4 wins.
 
-| Seed | Fortress | Pyre | Legion |
-|---|---|---|---|
-| 3 | won | won | won |
-| 5 | won | won | lost day 62 |
-| 7 | lost day 41 | lost day 23 | lost day 36 |
-| 11 | won | won | won |
-| 13 | lost day 62 | won | lost day 35 |
-| 19 | won | lost day 62 | lost day 62 |
-| 23 | lost day 63 | lost day 63 | lost day 51 |
-| 42 | lost day 38 | lost day 38 | lost day 38 |
+`hellwall-sim run` checks that the passive bot (economy, no defense) loses on five
+maps. Wins out of 24, at Normal unless stated:
 
-Fortress and pyre win 4 of 8 each, legion 2. Many losses come at the
-Convergence (days 61-63), so these runs are close, and one change to the bot
-moves a map either way. Seeds 7 and 42 collapse early whatever the path: on
-7 the colony grows along a lake shore and never reaches its iron. The map
-generator already guarantees rock and forest 16 to 20 tiles out on the landward
-side, but making every generated map fair is phase 5's job.
+| Map | Fortress | Pyre | Legion | Total |
+|---|---|---|---|---|
+| Plains | 4 | 4 | 3 | 11 |
+| Lakes | 2 | 3 | 1 | 6 |
+| Highlands | 7 | 6 | 5 | 18 |
+| Wildwood | 2 | 4 | 3 | 9 |
+
+| Difficulty (Plains) | Fortress | Pyre | Legion | Total |
+|---|---|---|---|---|
+| Easy | 7 | 8 | 5 | 20 |
+| Normal | 4 | 4 | 3 | 11 |
+| Hard | 4 | 3 | 1 | 8 |
+| Nightmare | 0 | 1 | 0 | 1 |
+
+The kind of map matters more than the path. Stone-rich Highlands is the easiest, and
+cramped Lakes the hardest. On fair maps nearly every run reaches the
+Convergence, and most losses come there, on days 61 to 63. So any one run is close
+to a coin flip, and the gate is on rates rather than on named maps.
+
+Endless (`hellwall-sim endless`, fortress, Normal): the bot falls between day 42
+and day 72 depending on the seed, and every seed draws its corruptions in a different
+order.
 
 `town --extra=<Kind>` measures what one more building on each attacked side
 adds. At a 650-demon wave (5 maps):

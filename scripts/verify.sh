@@ -71,6 +71,10 @@ if [[ $RUN_GODOT == 1 ]]; then
     || { cat out/godot-boot.log; echo "FAIL: godot boot"; exit 1; }
   if grep -Ei 'error|exception' out/godot-boot.log; then echo "FAIL: errors during boot"; exit 1; fi
   grep '^hellwall: world ready' out/godot-boot.log || { cat out/godot-boot.log; echo "FAIL: Main.cs never ran"; exit 1; }
+  # The new-game menu, which a headless boot otherwise skips.
+  "$GODOT" --headless --path game --quit-after 60 -- --menu >out/godot-menu.log 2>&1 \
+    || { cat out/godot-menu.log; echo "FAIL: godot boot to the menu"; exit 1; }
+  if grep -Ei 'error|exception' out/godot-menu.log; then echo "FAIL: errors on the new-game menu"; exit 1; fi
 fi
 
 step "ok"
