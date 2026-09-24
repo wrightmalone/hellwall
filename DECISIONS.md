@@ -18,7 +18,7 @@ log. Any of these is easy to reverse: most are one line in
   Walls, Lance Towers, Crossbowmen, and Hellgates.
 - **The open problem is map fairness**, and it's phase 5's: whole maps are
   won or lost by every build path alike. See the table in the README.
-- 93 tests; `scripts/verify.sh` green (~5 min; `--fast` ~1 min).
+- 106 tests; `scripts/verify.sh` green (~5 min; `--fast` ~1 min).
 
 ## Design decisions
 
@@ -134,6 +134,51 @@ colony died on day 1. Fighting is the loud part now.
 The result is fortress 3/8, pyre 4/8 and legion 2/8 over 8 maps (README table). Legion is a
 little behind; I'd rather wait for a playtest than tune further against the bot.
 
+## The rest of the phase 4 roster
+
+The plan asked for 6 units, 6 towers and 8 demons. Each new one brings a rule of
+its own rather than new numbers on an old one.
+
+### 17. Two units, each tied to a path's tech
+- **Chaplain** (Hallowing): heals every other soldier within 4 tiles at 5 hp/s,
+  and barely fights. It gives the pyre path an army.
+- **Outrider** (Husbandry): fast (4.2 tiles/s) mounted melee at 30 iron, for
+  clearing the wilds.
+
+### 18. Three towers
+- **Censer**: range 3, rapid splash, quiet, 40 gold. A cheap wall-hugger.
+- **Skyspire**: shoots only fliers, the Gargoyle counter.
+- **Belfry** (Masonry): no weapon; demons within 7 tiles move at 55% speed.
+
+The Belfry and Skyspire cost wood, not stone, because stone is what the
+fortress path runs out of.
+
+### 19. Howlers howl only in sight of the colony
+My first Howler howled everywhere and woke every pack along its route
+from the map edge, which meant thousands of demons and every run lost by day 17. Now it howls
+only within 12 tiles of a building. Ground left uncleared beside your walls
+is what it punishes, which ties it to the wilds.
+
+### 20. Broodmothers: five Imps each
+With eight, the Convergence grew by about 1,600 Imps and every path lost
+there.
+
+### 21. Waves grow x1.24, Convergence 9,000
+This is a little gentler than 12 (x1.26, 10,000). With the two new demons, the gate maps
+were decided by a day at the Convergence, a coin flip for every path. The
+last regular wave is about 1,330, four times the old one.
+
+### 22. Bombards look strongest for the space they take
+Measured with `town --extra`: a pair of extra Bombards holds a wave of 800 where
+a pair of Watchtowers doesn't hold 650. They cost stone and sanctity (6, against the Watchtower's 3) and are
+the loudest thing in the game, so the economy may balance them. The bot
+doesn't show them dominating. Worth watching in a playtest.
+
+### 23. Research stays in one building
+The plan said three workshops. There's still one Scriptorium; the three paths
+come from tech exclusivity instead. Splitting it is easy later if the
+playtest wants research to cost space.
+
 ## Things I noticed that you should decide
 
 - **Scale:** addressed by 12-14. The Convergence is 10,000 plus whatever
@@ -143,8 +188,6 @@ little behind; I'd rather wait for a playtest than tune further against the bot.
   maps` as the tool.
 - **Controls:** number keys arm buildings, so control groups are Ctrl+N to
   set and Alt+N to recall. Worth revisiting in the UX pass.
-- **Remaining phase 4 content:** the plan says 6 units, 6 towers, 8 demon
-  types; there are 4, 3 (+2 wall tiers), and 6.
 
 ## Not done, and why
 

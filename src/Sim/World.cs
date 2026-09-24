@@ -100,6 +100,12 @@ public sealed partial class World
     /// <summary>The horde changed (spawns, deaths) since the spatial hash was last built.</summary>
     bool _spatialStale;
 
+    /// <summary>Per tile, the speed factor Belfries impose (1 where none reach). Derived, rebuilt every tick.</summary>
+    internal readonly float[] Slow;
+    internal readonly List<int> SlowedTiles = new();
+
+    public float SlowAt(float x, float y) => Slow[Math.Clamp((int)y, 0, Terrain.Height - 1) * Terrain.Width + Math.Clamp((int)x, 0, Terrain.Width - 1)];
+
     World(WorldOptions options)
     {
         Seed = options.Seed;
@@ -108,6 +114,8 @@ public sealed partial class World
         Terrain = MapGen.Generate(options.Seed, options.MapSize);
         _occupancy = new int[Terrain.Width * Terrain.Height];
         _gateTile = new bool[Terrain.Width * Terrain.Height];
+        Slow = new float[Terrain.Width * Terrain.Height];
+        Array.Fill(Slow, 1f);
         Colony = new Colony(Terrain.Width * Terrain.Height, Rules.StartingResources);
         Flow = new FlowField(Terrain.Width, Terrain.Height);
         Noise = new NoiseGrid(Terrain.Width, Terrain.Height);
@@ -157,11 +165,14 @@ public sealed partial class World
         Spatial.Build(Horde);
         _spatialStale = false;
         UnitSystem.MarkChase(this);
+        Abilities.StampSlow(this);
         HordeSystem.Move(this);
+        Abilities.Howl(this);
         BurnOnHolyGround(dt);
         UnitSystem.TakeHits(this);
         Combat.DemonsAttackBuildings(this);
         UnitSystem.Step(this, dt);
+        Abilities.Heal(this, dt);
         Combat.TowersFire(this, dt);
         StepPossessed(dt);
 
@@ -679,6 +690,16 @@ public sealed partial class World
     }
 
     /// <summary>A building whose footprint lies within reach of a point, checking the tile under it and its neighbours.</summary>
+    /// <summary>Whether any building stands within about `radius` tiles: a coarse scan of every other tile, for rare checks.</summary>
+    internal bool BuildingInSight(float x, float y, int radius)
+    {
+        int cx = (int)x, cy = (int)y, r2 = radius * radius;
+        for (int oy = -radius; oy <= radius; oy += 2)
+            for (int ox = -radius; ox <= radius; ox += 2)
+                if (ox * ox + oy * oy <= r2 && BuildingIdAt(cx + ox, cy + oy) != 0) return true;
+        return false;
+    }
+
     internal int BuildingWithinReach(float x, float y, float reach, bool skipWalls)
     {
         int cx = (int)x, cy = (int)y;
@@ -700,14 +721,23 @@ public sealed partial class World
     void ResolveDeaths()
     {
         // Bloaters burst as they die, however they died, before anything else is counted.
+        // Broodmothers' broods crawl out after the dead are cleared, so they don't count as killed.
+        List<(DemonKind Kind, float X, float Y, int Count)>? broods = null;
         for (int i = 0; i < Horde.Count; i++)
         {
             if (Horde.Hp[i] > 0) continue;
             var def = Rules[Horde.Kind[i]];
             if (def.ExplodeDamage > 0) Combat.Explode(this, Horde.X[i], Horde.Y[i], def);
+            if (def.BroodCount > 0) (broods ??= new()).Add((def.BroodKind, Horde.X[i], Horde.Y[i], def.BroodCount));
         }
 
         int killed = Horde.RemoveDead();
+        if (broods != null)
+            foreach (var (kind, x, y, count) in broods)
+            {
+                int n = SpawnCluster(kind, (int)x, (int)y, count);
+                if (n > 0) _events.Add(new DemonsSpawned(Tick, kind, n));
+            }
         if (killed > 0)
         {
             Stats.DemonsKilled += killed;

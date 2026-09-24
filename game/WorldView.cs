@@ -128,6 +128,13 @@ public partial class WorldView : Node2D
                 if (shot.Splash > 0) DrawArc(to, shot.Splash * T, 0, Mathf.Tau, 20, new Color(1, 0.6f, 0.2f, a), 2);
             }
 
+            // A howl: a thin ring spreading to the radius it wakes the wilds within.
+            foreach (var (howl, age) in state.Howls)
+            {
+                float t = (float)(age / 1.2);
+                DrawArc(new Vector2(howl.X, howl.Y) * T, howl.Radius * 0.5f * T * t, 0, Mathf.Tau, 32, new Color(0.9f, 0.3f, 0.9f, 0.6f * (1 - t)), 1.5f);
+            }
+
             foreach (var (burst, age) in state.Bursts)
             {
                 float t = (float)(age / 0.4);

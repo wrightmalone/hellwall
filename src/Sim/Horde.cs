@@ -12,6 +12,10 @@ public enum DemonKind : byte
     Bloater,
     /// <summary>Siege: slow, very tough, hits buildings hard.</summary>
     Brute,
+    /// <summary>Howls as it comes, waking the sleeping packs along its way.</summary>
+    Howler,
+    /// <summary>Slow and heavy; bursts into a brood of Imps when killed.</summary>
+    Broodmother,
 }
 
 /// <summary>
@@ -156,7 +160,7 @@ internal static class HordeSystem
             float x = h.X[i];
             float y = h.Y[i];
             var def = demons[(int)h.Kind[i]];
-            float speed = def.Speed;
+            float speed = def.Speed * world.SlowAt(x, y);
             h.Cooldown[i] = MathF.Max(0, h.Cooldown[i] - dt);
 
             float vx, vy;

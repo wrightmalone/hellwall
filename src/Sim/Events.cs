@@ -58,3 +58,6 @@ public sealed record HellgateClosed(int Tick, int GateId, int X, int Y) : SimEve
 
 /// <summary>A Bloater burst here.</summary>
 public sealed record DemonBurst(int Tick, float X, float Y, float Radius) : SimEvent(Tick);
+
+/// <summary>A Howler howled: noise of Radius tiles.</summary>
+public sealed record DemonHowled(int Tick, float X, float Y, float Radius) : SimEvent(Tick);

@@ -91,7 +91,7 @@ internal static class Combat
             if (weapon == null || !b.Active) continue;
             b.Cooldown = Math.Max(0, b.Cooldown - dt * power);
             if (b.Cooldown > 0) continue;
-            int target = NearestDemon(world, b.CentreX, b.CentreY, weapon.Range);
+            int target = NearestDemon(world, b.CentreX, b.CentreY, weapon.Range, weapon.AirOnly);
             if (target < 0) continue;
             Fire(world, b.CentreX, b.CentreY, world.Horde.X[target], world.Horde.Y[target], target, weapon, fromUnit: false);
             b.Cooldown = weapon.Cooldown;
@@ -128,9 +128,10 @@ internal static class Combat
     }
 
     /// <summary>The nearest live demon within range of a point, or -1. Ties go to the lower slot.</summary>
-    public static int NearestDemon(World world, float x, float y, float range)
+    public static int NearestDemon(World world, float x, float y, float range, bool airOnly = false)
     {
         var h = world.Horde;
+        var demons = world.Rules.Demons;
         if (h.Count == 0) return -1;
         var grid = world.Spatial;
         float best = range * range;
@@ -145,6 +146,7 @@ internal static class Combat
                 {
                     int j = grid.Items[k];
                     if (h.Hp[j] <= 0) continue;
+                    if (airOnly && !demons[(int)h.Kind[j]].Flies) continue;
                     float dx = h.X[j] - x, dy = h.Y[j] - y;
                     float d2 = dx * dx + dy * dy;
                     if (d2 < best || (d2 == best && found >= 0 && j < found))

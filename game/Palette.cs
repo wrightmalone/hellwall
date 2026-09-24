@@ -36,6 +36,9 @@ public static class Palette
         BuildingKind.LanceTower => new(0.28f, 0.42f, 0.70f),
         BuildingKind.Scriptorium => new(0.62f, 0.46f, 0.78f),
         BuildingKind.Mine => new(0.45f, 0.30f, 0.25f),
+        BuildingKind.Belfry => new(0.80f, 0.70f, 0.45f),
+        BuildingKind.Skyspire => new(0.60f, 0.75f, 0.90f),
+        BuildingKind.Censer => new(0.90f, 0.45f, 0.20f),
         _ => Colors.Magenta,
     };
 
@@ -55,6 +58,9 @@ public static class Palette
         BuildingKind.LanceTower => "La",
         BuildingKind.Scriptorium => "Scr",
         BuildingKind.Mine => "Mi",
+        BuildingKind.Belfry => "Bel",
+        BuildingKind.Skyspire => "Sk",
+        BuildingKind.Censer => "Ce",
         _ => "",
     };
 
@@ -64,6 +70,8 @@ public static class Palette
         UnitKind.Marksman => new(0.70f, 1.0f, 0.70f),
         UnitKind.Templar => new(1.0f, 0.95f, 0.75f),
         UnitKind.Crossbowman => new(0.45f, 0.95f, 0.95f),
+        UnitKind.Chaplain => new(1.0f, 1.0f, 1.0f),
+        UnitKind.Outrider => new(0.95f, 0.70f, 0.35f),
         _ => Colors.White,
     };
 
@@ -80,6 +88,6 @@ public static class Palette
         (BuildingKind.Woodcutter, Key.Key4, "4"), (BuildingKind.Quarry, Key.Key5, "5"), (BuildingKind.Shrine, Key.Key6, "6"),
         (BuildingKind.Wardstone, Key.Key7, "7"), (BuildingKind.Wall, Key.Key8, "8"), (BuildingKind.StoneWall, Key.Key9, "9"),
         (BuildingKind.Watchtower, Key.Key0, "0"), (BuildingKind.Bombard, Key.Minus, "-"), (BuildingKind.LanceTower, Key.Equal, "="),
-        (BuildingKind.Mine, Key.M, "M"), (BuildingKind.Gate, Key.G, "G"), (BuildingKind.Barracks, Key.B, "B"), (BuildingKind.Scriptorium, Key.U, "U"),
+        (BuildingKind.Mine, Key.M, "M"), (BuildingKind.Censer, Key.C, "C"), (BuildingKind.Belfry, Key.L, "L"), (BuildingKind.Skyspire, Key.P, "P"), (BuildingKind.Gate, Key.G, "G"), (BuildingKind.Barracks, Key.B, "B"), (BuildingKind.Scriptorium, Key.U, "U"),
     ];
 }

@@ -19,6 +19,12 @@ public enum BuildingKind : byte
     LanceTower,
     Scriptorium,
     Mine,
+    /// <summary>No weapon: its bells slow every demon in earshot.</summary>
+    Belfry,
+    /// <summary>Anti-air: long range, shoots only fliers.</summary>
+    Skyspire,
+    /// <summary>Short range, rapid, quiet: burns whatever is at the wall.</summary>
+    Censer,
 }
 
 public sealed class Building

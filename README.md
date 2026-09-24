@@ -8,7 +8,8 @@ are in [PLAN.md](./PLAN.md).
 a 60-day survival run with announced waves, possession and a final
 Convergence is winnable and losable. Phase 4 adds a tech tree with three
 build paths, three new demons, Stone Walls, Lance Towers, Crossbowmen, and
-Hellgates. Since then, the expansion loop: waves are about four times
+Hellgates, and the roster the plan asks for: 6 units, 6 towers and 8 demon
+types. Since then, the expansion loop: waves are about four times
 larger, demons sleep in packs across the whole map and must be cleared
 before you can build near them, and every soldier costs iron, which is mined
 from deposits out in the wilds. The three paths are balanced against each other, but
@@ -112,8 +113,8 @@ To watch the probe's town hold a wave at 4x speed:
 60 one-minute days, on the designated map (seed 11) by default. From day 6 a wave lands every three days, each larger
 than the last and from more sides as the run goes on; each is announced a
 minute ahead with its size and direction, pinned to the edge of the screen.
-The first wave is 30 demons, each wave after is x1.26, and the last regular
-wave is about 1,500. At the end of day 60 the Convergence (10,000) comes from every side at once.
+The first wave is 30 demons, each wave after is x1.24, and the last regular
+wave is about 1,330. At the end of day 60 the Convergence (9,000) comes from every side at once.
 Survive it and the run is won; lose the Keep and it's over.
 
 **The wilds.** 160 packs sleep across the map, none within 20 tiles of the
@@ -134,7 +135,10 @@ demon left, or the Keep still standing four minutes after it lands.
 
 **Demons:** Imps; fast Hounds; Thralls (colonists and soldiers the horde has
 taken); Gargoyles, which fly over walls (from wave 5); Bloaters, which burst
-against buildings and when killed (from wave 7); and siege Brutes (from wave 10).
+against buildings and when killed (from wave 7); Howlers (from wave 5), which howl
+once they're in sight of the colony and wake the sleeping packs near it;
+Broodmothers (from wave 8), which burst into five Imps when killed; and siege
+Brutes (from wave 10).
 
 **Research** happens at a Scriptorium. Twelve techs in three tiers; tier 3
 is two exclusive pairs (Bastions or Holy Fire, Standing Army or Artillery),
@@ -172,8 +176,22 @@ Every content number lives in [src/Sim/data/rules.json](src/Sim/data/rules.json)
   sanctity; a shortfall slows everything that draws it.
 - **Demons** head for every building except walls and gates, which they path
   through at 30x cost: they walk round a short wall and break a long one.
-- **Towers** (Watchtower, Bombard) draw sanctity but no crew; **soldiers**
-  (Militia, Marksman, Templar) train at a Barracks. Both shoot the nearest demon. Shots are loud. Demons within four tiles
+- **Towers** draw sanctity but no crew:
+  - Watchtower, the all-rounder.
+  - Bombard, with splash. It is loud.
+  - Lance Tower, long range (needs Ballistics).
+  - Censer, cheap and quiet, with a short range and rapid splash for the crowd at the wall.
+  - Skyspire, which shoots only fliers.
+  - Belfry, which has no weapon but slows every demon within 7 tiles to 55% speed (needs Masonry).
+- **Soldiers** train at a Barracks:
+  - Militia.
+  - Marksman.
+  - Templar.
+  - Crossbowman (needs Drill).
+  - Chaplain, which heals soldiers around it at 5 hp/s (needs Hallowing).
+  - Outrider, fast mounted melee for riding out to clear the wilds (needs Husbandry).
+
+  Towers and soldiers shoot the nearest demon. Shots are loud. Demons within four tiles
   of a soldier go for it.
 - **Losing the Keep loses the game.**
 
@@ -234,26 +252,38 @@ p99 9.1 ms, sim 4.8 ms/tick.
 11) and seed 3 and requires wins, and the passive bot on five maps and
 requires losses. `hellwall-sim paths` plays all three research plans. Both
 are in verify.sh. `scripts/sweep.sh` plays 8 maps x 3 paths in parallel
-(about 2 minutes). After the expansion loop (x4 waves, wilds, iron):
+(about 2 minutes). With the full phase 4 roster (6 units, 6 towers, 8 demons):
 
 | Seed | Fortress | Pyre | Legion |
 |---|---|---|---|
 | 3 | won | won | won |
-| 5 | won | won | lost day 63 |
-| 7 | lost | lost | lost |
+| 5 | won | won | lost day 62 |
+| 7 | lost day 41 | lost day 23 | lost day 36 |
 | 11 | won | won | won |
-| 13 | lost day 42 | lost day 42 | lost day 32 |
-| 19 | lost | won | lost |
-| 23 | lost day 44 | lost day 44 | lost day 38 |
-| 42 | lost day 34 | lost day 34 | lost day 34 |
+| 13 | lost day 62 | won | lost day 35 |
+| 19 | won | lost day 62 | lost day 62 |
+| 23 | lost day 63 | lost day 63 | lost day 51 |
+| 42 | lost day 38 | lost day 38 | lost day 38 |
 
-Fortress wins 3 of 8, pyre 4 and legion 2. Just as before the expansion
-loop, the map decides more than the path: 13, 23 and 42 collapse in the
-same week whatever the path. The map generator already guarantees rock and forest 16 to 20
-tiles out on the landward side (seed 42 has neither within 25 tiles
-otherwise). Making every generated map fair is phase 5's job.
+Fortress and pyre win 4 of 8 each, legion 2. Many losses come at the
+Convergence (days 61-63), so these runs are close, and one change to the bot
+moves a map either way. Seeds 7 and 42 collapse early whatever the path: on
+7 the colony grows along a lake shore and never reaches its iron. The map
+generator already guarantees rock and forest 16 to 20 tiles out on the landward
+side, but making every generated map fair is phase 5's job.
+
+`town --extra=<Kind>` measures what one more building on each attacked side
+adds. At a 650-demon wave (5 maps):
+
+| Extra | Maps held |
+|---|---|
+| none | 0 |
+| Watchtower | 1 |
+| Censer | 2 |
+| Belfry | 3 |
+| Bombard | 5 (holds 800 as well) |
 
 The bot is a lower bound, not a target: it packs towers into blocks, builds
 over its own farmland, doesn't plan chokepoints, and only the legion plan
-raids gates. It clears packs only with 8+ soldiers and 4+ towers, leaves
+raids gates. Short of stone for a Bombard, it builds a Watchtower, or a Censer when gold piles up. It adds a Skyspire and a Belfry per eight towers. It clears packs only with 8+ soldiers and 4+ towers, leaves
 a home guard of 4, and takes on packs up to 1.5x its own army.

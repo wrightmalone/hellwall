@@ -26,11 +26,13 @@ public static class TownProbe
         int wave = int.Parse(args.GetValueOrDefault("wave", "200"), CultureInfo.InvariantCulture);
         int seconds = int.Parse(args.GetValueOrDefault("seconds", "240"), CultureInfo.InvariantCulture);
         bool trace = args.ContainsKey("trace");
+        // --extra=Belfry: one more of that building inside each attacked wall, to measure what it adds.
+        BuildingKind? extra = args.TryGetValue("extra", out var e) ? Enum.Parse<BuildingKind>(e) : null;
 
         bool ok = true;
         foreach (var seed in seeds)
         {
-            var defended = Play(seed, wave, seconds, defend: true, trace);
+            var defended = Play(seed, wave, seconds, defend: true, trace, extra);
             var bare = Play(seed, wave, seconds, defend: false);
             Console.WriteLine($"seed {seed}");
             Console.WriteLine($"  {defended}");
@@ -48,9 +50,10 @@ public static class TownProbe
             $"{Name,-10} {Outcome,-7} after {Seconds,5:F0}s  keep_hp={KeepHp,6:F0}  demons {Killed}/{Spawned} killed  buildings_lost={BuildingsLost} (walls {WallsLost})  units {UnitsTrained - UnitsLost}/{UnitsTrained} alive  rejected={Rejected}");
     }
 
-    public static Result Play(uint seed, int waveSize, int seconds, bool defend, bool trace = false)
+    public static Result Play(uint seed, int waveSize, int seconds, bool defend, bool trace = false, BuildingKind? extra = null)
     {
         var rules = Rules.Default.WithStartingResources(new Cost { Gold = 5000, Wood = 3000, Stone = 2000, Food = 1000, Iron = 1000 });
+        if (extra is { } ek) rules = rules.WithBuilding(ek, d => d with { RequiresTech = null });
         var world = World.Create(new WorldOptions(seed, 128, 0, rules));
         var rejected = new List<CommandRejected>();
         int wallsLost = 0, trained = 0, spawned = 0, shots = 0;
@@ -62,6 +65,7 @@ public static class TownProbe
         }
 
         Do(defend ? Town() : [new PlaceBuilding(BuildingKind.House, 59, 63), new PlaceBuilding(BuildingKind.House, 68, 63)]);
+        if (defend && extra is { } k) Do([new PlaceBuilding(k, 57, 61), new PlaceBuilding(k, 70, 61)]);
 
         int waveTick = 60 * Balance.TickHz;
         bool trainedQueued = false;

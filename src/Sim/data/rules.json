@@ -19,14 +19,16 @@
   "survival": {
     "daySeconds": 60, "days": 60,
     "firstWaveDay": 6, "waveEveryDays": 3, "telegraphSeconds": 60,
-    "firstWaveSize": 30, "waveGrowth": 1.26,
+    "firstWaveSize": 30, "waveGrowth": 1.24,
     "wavesPerExtraSide": 5, "maxSides": 3,
-    "convergenceSize": 10000,
+    "convergenceSize": 9000,
     "mix": [
       { "kind": "Hound",    "fromWave": 1,  "share": 0.20 },
       { "kind": "Gargoyle", "fromWave": 5,  "share": 0.06 },
       { "kind": "Bloater",  "fromWave": 7,  "share": 0.04 },
-      { "kind": "Brute",    "fromWave": 10, "share": 0.02 }
+      { "kind": "Howler",   "fromWave": 5,  "share": 0.012 },
+      { "kind": "Brute",    "fromWave": 10, "share": 0.02 },
+      { "kind": "Broodmother", "fromWave": 8, "share": 0.012 }
     ]
   },
 
@@ -69,7 +71,16 @@
                     "sanctityUse": 6, "possessable": false,
                     "weapon": { "range": 8, "damage": 50, "cooldown": 2.0, "splash": 2.2, "noise": 30 } },
     "Barracks":   { "size": [3, 3], "hp": 600,  "buildSeconds": 15, "cost": { "gold": 120, "wood": 30 },
-                    "workers": 4, "sanctityUse": 4, "trains": ["Militia", "Marksman", "Templar", "Crossbowman"] }
+                    "workers": 4, "sanctityUse": 4, "trains": ["Militia", "Marksman", "Templar", "Crossbowman", "Chaplain", "Outrider"] },
+    "Belfry":     { "size": [2, 2], "hp": 350,  "buildSeconds": 10, "cost": { "gold": 90, "wood": 60, "stone": 10 },
+                    "sanctityUse": 4, "possessable": false, "requiresTech": "masonry",
+                    "slowRadius": 7, "slowFactor": 0.55 },
+    "Skyspire":   { "size": [1, 1], "hp": 300,  "buildSeconds": 8,  "cost": { "gold": 80, "wood": 30 },
+                    "sanctityUse": 2, "possessable": false,
+                    "weapon": { "range": 12, "damage": 40, "cooldown": 0.4, "splash": 0.8, "noise": 10, "airOnly": true } },
+    "Censer":     { "size": [1, 1], "hp": 250,  "buildSeconds": 5,  "cost": { "gold": 40, "wood": 10, "stone": 10 },
+                    "sanctityUse": 2, "possessable": false,
+                    "weapon": { "range": 3, "damage": 8, "cooldown": 0.3, "splash": 1.2, "noise": 4 } }
   },
 
   "units": {
@@ -80,13 +91,18 @@
     "Templar":  { "hp": 320, "speed": 2.2, "trainSeconds": 12, "cost": { "gold": 50, "food": 15, "iron": 20 }, "upkeepGold": 0.07,
                   "weapon": { "range": 1.4, "damage": 28, "cooldown": 1.0, "splash": 0.8, "noise": 8 } },
     "Crossbowman": { "hp": 90, "speed": 2.4, "trainSeconds": 9, "cost": { "gold": 40, "food": 10, "iron": 15 }, "upkeepGold": 0.04, "requiresTech": "drill",
-                  "weapon": { "range": 7, "damage": 24, "cooldown": 1.2, "noise": 10 } }
+                  "weapon": { "range": 7, "damage": 24, "cooldown": 1.2, "noise": 10 } },
+    "Chaplain": { "hp": 70, "speed": 2.4, "trainSeconds": 10, "cost": { "gold": 50, "food": 10, "iron": 10 }, "upkeepGold": 0.04, "requiresTech": "hallowing",
+                  "healPerSecond": 5, "healRadius": 4,
+                  "weapon": { "range": 4, "damage": 6, "cooldown": 1.0, "noise": 6 } },
+    "Outrider": { "hp": 240, "speed": 4.2, "trainSeconds": 12, "cost": { "gold": 70, "food": 25, "iron": 30 }, "upkeepGold": 0.08, "requiresTech": "husbandry",
+                  "weapon": { "range": 1.4, "damage": 34, "cooldown": 0.9, "splash": 0.5, "noise": 8 } }
   },
 
   "techs": [
     { "id": "masonry", "name": "Masonry", "tier": 1, "cost": { "gold": 150, "stone": 60 }, "seconds": 40,
-      "description": "Stone walls: three times the hit points of wood.",
-      "unlocksBuildings": ["StoneWall"] },
+      "description": "Stone walls, three times the hit points of wood; Belfries, whose bells slow demons.",
+      "unlocksBuildings": ["StoneWall", "Belfry"] },
     { "id": "fletching", "name": "Fletching", "tier": 1, "cost": { "gold": 200 }, "seconds": 45,
       "description": "Towers +25% damage, soldiers +20%.",
       "modifiers": [ { "group": "towers", "stat": "damage", "mul": 1.25 }, { "group": "units", "stat": "damage", "mul": 1.2 } ] },
@@ -94,7 +110,8 @@
       "description": "Colonists pay 30% more gold.",
       "modifiers": [ { "stat": "colonistGold", "mul": 1.3 } ] },
     { "id": "husbandry", "name": "Husbandry", "tier": 1, "cost": { "gold": 150, "wood": 40 }, "seconds": 40,
-      "description": "Farms and Hunters yield 35% more.",
+      "description": "Farms and Hunters yield 35% more; Outriders.",
+      "unlocksUnits": ["Outrider"],
       "modifiers": [ { "group": "food", "stat": "rate", "mul": 1.35 } ] },
 
     { "id": "ballistics", "name": "Ballistics", "tier": 2, "requires": ["fletching"], "cost": { "gold": 300, "stone": 120 }, "seconds": 60,
@@ -104,7 +121,8 @@
       "description": "Bombards +30% damage and splash.",
       "modifiers": [ { "building": "Bombard", "stat": "damage", "mul": 1.3 }, { "building": "Bombard", "stat": "splash", "mul": 1.3 } ] },
     { "id": "hallowing", "name": "Hallowing", "tier": 2, "requires": ["tithes"], "cost": { "gold": 250, "stone": 60 }, "seconds": 55,
-      "description": "Wardstones consecrate 2 tiles further; Shrines supply 10 more sanctity.",
+      "description": "Wardstones consecrate 2 tiles further; Shrines supply 10 more sanctity; Chaplains.",
+      "unlocksUnits": ["Chaplain"],
       "modifiers": [ { "building": "Wardstone", "stat": "consecrateRadius", "add": 2 }, { "building": "Shrine", "stat": "sanctitySupply", "add": 10 } ] },
     { "id": "drill", "name": "Drill", "tier": 2, "requires": ["tithes"], "cost": { "gold": 250, "wood": 60 }, "seconds": 55,
       "description": "Crossbowmen; every soldier +30% hit points.",
@@ -137,6 +155,8 @@
     "Thrall": { "hp": 60, "speed": 2.2, "damage": 10, "cooldown": 1.0 },
     "Gargoyle": { "hp": 50, "speed": 2.6, "damage": 7, "cooldown": 1.0, "flies": true },
     "Bloater": { "hp": 160, "speed": 1.2, "damage": 0, "cooldown": 1.0, "explodeDamage": 150, "explodeRadius": 1.8 },
-    "Brute": { "hp": 700, "speed": 1.4, "damage": 60, "cooldown": 1.5 }
+    "Brute": { "hp": 700, "speed": 1.4, "damage": 60, "cooldown": 1.5 },
+    "Howler": { "hp": 80, "speed": 2.4, "damage": 4, "cooldown": 1.0, "howlRadius": 20, "howlSeconds": 5, "howlSight": 12 },
+    "Broodmother": { "hp": 450, "speed": 1.3, "damage": 20, "cooldown": 1.2, "broodKind": "Imp", "broodCount": 5 }
   }
 }

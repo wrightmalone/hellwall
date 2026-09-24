@@ -28,6 +28,7 @@ public sealed class ClientState
 
     public readonly List<(ShotFired Shot, double Age)> Shots = new();
     public readonly List<(DemonBurst Burst, double Age)> Bursts = new();
+    public readonly List<(DemonHowled Howl, double Age)> Howls = new();
     public readonly List<(string Text, double Age)> Log = new();
 
     public void Say(string text)

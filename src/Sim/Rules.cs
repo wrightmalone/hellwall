@@ -20,6 +20,10 @@ public enum UnitKind : byte
     Marksman,
     Templar,
     Crossbowman,
+    /// <summary>Heals the soldiers around it; barely fights.</summary>
+    Chaplain,
+    /// <summary>Mounted: fast and tough, for riding out to clear the wilds.</summary>
+    Outrider,
 }
 
 /// <summary>An amount of each resource. Used for costs and for the colony's stockpile.</summary>
@@ -93,6 +97,8 @@ public sealed record WeaponDef
     public float Splash { get; init; }
     /// <summary>Radius in tiles of the noise each shot makes.</summary>
     public float Noise { get; init; }
+    /// <summary>Shoots only fliers.</summary>
+    public bool AirOnly { get; init; }
 }
 
 public sealed record BuildingDef
@@ -137,6 +143,14 @@ public sealed record BuildingDef
     /// <summary>Researches techs (the Scriptorium).</summary>
     public bool Researches { get; init; }
 
+    /// <summary>
+    /// While active, every demon within SlowRadius tiles moves at SlowFactor
+    /// of its speed (the Belfry). Overlapping fields don't stack: the
+    /// strongest applies.
+    /// </summary>
+    public float SlowRadius { get; init; }
+    public float SlowFactor { get; init; } = 1;
+
     public int W => Size[0];
     public int H => Size[1];
 }
@@ -149,6 +163,10 @@ public sealed record UnitDef
     public Cost Cost { get; init; } = Cost.None;
     public double UpkeepGold { get; init; }
     public WeaponDef Weapon { get; init; } = new();
+
+    /// <summary>Hit points a second restored to every other soldier within HealRadius tiles (the Chaplain).</summary>
+    public float HealPerSecond { get; init; }
+    public float HealRadius { get; init; }
 
     /// <summary>Can't be trained until this tech is researched.</summary>
     public string? RequiresTech { get; init; }
@@ -174,6 +192,20 @@ public sealed record DemonDef
     /// </summary>
     public float ExplodeDamage { get; init; }
     public float ExplodeRadius { get; init; }
+
+    /// <summary>
+    /// Every HowlSeconds, once it's within HowlSight tiles of a building, it
+    /// howls: noise of HowlRadius tiles where it stands. Sleeping packs near
+    /// the colony wake and join it, so ground left uncleared beside the
+    /// walls is a debt that a Howler calls in.
+    /// </summary>
+    public float HowlRadius { get; init; }
+    public float HowlSeconds { get; init; }
+    public int HowlSight { get; init; } = 12;
+
+    /// <summary>On death, BroodCount demons of BroodKind crawl out where it fell.</summary>
+    public DemonKind BroodKind { get; init; }
+    public int BroodCount { get; init; }
 }
 
 /// <summary>
@@ -290,6 +322,14 @@ public sealed class Rules
         return Copy(r => r.Demons = demons);
     }
 
+    /// <summary>A copy with one unit's definition replaced (no tech requirement, for tests).</summary>
+    public Rules WithUnit(UnitKind kind, Func<UnitDef, UnitDef> change)
+    {
+        var units = (UnitDef[])Units.Clone();
+        units[(int)kind] = change(units[(int)kind]);
+        return Copy(r => r.Units = units);
+    }
+
     /// <summary>A copy in which no demon does any damage: for testing how the horde moves.</summary>
     public Rules Harmless()
     {
@@ -322,6 +362,7 @@ public sealed class Rules
     {
         public Cost StartingResources = Cost.None;
         public BuildingDef[] Buildings = [];
+        public UnitDef[] Units = [];
         public DemonDef[] Demons = [];
         public SurvivalRules Survival = new();
         public HellgateRules Hellgates = new();
@@ -330,7 +371,7 @@ public sealed class Rules
 
     Rules Copy(Action<Builder> change)
     {
-        var b = new Builder { StartingResources = StartingResources, Buildings = Buildings, Demons = Demons, Survival = Survival, Hellgates = Hellgates, Wilds = Wilds };
+        var b = new Builder { StartingResources = StartingResources, Buildings = Buildings, Units = Units, Demons = Demons, Survival = Survival, Hellgates = Hellgates, Wilds = Wilds };
         change(b);
         return new Rules
         {
@@ -345,7 +386,7 @@ public sealed class Rules
             Wilds = b.Wilds,
             Techs = Techs,
             Buildings = b.Buildings,
-            Units = Units,
+            Units = b.Units,
             Demons = b.Demons,
             // A modified copy must not share the original's hash.
             Hash = Hash ^ 0x9E3779B97F4A7C15UL ^ Fnv(Describe(b)),
@@ -353,7 +394,7 @@ public sealed class Rules
     }
 
     static string Describe(Builder b) =>
-        JsonSerializer.Serialize(new { b.StartingResources, b.Buildings, b.Demons, b.Survival, b.Hellgates, b.Wilds }, Options);
+        JsonSerializer.Serialize(new { b.StartingResources, b.Buildings, b.Units, b.Demons, b.Survival, b.Hellgates, b.Wilds }, Options);
 
     static T[] Dense<TKey, T>(Dictionary<TKey, T> map, string what) where TKey : struct, Enum
     {

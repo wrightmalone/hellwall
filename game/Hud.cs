@@ -36,11 +36,11 @@ public partial class Hud : CanvasLayer
     Label _help = null!;
 
     const string HelpText =
-        "BUILD   1-0 - =  G B U  or the bar; click to place; drag walls for a line; right-click or Esc to disarm\n" +
+        "BUILD   1-0 - =  M C L P  G B U  or the bar; click to place; drag walls for a line; right-click or Esc to disarm\n" +
         "SELECT  click a building or soldier; drag to box-select soldiers (shift adds)\n" +
         "ORDER   right-click attack-move · shift+right-click move · H hold · Shift+S stop\n" +
         "GROUPS  Ctrl+1-9 set · Alt+1-9 recall\n" +
-        "BARRACKS  Q E R train · SCRIPTORIUM  research buttons in the inspector\n" +
+        "BARRACKS  Q E R T Y F train · SCRIPTORIUM  research buttons in the inspector\n" +
         "X / Delete  demolish (purges a possessed building)\n" +
         "Space pause · Tab speed 1x/2x/4x · F5 save · F9 load · WASD pan · wheel zoom · minimap click to jump\n" +
         "Debug: N noise at cursor · K wave · J 20k assault\n" +
@@ -279,11 +279,11 @@ public partial class Hud : CanvasLayer
             foreach (var child in _trainButtons.GetChildren()) child.QueueFree();
             if (building is { Def.Trains.Length: > 0 })
             {
-                string[] keys = ["Q", "E", "R"];
+                string[] keys = Main.TrainKeys.Select(k => k.ToString()).ToArray();
                 for (int i = 0; i < building.Def.Trains.Length; i++)
                 {
                     var kind = building.Def.Trains[i];
-                    var def = World.Rules[kind];
+                    var def = World.Def(kind);
                     var button = new Button
                     {
                         Text = $"{(i < keys.Length ? keys[i] + " " : "")}{kind}",

@@ -30,6 +30,8 @@ public partial class Main : Node2D
     Sprite2D _terrain = null!;
     readonly ClientState _state = new();
     static readonly string SavePath = ProjectSettings.GlobalizePath("user://quicksave.hwsave");
+    /// <summary>Barracks train keys, in the order of its Trains list.</summary>
+    public static readonly Key[] TrainKeys = [Key.Q, Key.E, Key.R, Key.T, Key.Y, Key.F];
     static readonly double[] Speeds = [1, 2, 4];
     int _speed;
     Hellwall.Headless.Bot? _bot;
@@ -138,6 +140,7 @@ public partial class Main : Node2D
         HandleEvents();
         Age(_state.Shots, delta, ClientState.ShotLife);
         Age(_state.Bursts, delta, 0.4);
+        Age(_state.Howls, delta, 1.2);
         Age(_state.Log, delta, 8);
 
         _state.Alpha = _paused ? 1f : (float)Math.Clamp(_accumulator / TickSeconds, 0, 1);
@@ -178,6 +181,7 @@ public partial class Main : Node2D
                 case TechResearched t: _state.Say($"Researched {_world.Rules.Tech(t.TechId).Name}"); break;
                 case HellgateClosed: _state.Say($"A Hellgate is closed: waves will be smaller ({_world.Gates.Count(g => g.Alive)} still open)"); break;
                 case DemonBurst d: _state.Bursts.Add((d, 0)); break;
+                case DemonHowled h: _state.Howls.Add((h, 0)); break;
                 case OutcomeChanged o: _state.Say(o.Outcome == Outcome.Lost ? "The Keep has fallen." : "Victory."); break;
             }
         }
@@ -285,8 +289,8 @@ public partial class Main : Node2D
             case Key.X or Key.Delete when selected != null:
                 Send(new Demolish(selected.Id));
                 break;
-            case Key.Q or Key.E or Key.R when selected is { Def.Trains.Length: > 0 }:
-                int i = key.Keycode == Key.Q ? 0 : key.Keycode == Key.E ? 1 : 2;
+            case Key.Q or Key.E or Key.R or Key.T or Key.Y or Key.F when selected is { Def.Trains.Length: > 0 }:
+                int i = Array.IndexOf(TrainKeys, key.Keycode);
                 if (i < selected.Def.Trains.Length) Send(new TrainUnit(selected.Id, selected.Def.Trains[i]));
                 break;
             case Key.H when _state.SelectedUnits.Count > 0:

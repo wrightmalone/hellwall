@@ -24,7 +24,7 @@ public sealed class Bot
     /// <summary>Named research orders: three build paths that part ways at the exclusive tier-3 pairs.</summary>
     public static readonly Dictionary<string, string[]> Plans = new()
     {
-        ["fortress"] = ["tithes", "masonry", "fletching", "pitch", "bastions", "ballistics", "artillery", "husbandry"],
+        ["fortress"] = ["tithes", "masonry", "fletching", "husbandry", "pitch", "bastions", "ballistics", "artillery"],
         ["pyre"] = ["tithes", "hallowing", "holyfire", "fletching", "pitch", "artillery", "husbandry"],
         ["legion"] = ["tithes", "husbandry", "drill", "standingarmy", "fletching", "pitch", "masonry", "ballistics"],
     };
@@ -196,10 +196,25 @@ public sealed class Bot
         var towerKind = Seconds > 900 && Count(BuildingKind.Bombard) * 3 < Count(BuildingKind.Watchtower) ? BuildingKind.Bombard : BuildingKind.Watchtower;
         if (towerKind == BuildingKind.Watchtower && _world.Tech.Has("ballistics") && Count(BuildingKind.LanceTower) * 2 < Count(BuildingKind.Watchtower))
             towerKind = BuildingKind.LanceTower;
-        var towerDef = _world.Def(towerKind);
-        if (towers < wantTowers && free >= towerDef.Workers && CanSpend(towerDef.Cost)
-            && Colony.SanctitySupply - Colony.SanctityDemand >= towerDef.SanctityUse)
-            if (Place(towerKind, TowerScore)) return;
+        // Short of stone for the tower it wants, it builds what it can afford rather than nothing.
+        // (A Censer only when gold is piling up: it's a stopgap, not the opening's tower.)
+        var fallback = Colony[Resource.Gold] > 500 ? new[] { towerKind, BuildingKind.Watchtower, BuildingKind.Censer } : new[] { towerKind, BuildingKind.Watchtower };
+        foreach (var kind in fallback.Distinct())
+        {
+            var towerDef = _world.Def(kind);
+            if (!(towers < wantTowers && free >= towerDef.Workers && CanSpend(towerDef.Cost)
+                && Colony.SanctitySupply - Colony.SanctityDemand >= towerDef.SanctityUse)) continue;
+            if (Place(kind, TowerScore)) return;
+            break;
+        }
+
+        // Support, on top of the quota: gargoyles come from wave 5, so a Skyspire per eight towers by then; a Belfry per eight once Masonry allows.
+        var support = Seconds > 900 && Count(BuildingKind.Skyspire) * 8 < towers ? BuildingKind.Skyspire
+            : towers >= 8 && _world.Tech.Has("masonry") && Count(BuildingKind.Belfry) * 8 < towers ? BuildingKind.Belfry
+            : (BuildingKind?)null;
+        if (support is { } sk && towers >= wantTowers / 2 && CanSpend(_world.Def(sk).Cost) && Colony[Resource.Gold] > 300
+            && Colony.SanctitySupply - Colony.SanctityDemand >= _world.Def(sk).SanctityUse)
+            if (Place(sk, TowerScore)) return;
 
         if (Research()) return;
 
@@ -214,7 +229,10 @@ public sealed class Bot
         if (barracks != null && barracks.Queue.Count < 2 && _world.Units.Count + barracks.Queue.Count < wantUnits && Colony[Resource.Gold] > 120 && affordArmy)
         {
             var ranged = _world.Tech.Has("drill") ? UnitKind.Crossbowman : UnitKind.Militia;
-            Do(new TrainUnit(barracks.Id, _world.Units.Count % 4 == 3 ? UnitKind.Templar : ranged));
+            var melee = _world.Tech.Has("husbandry") && _world.Units.Count % 12 == 5 ? UnitKind.Outrider : UnitKind.Templar;
+            int slot = _world.Units.Count % 6;
+            var kind = slot == 5 && _world.Tech.Has("hallowing") ? UnitKind.Chaplain : slot is 2 or 5 ? melee : ranged;
+            Do(new TrainUnit(barracks.Id, kind));
         }
 
         Raid();
