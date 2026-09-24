@@ -6,14 +6,14 @@ namespace Hellwall.Game;
 /// <summary>
 /// Placeholder art from Kenney's CC0 packs (game/art/kenney, each with its
 /// License.txt): Tower Defense and Isometric Tiles Landscape for terrain and
-/// buildings, Tiny Dungeon for soldiers and demons. Everything that names a
+/// buildings; soldiers and demons are sheets baked from Kenney's 3D Mini
+/// Dungeon and Graveyard Kit characters (tools/bake.gd). Everything that names a
 /// file lives here, so swapping the art is one file.
 /// </summary>
 public static class Art
 {
     const string TD = "res://art/kenney/tower-defense/PNG/";
     const string Land = "res://art/kenney/isometric-landscape/PNG/";
-    const string Tiny = "res://art/kenney/tiny-dungeon/Tiles/";
 
     static readonly Dictionary<string, Texture2D> Cache = new();
 
@@ -37,6 +37,23 @@ public static class Art
             for (int x = 0; x < 132; x++)
                 if (Mathf.Abs(x - 65.5f) / 66f + Mathf.Abs(y - 32.5f) / 33f <= 1) img.SetPixel(x, y, colour);
         return ImageTexture.CreateFromImage(img);
+    }
+
+    static Texture2D? _shadow;
+
+    /// <summary>A soft black ellipse, drawn under figures.</summary>
+    public static Texture2D Shadow()
+    {
+        if (_shadow != null) return _shadow;
+        var img = Image.CreateEmpty(32, 16, false, Image.Format.Rgba8);
+        for (int y = 0; y < 16; y++)
+            for (int x = 0; x < 32; x++)
+            {
+                float dx = (x - 15.5f) / 16f, dy = (y - 7.5f) / 8f;
+                float d = Mathf.Sqrt(dx * dx + dy * dy);
+                img.SetPixel(x, y, new Color(0, 0, 0, Mathf.Clamp(1 - d, 0, 1) * 0.55f));
+            }
+        return _shadow = ImageTexture.CreateFromImage(img);
     }
 
     // --- buildings: stacks of Tower Defense pieces, bottom first ---
@@ -87,41 +104,28 @@ public static class Art
         _ => null,
     };
 
-    // --- soldiers and demons: 16 px Tiny Dungeon figures ---
+    // --- soldiers and demons: sheets baked from Kenney's 3D characters (tools/bake.gd) ---
 
-    static string Figure(int i) => $"{Tiny}tile_{i:0000}.png";
+    /// <summary>Every sheet is Directions rows (facing d points along sim angle d x 45 deg) by Frames walk frames of Cell px.</summary>
+    public const int Cell = 72, Frames = 6, Directions = 8;
 
-    public static string Unit(UnitKind kind) => Figure(kind switch
-    {
-        UnitKind.Militia => 98,
-        UnitKind.Marksman => 112,
-        UnitKind.Templar => 96,
-        UnitKind.Crossbowman => 87,
-        UnitKind.Chaplain => 111,
-        UnitKind.Outrider => 88,
-        _ => 85,
-    });
+    /// <summary>Where the figure's feet are in a cell (tools/bake.gd writes it to sheets.json).</summary>
+    public static readonly Vector2 Feet = new(36f, 56.78f);
 
-    public static string Demon(DemonKind kind) => Figure(kind switch
-    {
-        DemonKind.Hound => 123,
-        DemonKind.Thrall => 121,
-        DemonKind.Gargoyle => 120,
-        DemonKind.Bloater => 108,
-        DemonKind.Brute => 109,
-        DemonKind.Howler => 124,
-        DemonKind.Broodmother => 122,
-        _ => 110,
-    });
+    /// <summary>Soldiers draw at this scale of their baked cell.</summary>
+    public const float UnitScale = 0.8f;
 
-    /// <summary>On-screen height of a figure, in world pixels: big demons are drawn bigger.</summary>
-    public static float DemonSize(DemonKind kind) => kind switch
-    {
-        DemonKind.Brute or DemonKind.Broodmother => 34,
-        DemonKind.Bloater => 30,
-        DemonKind.Hound => 20,
-        _ => 22,
-    };
+    /// <summary>A soldier's height on screen, feet to head, in world pixels (for picking).</summary>
+    public const float UnitSize = 30;
 
-    public const float UnitSize = 24;
+    public static string Unit(UnitKind kind) => $"res://art/baked/unit-{kind.ToString().ToLowerInvariant()}.png";
+
+    public static string Demon(DemonKind kind) => $"res://art/baked/demon-{kind.ToString().ToLowerInvariant()}.png";
+
+    /// <summary>Demons draw at this scale of their baked cell (the bake already made the big ones big).</summary>
+    public const float DemonScale = 0.72f;
+
+    /// <summary>The facing row for a direction of travel in sim units.</summary>
+    public static int Facing(float dx, float dy) =>
+        dx == 0 && dy == 0 ? 1 : ((int)Mathf.Round(Mathf.Atan2(dy, dx) / (Mathf.Pi / 4)) + 8) % 8;
 }

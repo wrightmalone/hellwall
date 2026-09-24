@@ -17,7 +17,7 @@ public partial class WorldView : Node2D
     /// <summary>The y-sorted layer the terrain's trees are in.</summary>
     public Node2D Sorted = null!;
 
-    readonly Dictionary<int, BuildingSprite> _buildings = new();
+    readonly Dictionary<int, Node2D> _buildings = new();
     readonly Dictionary<int, Sprite2D> _units = new();
     readonly Overlay _overlay = new();
     readonly Ground _ground = new();
@@ -25,7 +25,7 @@ public partial class WorldView : Node2D
     public override void _Ready()
     {
         _ground.View = this;
-        _ground.ZIndex = 0;
+        _ground.ZIndex = -1; // under the sorted layer, above the terrain (z -2)
         AddChild(_ground); // footprint shadows and gates, on the ground under everything that stands
         _overlay.View = this;
         _overlay.ZIndex = 3; // above the sorted layer and the horde
@@ -43,14 +43,16 @@ public partial class WorldView : Node2D
     void SyncBuildings()
     {
         var seen = new HashSet<int>();
+        bool changed = false;
         foreach (var b in World.Buildings)
         {
             seen.Add(b.Id);
             if (!_buildings.TryGetValue(b.Id, out var sprite))
             {
-                sprite = new BuildingSprite(b);
+                sprite = b.IsWallLike ? new WallSprite(World, b) : new BuildingSprite(b);
                 _buildings[b.Id] = sprite;
                 Sorted.AddChild(sprite);
+                changed = true;
             }
             sprite.Modulate = !b.Complete ? new Color(0.55f, 0.55f, 0.6f, 0.75f)
                 : b.Possessed ? new Color(0.75f, 0.4f, 0.95f)
@@ -61,31 +63,50 @@ public partial class WorldView : Node2D
         {
             _buildings[id].QueueFree();
             _buildings.Remove(id);
+            changed = true;
         }
+        // Walls join their neighbours, so any change to the layout redraws them.
+        if (changed)
+            foreach (var sprite in _buildings.Values)
+                if (sprite is WallSprite wall) wall.QueueRedraw();
     }
+
+    readonly Dictionary<int, int> _facing = new();
 
     void SyncUnits()
     {
         var seen = new HashSet<int>();
+        int step = (int)(Time.GetTicksMsec() / 100); // walk frames at 10 a second
         foreach (var u in World.Units)
         {
             seen.Add(u.Id);
             if (!_units.TryGetValue(u.Id, out var sprite))
             {
-                var tex = Art.Tex(Art.Unit(u.Kind));
-                sprite = new Sprite2D { Texture = tex, Centered = false, TextureFilter = TextureFilterEnum.Nearest };
-                float s = Art.UnitSize / tex.GetHeight();
-                sprite.Scale = new Vector2(s, s);
-                sprite.Offset = new Vector2(-tex.GetWidth() / 2f, -tex.GetHeight()); // feet on the ground point
+                sprite = new Sprite2D
+                {
+                    Texture = Art.Tex(Art.Unit(u.Kind)),
+                    Centered = false,
+                    RegionEnabled = true,
+                    Scale = new Vector2(Art.UnitScale, Art.UnitScale),
+                    Offset = -Art.Feet, // feet on the ground point
+                    TextureFilter = TextureFilterEnum.LinearWithMipmaps,
+                };
                 _units[u.Id] = sprite;
                 Sorted.AddChild(sprite);
             }
+            float dx = u.X - u.PrevX, dy = u.Y - u.PrevY;
+            bool moving = dx * dx + dy * dy > 1e-6f;
+            if (moving) _facing[u.Id] = Art.Facing(dx, dy);
+            int facing = _facing.GetValueOrDefault(u.Id, 1);
+            int frame = moving ? (step + u.Id) % Art.Frames : 0;
+            sprite.RegionRect = new Rect2(frame * Art.Cell, facing * Art.Cell, Art.Cell, Art.Cell);
             sprite.Position = Iso.P(Mathf.Lerp(u.PrevX, u.X, State.Alpha), Mathf.Lerp(u.PrevY, u.Y, State.Alpha));
         }
         foreach (var id in _units.Keys.Where(id => !seen.Contains(id)).ToList())
         {
             _units[id].QueueFree();
             _units.Remove(id);
+            _facing.Remove(id);
         }
     }
 
@@ -138,6 +159,14 @@ public partial class WorldView : Node2D
                 DrawColoredPolygon(Iso.Diamond(g.X, g.Y, Hellgate.Size, Hellgate.Size), new Color(0.25f, 0f, 0.06f, 0.9f));
                 DrawColoredPolygon(Iso.Diamond(g.X + 0.6f, g.Y + 0.6f, Hellgate.Size - 1.2f, Hellgate.Size - 1.2f), new Color(0.85f, 0.1f, 0.3f, 0.9f));
             }
+            // Your soldiers stand on blue rings, so they can be found in a crowd.
+            foreach (var u in world.Units)
+            {
+                var feet = new Vector2(Mathf.Lerp(u.PrevX, u.X, View.State.Alpha), Mathf.Lerp(u.PrevY, u.Y, View.State.Alpha));
+                Iso.Ellipse(this, feet, 0.32f, new Color(0, 0, 0, 0.35f), filled: true);
+                Iso.Ellipse(this, feet, 0.34f, new Color(0.35f, 0.7f, 1f, 0.95f), 2);
+            }
+
             foreach (var p in world.Packs)
             {
                 if (p.Awake) continue;

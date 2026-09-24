@@ -210,7 +210,7 @@ public partial class Main : Node2D
         _state.MouseWorld = GetGlobalMousePosition();
         _state.HoveredTile = Iso.TileAt(_state.MouseWorld);
 
-        _horde.Sync(_world.Horde, _state.Alpha);
+        _horde.Sync(_world.Horde, _state.Alpha, delta);
         _view.Refresh();
         PanCamera(delta);
         UpdateDebugLine();

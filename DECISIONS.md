@@ -303,6 +303,28 @@ except the Keep and the Lance Tower (stacked pieces buried the town), with the
 building's name shown on hover. These are the weakest part of the look, and the first thing to
 commission.
 
+### 36. Soldiers and demons are baked from Kenney's 3D characters (you asked for easier-to-see figures)
+- **Source:** Mini Dungeon (a human, an orc, weapons, shields) and Graveyard Kit (ghost, skeleton,
+  zombie, vampire, gravekeeper). Both are CC0, same style as the buildings.
+- **Baking:** `game/tools/bake.gd` renders each soldier and demon type from the matching
+  isometric angle (30 degrees down, 45 round) into a sheet of 8 facings x 6 walk frames, 72 px
+  cells, with a 1-px outline.
+- **Telling them apart:** a recolour shader (soldiers by their clothes, demons all over), a size,
+  and a weapon.
+- **In game:** the sheets are committed, so builds never bake. Soldiers face the way they walk
+  and stand on a blue ring. Every demon has a soft shadow. The horde stays one MultiMesh per kind,
+  and a small shader picks each demon's facing and frame from per-instance data: 20,000 walking
+  demons draw at about 100 fps.
+- **Rejected:** KayKit and Quaternius (CC0, more characters) need browser downloads from itch.
+  They're the next step if the roster needs more variety than tints give.
+- **Colour rule:** Hounds are charcoal, so no demon shares the soldiers' skin tone.
+
+### 37. Walls are drawn in code
+A wall tile is a post plus an arm toward each neighbouring wall, gate, tower
+or the Keep, extruded and shaded by face, so a line reads as one wall. Timber is a
+palisade with stakes. Stone is taller and grey, with merlons. A gate has a timber door
+on each face.
+
 ## Things I noticed that you should decide
 
 - **Scale:** addressed by 12-14 and 21. The Convergence is 9,000 plus whatever
