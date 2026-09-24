@@ -20,6 +20,9 @@ public static class Balance
     /// <summary>Body radius in tiles; two demons closer than twice this push apart.</summary>
     public const float DemonRadius = 0.3f;
 
+    /// <summary>How close, in tiles, a demon's centre must be to a building's footprint to hit it: its body is against the wall.</summary>
+    public const float DemonReach = 0.45f;
+
     /// <summary>Push speed, in tiles/s, per tile of overlap.</summary>
     public const float SeparationStrength = 6f;
 

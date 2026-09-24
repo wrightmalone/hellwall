@@ -28,10 +28,18 @@ internal static class Combat
             int t = ty * width + tx;
             float dx = flow.DirX[t], dy = flow.DirY[t];
             if (dx == 0 && dy == 0) continue;
-            int id = world.BuildingIdAt(tx + Math.Sign(dx), ty + Math.Sign(dy));
+            int bx = tx + Math.Sign(dx), by = ty + Math.Sign(dy);
+            int id = world.BuildingIdAt(bx, by);
             if (id == 0) continue;
+            // Only a body actually against the building can hit it: of a tile
+            // crowded to the density cap, the front rank does the damage and
+            // the rest wait their turn.
+            float ex = MathF.Max(MathF.Max(bx - h.X[i], 0), h.X[i] - (bx + 1));
+            float ey = MathF.Max(MathF.Max(by - h.Y[i], 0), h.Y[i] - (by + 1));
+            if (ex * ex + ey * ey > Balance.DemonReach * Balance.DemonReach) continue;
             var def = rules[h.Kind[i]];
-            world.DamageBuilding(id, def.Damage);
+            if (def.Damage <= 0) continue; // harmless (test and probe rules): makes no attacks at all, so possesses nothing
+            world.DemonHitsBuilding(id, def.Damage);
             h.Cooldown[i] = def.Cooldown;
         }
     }

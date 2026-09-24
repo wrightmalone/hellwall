@@ -92,7 +92,10 @@ public static class TownProbe
                 switch (e)
                 {
                     case CommandRejected r: rejected.Add(r); break;
-                    case BuildingDestroyed { Kind: BuildingKind.Wall or BuildingKind.Gate }: wallsLost++; break;
+                    case BuildingDestroyed { Kind: BuildingKind.Wall or BuildingKind.Gate } w:
+                        wallsLost++;
+                        if (trace) Console.WriteLine($"  t={world.Tick / Balance.TickHz}s wall down at ({w.X},{w.Y})");
+                        break;
                     case UnitTrained ut:
                         trained++;
                         // Send each soldier to the middle of town as soon as it's trained.
@@ -101,6 +104,8 @@ public static class TownProbe
                     case DemonsSpawned s: spawned += s.Count; break;
                     case ShotFired: shots++; break;
                     case BuildingDestroyed d when trace: Console.WriteLine($"  t={world.Tick / Balance.TickHz}s destroyed {d.Kind} at ({d.X},{d.Y})"); break;
+                    case BuildingPossessed p when trace: Console.WriteLine($"  t={world.Tick / Balance.TickHz}s POSSESSED {p.Kind} ({p.Occupants} inside)"); break;
+                    case UnitDied u when trace: Console.WriteLine($"  t={world.Tick / Balance.TickHz}s {u.Kind} died{(u.Rose ? ", rose" : "")} at ({u.X:F0},{u.Y:F0})"); break;
                 }
             }
             if (trace && world.Tick % (5 * Balance.TickHz) == 0)

@@ -89,6 +89,14 @@ public sealed record BuildingDef
     public WeaponDef? Weapon { get; init; }
     public UnitKind[] Trains { get; init; } = [];
 
+    /// <summary>
+    /// A demon reaching it with people inside takes it, rather than damaging
+    /// it. True for homes and workplaces; fortifications (towers) are only
+    /// ever battered down, so a breach costs the tower, not a tower's worth
+    /// of Thralls behind the wall.
+    /// </summary>
+    public bool Possessable { get; init; } = true;
+
     public int W => Size[0];
     public int H => Size[1];
 }
@@ -129,6 +137,9 @@ public sealed class Rules
     public double ColonistFoodPerSecond { get; private init; }
     public double RefundFraction { get; private init; }
 
+    /// <summary>Seconds between Thralls leaving a possessed building.</summary>
+    public float PossessionSpawnSeconds { get; private init; }
+
     public BuildingDef[] Buildings { get; private init; } = [];
     public UnitDef[] Units { get; private init; } = [];
     public DemonDef[] Demons { get; private init; } = [];
@@ -151,6 +162,7 @@ public sealed class Rules
         public double ColonistGoldPerSecond { get; init; }
         public double ColonistFoodPerSecond { get; init; }
         public double RefundFraction { get; init; }
+        public float PossessionSpawnSeconds { get; init; }
         public Dictionary<BuildingKind, BuildingDef> Buildings { get; init; } = new();
         public Dictionary<UnitKind, UnitDef> Units { get; init; } = new();
         public Dictionary<DemonKind, DemonDef> Demons { get; init; } = new();
@@ -173,6 +185,7 @@ public sealed class Rules
             ColonistGoldPerSecond = file.ColonistGoldPerSecond,
             ColonistFoodPerSecond = file.ColonistFoodPerSecond,
             RefundFraction = file.RefundFraction,
+            PossessionSpawnSeconds = file.PossessionSpawnSeconds,
             Buildings = Dense(file.Buildings, "building"),
             Units = Dense(file.Units, "unit"),
             Demons = Dense(file.Demons, "demon"),
@@ -223,6 +236,7 @@ public sealed class Rules
             ColonistGoldPerSecond = ColonistGoldPerSecond,
             ColonistFoodPerSecond = ColonistFoodPerSecond,
             RefundFraction = RefundFraction,
+            PossessionSpawnSeconds = PossessionSpawnSeconds,
             Buildings = b.Buildings,
             Units = Units,
             Demons = b.Demons,

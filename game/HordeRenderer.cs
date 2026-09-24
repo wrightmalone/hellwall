@@ -34,6 +34,7 @@ public partial class HordeRenderer : Node2D
             var (size, color) = kind switch
             {
                 DemonKind.Hound => (0.55f, new Color(1.0f, 0.55f, 0.15f)),
+                DemonKind.Thrall => (0.62f, new Color(0.72f, 0.45f, 0.85f)),
                 _ => (0.62f, new Color(0.85f, 0.12f, 0.10f)),
             };
             var mesh = new MultiMesh

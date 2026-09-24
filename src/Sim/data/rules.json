@@ -3,6 +3,7 @@
   "colonistGoldPerSecond": 0.12,
   "colonistFoodPerSecond": 0.03,
   "refundFraction": 0.5,
+  "possessionSpawnSeconds": 1.0,
 
   "buildings": {
     "Keep":       { "size": [3, 3], "hp": 1600, "buildSeconds": 0,  "housing": 8,  "gold": 1.0,
@@ -25,10 +26,10 @@
     "Wall":       { "size": [1, 1], "hp": 400,  "buildSeconds": 2,  "cost": { "wood": 3 } },
     "Gate":       { "size": [1, 1], "hp": 500,  "buildSeconds": 4,  "cost": { "wood": 8, "stone": 2 } },
     "Watchtower": { "size": [2, 2], "hp": 400,  "buildSeconds": 8,  "cost": { "gold": 40, "wood": 30 },
-                    "workers": 2, "sanctityUse": 3,
+                    "workers": 2, "sanctityUse": 3, "possessable": false,
                     "weapon": { "range": 7, "damage": 14, "cooldown": 0.6, "noise": 14 } },
     "Bombard":    { "size": [2, 2], "hp": 500,  "buildSeconds": 12, "cost": { "gold": 90, "stone": 40 },
-                    "workers": 3, "sanctityUse": 6,
+                    "workers": 3, "sanctityUse": 6, "possessable": false,
                     "weapon": { "range": 8, "damage": 40, "cooldown": 2.5, "splash": 1.6, "noise": 30 } },
     "Barracks":   { "size": [3, 3], "hp": 600,  "buildSeconds": 15, "cost": { "gold": 100, "wood": 60 },
                     "workers": 4, "sanctityUse": 4, "trains": ["Militia", "Marksman", "Templar"] }
@@ -45,6 +46,7 @@
 
   "demons": {
     "Imp":   { "hp": 40, "speed": 2.0, "damage": 8, "cooldown": 1.0 },
-    "Hound": { "hp": 25, "speed": 3.6, "damage": 5, "cooldown": 0.7 }
+    "Hound": { "hp": 25, "speed": 3.6, "damage": 5, "cooldown": 0.7 },
+    "Thrall": { "hp": 60, "speed": 2.2, "damage": 10, "cooldown": 1.0 }
   }
 }

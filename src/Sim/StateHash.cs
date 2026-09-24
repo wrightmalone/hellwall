@@ -38,6 +38,9 @@ public static class StateHash
             h = MixByte(h, (byte)((b.Complete ? 1 : 0) | (b.OnGround ? 2 : 0) | (b.Staffed ? 4 : 0)));
             h = Mix(h, Bits(b.Cooldown));
             h = Mix(h, Bits(b.TrainProgress));
+            h = MixByte(h, b.Possessed ? (byte)1 : (byte)0);
+            h = Mix(h, (uint)b.Occupants);
+            h = Mix(h, Bits(b.PossessTimer));
             h = Mix(h, (uint)b.Queue.Count);
             foreach (var q in b.Queue) h = MixByte(h, (byte)q);
         }

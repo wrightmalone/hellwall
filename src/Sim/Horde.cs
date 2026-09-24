@@ -4,6 +4,8 @@ public enum DemonKind : byte
 {
     Imp,
     Hound,
+    /// <summary>A colonist or soldier the horde has taken.</summary>
+    Thrall,
 }
 
 /// <summary>
@@ -166,9 +168,9 @@ internal static class HordeSystem
             }
             else
             {
-                var (fx, fy, arrived) = flow.Sample(x, y);
-                vx = arrived ? 0 : fx * speed;
-                vy = arrived ? 0 : fy * speed;
+                var (fx, fy, _) = flow.Sample(x, y);
+                vx = fx * speed;
+                vy = fy * speed;
             }
 
             // Separation: push away from overlapping neighbours in the 3x3

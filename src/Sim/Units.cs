@@ -100,6 +100,7 @@ internal static class UnitSystem
                         float dx = u.X - h.X[j], dy = u.Y - h.Y[j];
                         if (dx * dx + dy * dy >= m2) continue;
                         var def = rules[h.Kind[j]];
+                        if (def.Damage <= 0) continue;
                         u.Hp -= def.Damage;
                         h.Cooldown[j] = def.Cooldown;
                     }

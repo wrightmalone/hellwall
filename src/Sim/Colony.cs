@@ -88,12 +88,12 @@ internal static class ColonySystem
         // Population and crews: first come, first served, in id order.
         int colonists = 0;
         foreach (var b in world.BuildingList)
-            if (b.Complete) colonists += b.Def.Housing;
+            if (b.Complete && !b.Possessed) colonists += b.Def.Housing;
         int pool = colonists;
         foreach (var b in world.BuildingList)
         {
             if (!b.NeedsCrew) continue;
-            b.Staffed = b.Complete && b.OnGround && pool >= b.Def.Workers;
+            b.Staffed = b.Complete && b.OnGround && !b.Possessed && pool >= b.Def.Workers;
             if (b.Staffed) pool -= b.Def.Workers;
         }
         colony.Colonists = colonists;
@@ -154,7 +154,7 @@ internal static class ColonySystem
 
         var nodes = new List<Building>();
         foreach (var b in world.BuildingList)
-            if (b.Complete && b.Def.ConsecrateRadius > 0) nodes.Add(b);
+            if (b.Complete && !b.Possessed && b.Def.ConsecrateRadius > 0) nodes.Add(b);
 
         var connected = new bool[nodes.Count];
         var frontier = new Queue<int>();

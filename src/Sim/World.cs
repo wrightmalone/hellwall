@@ -127,6 +127,7 @@ public sealed class World
         Combat.DemonsAttackBuildings(this);
         UnitSystem.Step(this, dt);
         Combat.TowersFire(this, dt);
+        StepPossessed(dt);
 
         ResolveDeaths();
         Tick++;
@@ -253,9 +254,51 @@ public sealed class World
         return null;
     }
 
-    internal void DamageBuilding(int id, float damage)
+    /// <summary>
+    /// A demon's blow. An inhabited building isn't damaged but taken: the first
+    /// hit possesses it. Everything else loses hit points.
+    /// </summary>
+    internal void DemonHitsBuilding(int id, float damage)
     {
-        if (_buildingById.TryGetValue(id, out var b)) b.Hp -= damage;
+        if (!_buildingById.TryGetValue(id, out var b)) return;
+        int people = b.PeopleInside;
+        if (people > 0)
+        {
+            b.Possessed = true;
+            b.Occupants = people;
+            b.PossessTimer = 0;
+            b.Queue.Clear(); // soldiers not yet out of a possessed Barracks are lost with it
+            OnLayoutChanged();
+            MarkNetworkDirty();
+            _events.Add(new BuildingPossessed(Tick, b.Id, b.Kind, people));
+            return;
+        }
+        b.Hp -= damage;
+    }
+
+    /// <summary>Possessed buildings release their occupants as Thralls, one at a time, and fall when empty.</summary>
+    void StepPossessed(float dt)
+    {
+        float every = Rules.PossessionSpawnSeconds;
+        foreach (var b in _buildings)
+        {
+            if (!b.Possessed || b.Hp <= 0) continue;
+            b.PossessTimer += dt;
+            while (b.PossessTimer >= every && b.Occupants > 0)
+            {
+                b.PossessTimer -= every;
+                b.Occupants--;
+                var tile = FindTileNear((int)b.CentreX, (int)b.CentreY, 4, IsWalkable);
+                if (tile != null) SpawnOne(DemonKind.Thrall, tile.Value.X + 0.5f, tile.Value.Y + 0.5f);
+            }
+            if (b.Occupants == 0) b.Hp = 0;
+        }
+    }
+
+    void SpawnOne(DemonKind kind, float x, float y)
+    {
+        Horde.Add(kind, x, y, Rules[kind].Hp);
+        _spatialStale = true;
     }
 
     /// <summary>Put a trained unit on the nearest open tile beside its Barracks. False if there's no room yet.</summary>
@@ -385,8 +428,9 @@ public sealed class World
     {
         if (!_buildingById.TryGetValue(id, out var building)) return "no such building";
         if (building.Kind == BuildingKind.Keep) return "the Keep cannot be demolished";
-        // Full refund for something not yet finished, a fraction once it's standing.
-        Colony.Refund(building.Def.Cost, building.Complete ? Rules.RefundFraction : 1);
+        // Purging a possessed building: whoever's still inside is lost with it, and there's nothing to salvage.
+        // Otherwise a full refund for something not yet finished, a fraction once it's standing.
+        if (!building.Possessed) Colony.Refund(building.Def.Cost, building.Complete ? Rules.RefundFraction : 1);
         RefundQueue(building);
         RemoveBuilding(building);
         _events.Add(new BuildingRemoved(Tick, building.Id, building.Kind));
@@ -489,7 +533,13 @@ public sealed class World
             if (u.Hp > 0) continue;
             _units.RemoveAt(i);
             Stats.UnitsLost++;
-            _events.Add(new UnitDied(Tick, u.Id, u.Kind, u.X, u.Y));
+            // Killed by the horde, a soldier gets up again on the other side.
+            (float X, float Y)? at = IsWalkable((int)u.X, (int)u.Y) ? (u.X, u.Y)
+                : FindTileNear((int)u.X, (int)u.Y, 3, IsWalkable) is { } t ? (t.X + 0.5f, t.Y + 0.5f)
+                : null;
+            bool rose = at != null;
+            if (at is { } p) SpawnOne(DemonKind.Thrall, p.X, p.Y);
+            _events.Add(new UnitDied(Tick, u.Id, u.Kind, u.X, u.Y, rose));
         }
 
         // Iterate a snapshot: removing a Wardstone can darken buildings but never kills them.

@@ -120,7 +120,7 @@ public sealed class FlowField
         {
             foreach (var b in world.BuildingList)
             {
-                if (!IsTarget(b.Kind)) continue;
+                if (!b.IsDemonTarget) continue;
                 for (int y = b.Y; y < b.Y + b.H; y++)
                     for (int x = b.X; x < b.X + b.W; x++)
                     {
@@ -212,8 +212,14 @@ public sealed class FlowField
         int tx = (int)x;
         int ty = (int)y;
         int own = DistAt(tx, ty);
-        if (own <= Balance.ArriveDistance) return (0, 0, true);
         if (own == Unreachable) return (0, 0, false);
+        if (own <= Balance.ArriveDistance)
+        {
+            // Arrived: keep pressing straight at the target, so the front rank
+            // closes to striking reach; collision holds it at the face.
+            int t = ty * Width + tx;
+            return (DirX[t], DirY[t], true);
+        }
 
         float u = x - 0.5f;
         float v = y - 0.5f;

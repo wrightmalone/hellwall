@@ -30,7 +30,11 @@ public sealed record ConsecrationChanged(int Tick) : SimEvent(Tick);
 
 public sealed record UnitTrained(int Tick, int UnitId, UnitKind Kind, int BarracksId) : SimEvent(Tick);
 
-public sealed record UnitDied(int Tick, int UnitId, UnitKind Kind, float X, float Y) : SimEvent(Tick);
+/// <param name="Rose">Came back as a Thrall.</param>
+public sealed record UnitDied(int Tick, int UnitId, UnitKind Kind, float X, float Y, bool Rose) : SimEvent(Tick);
+
+/// <summary>A demon reached an inhabited building; its Occupants will come out as Thralls.</summary>
+public sealed record BuildingPossessed(int Tick, int BuildingId, BuildingKind Kind, int Occupants) : SimEvent(Tick);
 
 /// <summary>One per tick with kills, not one per demon: a Bombard volley can kill dozens.</summary>
 public sealed record DemonsKilled(int Tick, int Count) : SimEvent(Tick);
