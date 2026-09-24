@@ -60,6 +60,7 @@ public static class RunProbe
     {
         var seeds = args.GetValueOrDefault("seeds", "11").Split(',').Select(v => uint.Parse(v, CultureInfo.InvariantCulture)).ToList();
         bool trace = args.ContainsKey("trace");
+        args_perf = args.ContainsKey("perf");
         bool ok = true;
         foreach (var seed in seeds)
             foreach (var plan in Bot.Plans.Keys)
@@ -77,6 +78,9 @@ public static class RunProbe
             $"seed {Seed,-3} {Style,-8} {Plan,-9}{Outcome,-7} day {Day,2}  buildings {Buildings,3}  units {Units,2}  demons killed {Killed,6}  buildings lost {Lost,4}  possessed {Possessed,3}  keep {KeepHp,5:F0}  gates closed {GatesClosed}  ({WallSeconds:F0}s)  [{Techs}]");
     }
 
+    /// <summary>Print per-tick sim cost for each run (set by --perf).</summary>
+    static bool args_perf;
+
     public static Result Play(uint seed, Bot.Style style, bool trace, double snapshotAt = -1, string plan = "fortress", Rules? rules = null)
     {
         var clock = Stopwatch.StartNew();
@@ -84,10 +88,16 @@ public static class RunProbe
         var bot = new Bot(world, style, plan) { Verbose = trace };
         int possessed = 0;
         int limit = (world.Rules.Survival.Days + 5) * (int)(world.Rules.Survival.DaySeconds * Balance.TickHz);
+        var tickClock = new Stopwatch();
+        var tickMs = new List<double>(limit);
+        int peakHorde = 0;
         while (world.Outcome == Outcome.Running && world.Tick < limit)
         {
             if (world.Tick % Balance.TickHz == 0) bot.Act();
+            tickClock.Restart();
             world.Step();
+            tickMs.Add(tickClock.Elapsed.TotalMilliseconds);
+            peakHorde = Math.Max(peakHorde, world.Horde.Count);
             var events = world.DrainEvents();
             bot.See(events);
             foreach (var e in events)
@@ -104,6 +114,12 @@ public static class RunProbe
             }
         }
         if (trace) Trace(world);
+        if (args_perf)
+        {
+            tickMs.Sort();
+            Console.WriteLine(string.Create(CultureInfo.InvariantCulture,
+                $"    sim ticks: {tickMs.Count}  p50 {tickMs[tickMs.Count / 2]:F2} ms  p99 {tickMs[(int)(tickMs.Count * 0.99)]:F2} ms  max {tickMs[^1]:F2} ms  peak horde {peakHorde}"));
+        }
         return new Result(seed, style, world.Outcome, world.Day, world.Buildings.Count, world.Units.Count, world.Stats.DemonsKilled,
             world.Stats.BuildingsLost, possessed, clock.Elapsed.TotalSeconds, style == Bot.Style.Full ? plan : "",
             string.Join(",", world.Tech.Researched), world.Buildings.FirstOrDefault(b => b.Kind == BuildingKind.Keep)?.Hp ?? 0,
