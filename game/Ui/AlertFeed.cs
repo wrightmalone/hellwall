@@ -121,6 +121,9 @@ public partial class AlertFeed : VBoxContainer
             case CorruptionAnnounced c:
                 Push("corrupt", $"Corruption coming: {c.Name}. {c.Description}", Violet, null, 14);
                 break;
+            case ScenarioMessage m when m.Text.Length > 0:
+                Push("script-" + m.Index, m.Text, Gold, m.Spawned > 0 ? EdgeOf(m.Side) : null, 16);
+                break;
             case UnitDied { Rose: true } u:
                 Push("rose", "A soldier has risen as a Thrall", Red, new Vector2(u.X, u.Y));
                 break;

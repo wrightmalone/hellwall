@@ -63,6 +63,7 @@ public sealed partial class World
     public ScenarioDef? Scenario { get; }
     public ObjectiveDef[] Goals { get; }
     public bool[] GoalsDone { get; }
+    public bool[] TriggersFired { get; }
 
     public DemonDef Def(DemonKind kind) => Demons[(int)kind];
 
@@ -146,6 +147,7 @@ public sealed partial class World
         // What winning takes: the mission's goals, or for a plain survival run, surviving.
         Goals = Scenario?.Goals ?? (options.Survival ? [new ObjectiveDef { Kind = ObjectiveKind.Survive }] : []);
         GoalsDone = new bool[Goals.Length];
+        TriggersFired = new bool[Scenario?.Triggers.Length ?? 0];
         Tech.Recompute(Rules);
         Demons = Rules.Demons;
     }

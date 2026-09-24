@@ -17,7 +17,7 @@ namespace Hellwall.Sim;
 public sealed partial class World
 {
     const uint Magic = 0x56535748; // "HWSV"
-    const int FormatVersion = 6;
+    const int FormatVersion = 7;
 
     public byte[] Save()
     {
@@ -161,6 +161,7 @@ public sealed partial class World
                 w.Write(s.NextCorruptionTick);
             }
             foreach (bool done in GoalsDone) w.Write(done);
+            foreach (bool fired in TriggersFired) w.Write(fired);
         }
         return stream.ToArray();
     }
@@ -309,6 +310,7 @@ public sealed partial class World
         }
 
         for (int i = 0; i < world.GoalsDone.Length; i++) world.GoalsDone[i] = r.ReadBoolean();
+        for (int i = 0; i < world.TriggersFired.Length; i++) world.TriggersFired[i] = r.ReadBoolean();
 
         // Derived state: rebuilt, not stored.
         world._flowDirty = true;

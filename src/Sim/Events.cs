@@ -55,6 +55,9 @@ public sealed record CorruptionAnnounced(int Tick, string Id, string Name, strin
 
 public sealed record CorruptionTook(int Tick, string Id, string Name) : SimEvent(Tick);
 
+/// <summary>A mission trigger fired: its message, and how many demons it brought (from Side).</summary>
+public sealed record ScenarioMessage(int Tick, int Index, string Text, int Spawned, Side Side) : SimEvent(Tick);
+
 /// <summary>A mission goal was met (index into the world's Goals).</summary>
 public sealed record ObjectiveCompleted(int Tick, int Index, ObjectiveKind Kind) : SimEvent(Tick);
 

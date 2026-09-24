@@ -122,6 +122,7 @@ public static class StateHash
             h = MixByte(h, s.ConvergenceSpent ? (byte)1 : (byte)0);
         }
         foreach (bool done in world.GoalsDone) h = MixByte(h, done ? (byte)1 : (byte)0);
+        foreach (bool fired in world.TriggersFired) h = MixByte(h, fired ? (byte)1 : (byte)0);
         // Flow field and spatial hash are pure functions of the above, so they aren't hashed.
         return h;
     }

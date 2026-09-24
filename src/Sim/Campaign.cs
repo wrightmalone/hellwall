@@ -30,6 +30,24 @@ public sealed record ObjectiveDef
 }
 
 /// <summary>
+/// A scripted moment in a mission: when it fires (at the start of Day, or
+/// once goal AfterGoal is met), and what happens: a message, demons at a map
+/// edge, resources given. Each fires once.
+/// </summary>
+public sealed record TriggerDef
+{
+    /// <summary>Fires when this day begins (0: not on a day).</summary>
+    public int Day { get; init; }
+    /// <summary>Fires once this goal (an index into the mission's goals) is met (-1: not on a goal).</summary>
+    public int AfterGoal { get; init; } = -1;
+    public string Say { get; init; } = "";
+    public DemonKind SpawnKind { get; init; } = DemonKind.Imp;
+    public int SpawnCount { get; init; }
+    public Side SpawnSide { get; init; } = Side.North;
+    public Cost? Give { get; init; }
+}
+
+/// <summary>
 /// One campaign mission: a map, how hard it is, what you start with, what
 /// isn't available yet, and what winning means. Data, in campaign.json; it
 /// turns into WorldOptions (rules adjusted from the defaults) with Options().
@@ -64,6 +82,9 @@ public sealed record ScenarioDef
 
     /// <summary>All must be done to win. Empty means Survive.</summary>
     public ObjectiveDef[] Objectives { get; init; } = [];
+
+    /// <summary>Scripted moments: messages, surprise attacks, relief.</summary>
+    public TriggerDef[] Triggers { get; init; } = [];
 
     /// <summary>Missions that must be won first.</summary>
     public string[] Requires { get; init; } = [];
@@ -165,9 +186,28 @@ internal static class ObjectiveSystem
             }
             all &= done[i];
         }
+        Fire(world);
         if (all) world.Win();
         // The Convergence is the deadline: once it has broken on the walls, whatever is still undone never will be.
         else if (world.Survival is { ConvergenceSpent: true }) world.Lose();
+    }
+
+    /// <summary>A mission's triggers whose moment has come, each once.</summary>
+    static void Fire(World world)
+    {
+        if (world.Scenario is not { } s) return;
+        var fired = world.TriggersFired;
+        for (int i = 0; i < s.Triggers.Length; i++)
+        {
+            if (fired[i]) continue;
+            var t = s.Triggers[i];
+            bool due = (t.Day > 0 && world.Day >= t.Day) || (t.AfterGoal >= 0 && t.AfterGoal < world.GoalsDone.Length && world.GoalsDone[t.AfterGoal]);
+            if (!due) continue;
+            fired[i] = true;
+            int spawned = t.SpawnCount > 0 ? world.SpawnAtEdge(t.SpawnSide, t.SpawnKind, t.SpawnCount) : 0;
+            if (t.Give != null) world.Colony.Refund(t.Give, 1);
+            world.Emit(new ScenarioMessage(world.Tick, i, t.Say, spawned, t.SpawnSide));
+        }
     }
 
     static bool Met(World world, ObjectiveDef goal) => goal.Kind switch

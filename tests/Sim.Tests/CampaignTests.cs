@@ -89,6 +89,35 @@ public class CampaignTests
     }
 
     [Fact]
+    public void TriggersFireOnTheirDayOrGoalOnceEach()
+    {
+        var s = new ScenarioDef
+        {
+            Id = "t", Days = 400, Hellgates = 1,
+            Objectives = [new() { Kind = ObjectiveKind.CloseGates, Count = 1 }, new() { Kind = ObjectiveKind.Slay, Count = 1_000_000 }],
+            Triggers =
+            [
+                new() { Day = 3, Say = "They come from the west", SpawnKind = DemonKind.Hound, SpawnCount = 12, SpawnSide = Side.West },
+                new() { AfterGoal = 0, Say = "Relief arrives", Give = new Cost { Gold = 500 } },
+            ],
+        };
+        var world = Start(s, Quick());
+        var early = RunSeconds(world, 1.5);
+        Assert.DoesNotContain(early, e => e is ScenarioMessage);
+        var day3 = RunSeconds(world, 2);
+        var west = Assert.Single(day3.OfType<ScenarioMessage>());
+        Assert.Equal("They come from the west", west.Text);
+        Assert.Equal(12, west.Spawned);
+
+        double gold = world.Colony[Resource.Gold];
+        world.DamageGate(world.GateList[0], 1e9f);
+        var relief = RunSeconds(world, 1).OfType<ScenarioMessage>().ToList();
+        Assert.Equal("Relief arrives", Assert.Single(relief).Text);
+        Assert.True(world.Colony[Resource.Gold] >= gold + 499);
+        Assert.Empty(RunSeconds(world, 5).OfType<ScenarioMessage>());
+    }
+
+    [Fact]
     public void AMissionSurvivesASave()
     {
         var s = Campaign.Default.Scenarios[1];
