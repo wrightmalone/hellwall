@@ -349,6 +349,23 @@ Demons stay on Kenney's models: none of the four packs has monsters.
 Quaternius Ultimate Monsters is still the pack that would fix that. The nature kit
 could replace the terrain trees and rocks later.
 
+### 39. Demons are Quaternius's Ultimate Monsters (you downloaded the pack)
+
+| Demon | Model |
+|---|---|
+| Imp | red Demon |
+| Hound | the toothy Fish, tinted dark red, running |
+| Gargoyle | the winged flying Demon, tinted stone grey |
+| Bloater | the green Spiky Blob |
+| Brute | the skull-faced Orc |
+| Howler | the flying Ghost Skull |
+| Broodmother | the Blue Demon, tinted purple |
+| Thrall | Kenney's zombie, since a Thrall is a possessed colonist |
+
+The baker fits each model to a height, counting wingspan, because the pack's models come in every size. Each walks with its
+own clip (Walk, Run, Flying_Idle or Fast_Flying). The style is cartoonish, cute rather than
+horrific, which reads well at 30 px but is a tone question for the commissioned art.
+
 ## Things I noticed that you should decide
 
 - **Scale:** addressed by 12-14 and 21. The Convergence is 9,000 plus whatever

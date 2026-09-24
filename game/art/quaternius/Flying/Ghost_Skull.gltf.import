@@ -3,13 +3,13 @@
 importer="scene"
 importer_version=1
 type="PackedScene"
-uid="uid://dm45jxo4lbvuy"
-path="res://.godot/imported/character-skeleton.glb-1dcea3e0315c1abf52b8f51b121e9d72.scn"
+uid="uid://c3ouhvn6vrcx8"
+path="res://.godot/imported/Ghost_Skull.gltf-71d5d848e14e3ea6b03109c11a9c2944.scn"
 
 [deps]
 
-source_file="res://art/kenney3d/graveyard-kit/character-skeleton.glb"
-dest_files=["res://.godot/imported/character-skeleton.glb-1dcea3e0315c1abf52b8f51b121e9d72.scn"]
+source_file="res://art/quaternius/Flying/Ghost_Skull.gltf"
+dest_files=["res://.godot/imported/Ghost_Skull.gltf-71d5d848e14e3ea6b03109c11a9c2944.scn"]
 
 [params]
 

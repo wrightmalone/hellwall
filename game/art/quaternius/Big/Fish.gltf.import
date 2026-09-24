@@ -3,13 +3,13 @@
 importer="scene"
 importer_version=1
 type="PackedScene"
-uid="uid://dt6cgpu0r2rov"
-path="res://.godot/imported/character-orc.glb-acce4362b93a218c73bf4b2bf59fcb7f.scn"
+uid="uid://ludhqaxl42e2"
+path="res://.godot/imported/Fish.gltf-527ee2949cd96f8e5477cc623f75abfa.scn"
 
 [deps]
 
-source_file="res://art/kenney3d/mini-dungeon/character-orc.glb"
-dest_files=["res://.godot/imported/character-orc.glb-acce4362b93a218c73bf4b2bf59fcb7f.scn"]
+source_file="res://art/quaternius/Big/Fish.gltf"
+dest_files=["res://.godot/imported/Fish.gltf-527ee2949cd96f8e5477cc623f75abfa.scn"]
 
 [params]
 

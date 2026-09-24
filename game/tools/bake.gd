@@ -13,9 +13,10 @@ const FRAMES := 6
 const ORTHO := 1.35
 const LOOK_Y := 0.45
 
-const MD := "res://art/kenney3d/mini-dungeon/"
+
 const KK := "res://art/kaykit/Models/Characters/gltf/"
 const KW := "res://art/kaykit/Models/gltf/"
+const QM := "res://art/quaternius/"
 const GY := "res://art/kenney3d/graveyard-kit/"
 
 # name, model, tint for the body (null: none), scale, [weapon right, item left]
@@ -27,14 +28,16 @@ var variants := [
 	["unit-crossbowman", KK + "character_knight.gltf", null, 0.5, [KW + "crossbow_common.gltf.glb", KW + "shield_common.gltf.glb"]],
 	["unit-chaplain", KK + "character_mage.gltf", null, 0.5, [KW + "staff_common.gltf.glb", ""]],
 	["unit-outrider", KK + "character_barbarian.gltf", null, 0.55, [KW + "axe_common.gltf.glb", ""]],
-	["demon-imp", MD + "character-orc.glb", Color(1.0, 0.35, 0.3), 0.85, ["", ""]],
-	["demon-hound", GY + "character-skeleton.glb", Color(0.32, 0.26, 0.28), 0.8, ["", ""]],
+	# Demons: Quaternius Ultimate Monsters, fitted to a height (6th field) and walked with
+	# their own clip (7th); the Thrall stays Kenney's zombie, a possessed colonist.
+	["demon-imp", QM + "Big/Demon.gltf", null, 1.0, ["", ""], 0.72, "Walk"],
+	["demon-hound", QM + "Big/Fish.gltf", Color(0.5, 0.3, 0.3), 1.0, ["", ""], 0.72, "Run"],
 	["demon-thrall", GY + "character-zombie.glb", null, 1.0, ["", ""]],
-	["demon-gargoyle", GY + "character-vampire.glb", Color(0.55, 0.6, 0.75), 0.9, ["", ""]],
-	["demon-bloater", GY + "character-zombie.glb", Color(0.75, 0.95, 0.35), 1.35, ["", ""]],
-	["demon-brute", MD + "character-orc.glb", Color(0.6, 0.12, 0.12), 1.55, ["", ""]],
-	["demon-howler", GY + "character-ghost.glb", Color(0.95, 0.5, 1.0), 1.0, ["", ""]],
-	["demon-broodmother", GY + "character-keeper.glb", Color(0.45, 0.2, 0.55), 1.5, ["", ""]],
+	["demon-gargoyle", QM + "Flying/Demon.gltf", Color(0.6, 0.62, 0.72), 1.0, ["", ""], 0.85, "Flying_Idle"],
+	["demon-bloater", QM + "Blob/GreenSpikyBlob.gltf", null, 1.0, ["", ""], 0.72, "Walk"],
+	["demon-brute", QM + "Big/Orc_Skull.gltf", null, 1.0, ["", ""], 1.15, "Walk"],
+	["demon-howler", QM + "Flying/Ghost_Skull.gltf", null, 1.0, ["", ""], 0.85, "Fast_Flying"],
+	["demon-broodmother", QM + "Big/BlueDemon.gltf", Color(0.5, 0.25, 0.6), 1.0, ["", ""], 1.15, "Walk"],
 ]
 
 var viewport: SubViewport
@@ -85,6 +88,8 @@ func bake_one(v):
 	var model: Node3D = load(v[1]).instantiate()
 	model.scale = Vector3.ONE * v[3]
 	viewport.add_child(model)
+	if v.size() > 5:
+		fit(model, v[5])
 	if v[2] != null:
 		tint(model, v[2], v[0].begins_with("demon"))
 	attach(model, v[4][0], "arm-right")
@@ -94,7 +99,7 @@ func bake_one(v):
 	var player: AnimationPlayer = players[0] if players.size() > 0 else null
 	var length := 1.0
 	if player:
-		player.play("walk")
+		player.play(v[6] if v.size() > 6 else "walk")
 		length = player.current_animation_length
 	var sheet := Image.create(CELL * FRAMES, CELL * 8, false, Image.FORMAT_RGBA8)
 	for d in 8:
@@ -115,6 +120,21 @@ func bake_one(v):
 	print("baked ", v[0])
 	model.queue_free()
 	await process_frame
+
+# Scale a model so it stands `height` tall with its feet on the ground (models come in every size).
+func fit(model: Node3D, height: float):
+	var box := AABB()
+	var first := true
+	for m in model.find_children("*", "MeshInstance3D", true, false):
+		var b: AABB = m.global_transform * m.get_aabb()
+		box = b if first else box.merge(b)
+		first = false
+	if first or box.size.y <= 0:
+		return
+	# Wings and spread arms count too: nothing may be much wider than it is meant to be tall.
+	var k := height / maxf(box.size.y, maxf(box.size.x, box.size.z) * 0.8)
+	model.scale *= k
+	model.position.y -= box.position.y * k
 
 # A walk for models with no animation (KayKit's): arms swing from the
 # shoulder in opposition, the whole figure bobs twice a stride and sways.
@@ -138,7 +158,11 @@ func tint(model: Node3D, colour: Color, whole: bool):
 			continue
 		for s in m.mesh.get_surface_count():
 			var mat = m.get_active_material(s)
-			if mat is BaseMaterial3D:
+			if mat is BaseMaterial3D and mat.albedo_texture == null:
+				var flat: BaseMaterial3D = mat.duplicate()
+				flat.albedo_color = mat.albedo_color.lerp(colour, 0.8)
+				m.set_surface_override_material(s, flat)
+			elif mat is BaseMaterial3D:
 				var copy := ShaderMaterial.new()
 				copy.shader = shader
 				copy.set_shader_parameter("albedo_tex", mat.albedo_texture)

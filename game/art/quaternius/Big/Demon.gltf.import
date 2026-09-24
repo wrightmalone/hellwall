@@ -3,13 +3,13 @@
 importer="scene"
 importer_version=1
 type="PackedScene"
-uid="uid://d16qdq7ln6jp3"
-path="res://.godot/imported/character-ghost.glb-f8e5323f9ae28cbc38a14fddc76935cb.scn"
+uid="uid://cho6am3vt1c6o"
+path="res://.godot/imported/Demon.gltf-86e6e49b1bee68070514b105d0b8b9df.scn"
 
 [deps]
 
-source_file="res://art/kenney3d/graveyard-kit/character-ghost.glb"
-dest_files=["res://.godot/imported/character-ghost.glb-f8e5323f9ae28cbc38a14fddc76935cb.scn"]
+source_file="res://art/quaternius/Big/Demon.gltf"
+dest_files=["res://.godot/imported/Demon.gltf-86e6e49b1bee68070514b105d0b8b9df.scn"]
 
 [params]
 

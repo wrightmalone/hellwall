@@ -3,13 +3,13 @@
 importer="scene"
 importer_version=1
 type="PackedScene"
-uid="uid://cxbm81fatmq2c"
-path="res://.godot/imported/hammer_common.gltf.glb-473c46a5327c46ad9d51858e7f514926.scn"
+uid="uid://8d4m55fxv18o"
+path="res://.godot/imported/Orc_Skull.gltf-79f002113f59245f2174c6cffe9a15d9.scn"
 
 [deps]
 
-source_file="res://art/kaykit/Models/gltf/hammer_common.gltf.glb"
-dest_files=["res://.godot/imported/hammer_common.gltf.glb-473c46a5327c46ad9d51858e7f514926.scn"]
+source_file="res://art/quaternius/Big/Orc_Skull.gltf"
+dest_files=["res://.godot/imported/Orc_Skull.gltf-79f002113f59245f2174c6cffe9a15d9.scn"]
 
 [params]
 

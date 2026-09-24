@@ -3,13 +3,13 @@
 importer="scene"
 importer_version=1
 type="PackedScene"
-uid="uid://dhg7586vuwg51"
-path="res://.godot/imported/character-keeper.glb-2c7bfd61053a3771da63d4ea4f9a0e35.scn"
+uid="uid://ceimxbde10qtv"
+path="res://.godot/imported/Demon.gltf-fdbd3742c9aab709c930531d62b9bc23.scn"
 
 [deps]
 
-source_file="res://art/kenney3d/graveyard-kit/character-keeper.glb"
-dest_files=["res://.godot/imported/character-keeper.glb-2c7bfd61053a3771da63d4ea4f9a0e35.scn"]
+source_file="res://art/quaternius/Flying/Demon.gltf"
+dest_files=["res://.godot/imported/Demon.gltf-fdbd3742c9aab709c930531d62b9bc23.scn"]
 
 [params]
 

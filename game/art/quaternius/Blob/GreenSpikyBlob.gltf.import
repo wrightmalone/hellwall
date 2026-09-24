@@ -3,13 +3,13 @@
 importer="scene"
 importer_version=1
 type="PackedScene"
-uid="uid://fil3t56duq5v"
-path="res://.godot/imported/character-vampire.glb-4ffbb4546fffe2cdb4fc8ed339c170bb.scn"
+uid="uid://7ubotac563ue"
+path="res://.godot/imported/GreenSpikyBlob.gltf-ed127e21cbf46f2cf3a1b4d21ef70e2a.scn"
 
 [deps]
 
-source_file="res://art/kenney3d/graveyard-kit/character-vampire.glb"
-dest_files=["res://.godot/imported/character-vampire.glb-4ffbb4546fffe2cdb4fc8ed339c170bb.scn"]
+source_file="res://art/quaternius/Blob/GreenSpikyBlob.gltf"
+dest_files=["res://.godot/imported/GreenSpikyBlob.gltf-ed127e21cbf46f2cf3a1b4d21ef70e2a.scn"]
 
 [params]
 
