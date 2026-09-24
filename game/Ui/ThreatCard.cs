@@ -59,7 +59,7 @@ public partial class ThreatCard : PanelContainer
             string what = next.Final ? "THE CONVERGENCE" : next.Surge ? $"Surge {next.Number}" : $"Wave {next.Number}";
             _next.Text = $"{what} in {UiKit.Clock((next.LandsAtTick - World.Tick) / tps)}";
             _next.AddThemeColorOverride("font_color", UiKit.Threat);
-            _detail.Text = $"{next.Size} from the {string.Join(" and ", next.Sides.Select(UiKit.SideName))}";
+            _detail.Text = $"{next.Size} from the {string.Join(" and ", next.Sides.Select(UiKit.SideOnScreen))}";
         }
         else
         {

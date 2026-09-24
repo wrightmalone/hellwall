@@ -110,7 +110,7 @@ public partial class AlertFeed : VBoxContainer
                 Push("pack", $"A pack of {p.Count} stirs", Grey, new Vector2(p.X + 0.5f, p.Y + 0.5f));
                 break;
             case WaveAnnounced w:
-                Push("wave", w.Final ? $"THE CONVERGENCE: {w.Size} from every side" : $"Wave {w.Number}: {w.Size} from the {string.Join(" and ", w.Sides.Select(UiKit.SideName))}", Red, EdgeOf(w.Sides[0]), 12);
+                Push("wave", w.Final ? $"THE CONVERGENCE: {w.Size} from every side" : $"Wave {w.Number}: {w.Size} from the {string.Join(" and ", w.Sides.Select(UiKit.SideOnScreen))}", Red, EdgeOf(w.Sides[0]), 12);
                 break;
             case TechResearched t:
                 Push("tech-" + t.TechId, $"Researched {World.Rules.Tech(t.TechId).Name}", Gold);

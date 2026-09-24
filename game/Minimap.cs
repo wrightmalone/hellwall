@@ -4,34 +4,47 @@ using Hellwall.Sim;
 namespace Hellwall.Game;
 
 /// <summary>
-/// The whole map in the corner: terrain and holy ground as a texture
-/// (repainted only when the grid changes), with buildings, the horde,
-/// Hellgates, sleeping packs and the camera's view drawn over it each frame.
-/// Click or drag on it to move the camera.
+/// The whole map in the corner, drawn as a diamond in the same projection as
+/// the main view, so north (the map's y = 0 edge) is up and to the right in
+/// both and the wave callouts point the same way everywhere. Terrain and
+/// holy ground are a texture (repainted only when the grid changes), sheared
+/// into the diamond; buildings, the horde, gates, packs, incoming waves,
+/// damage pings and the camera's view are drawn over it each frame. Click
+/// or drag to move the camera.
 /// </summary>
 public partial class Minimap : Control
 {
-    const int Px = 200;
+    /// <summary>The diamond is W wide and W/2 tall, like a tile.</summary>
+    const float W = 320, H = W / 2;
 
     public World World = null!;
     public Camera2D Camera = null!;
     public Action<Vector2> MoveCamera = null!;
 
-    readonly TextureRect _terrain = new() { MouseFilter = MouseFilterEnum.Ignore, StretchMode = TextureRect.StretchModeEnum.Scale, ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize };
-    readonly Overlay _overlay = new();
+    ImageTexture? _terrain;
+    readonly Dictionary<int, float> _lastHp = new();
+    readonly Dictionary<int, (Vector2 At, float Life)> _pings = new();
 
     public override void _Ready()
     {
-        CustomMinimumSize = new Vector2(Px, Px);
-        Size = new Vector2(Px, Px);
+        CustomMinimumSize = new Vector2(W, H + 16);
+        Size = CustomMinimumSize;
         MouseFilter = MouseFilterEnum.Stop;
-        _terrain.Size = new Vector2(Px, Px);
-        AddChild(_terrain);
-        _overlay.Map = this;
-        _overlay.MouseFilter = MouseFilterEnum.Ignore;
-        _overlay.Size = new Vector2(Px, Px);
-        AddChild(_overlay);
         Repaint();
+    }
+
+    float N => World.Terrain.Width;
+
+    /// <summary>Tile units to minimap pixels: the isometric projection, scaled to the diamond (8 px margin on top for the compass).</summary>
+    Vector2 M(float x, float y) => new(W / 2 + (x - y) * (W / 2) / N, 8 + (x + y) * (H / 2) / N);
+
+    Vector2 M(Vector2 t) => M(t.X, t.Y);
+
+    /// <summary>Minimap pixels back to tile units.</summary>
+    Vector2 Tile(Vector2 p)
+    {
+        float u = (p.X - W / 2) / ((W / 2) / N), v = (p.Y - 8) / ((H / 2) / N);
+        return new Vector2((u + v) / 2, (v - u) / 2);
     }
 
     /// <summary>Redraw the terrain layer (holy ground included). Call when the grid changes.</summary>
@@ -46,10 +59,10 @@ public partial class Minimap : Control
                 if (World.Colony.Consecrated[t.Index(x, y)]) c = c.Lerp(new Color(1, 0.9f, 0.5f), 0.25f);
                 image.SetPixel(x, y, c);
             }
-        _terrain.Texture = ImageTexture.CreateFromImage(image);
+        _terrain = ImageTexture.CreateFromImage(image);
     }
 
-    public override void _Process(double delta) => _overlay.QueueRedraw();
+    public override void _Process(double delta) => QueueRedraw();
 
     public override void _GuiInput(InputEvent @event)
     {
@@ -59,85 +72,91 @@ public partial class Minimap : Control
 
     void Jump(Vector2 local)
     {
-        float scale = World.Terrain.Width / (float)Px;
-        MoveCamera(Iso.P(local * scale));
+        var t = Tile(local);
+        MoveCamera(Iso.P(Mathf.Clamp(t.X, 0, N), Mathf.Clamp(t.Y, 0, N)));
         AcceptEvent();
     }
 
-    partial class Overlay : Control
+    public override void _Draw()
     {
-        public Minimap Map = null!;
-        readonly Dictionary<int, float> _lastHp = new();
-        readonly Dictionary<int, (Vector2 At, float Life)> _pings = new();
-
-        public override void _Draw()
+        var world = World;
+        float s = (W / 2) / N;
+        // Backing and frame, then the terrain sheared into the diamond.
+        Vector2[] diamond = [M(0, 0), M(N, 0), M(N, N), M(0, N)];
+        DrawColoredPolygon(diamond, new Color(0.08f, 0.08f, 0.07f));
+        if (_terrain != null)
         {
-            var world = Map.World;
-            float s = Px / (float)world.Terrain.Width;
-
-            foreach (var b in world.Buildings)
-            {
-                var colour = b.Possessed ? new Color(0.7f, 0.2f, 0.8f) : b.IsWallLike ? new Color(0.85f, 0.85f, 0.9f) : Palette.Building(b.Kind);
-                DrawRect(new Rect2(b.X * s, b.Y * s, MathF.Max(1, b.W * s), MathF.Max(1, b.H * s)), colour);
-            }
-
-            foreach (var p in world.Packs)
-                if (!p.Awake) DrawCircle(new Vector2(p.X, p.Y) * s, 2, new Color(0.9f, 0.4f, 0.2f, 0.8f));
-
-            // The horde, subsampled: a dot per demon up to a few thousand, which is plenty to read.
-            var h = world.Horde;
-            int step = Math.Max(1, h.Count / 3000);
-            for (int i = 0; i < h.Count; i += step)
-                DrawRect(new Rect2(h.X[i] * s, h.Y[i] * s, 1, 1), new Color(1, 0.15f, 0.1f));
-
-            foreach (var g in world.Gates)
-                if (g.Alive) DrawRect(new Rect2(g.X * s - 1, g.Y * s - 1, Hellgate.Size * s + 2, Hellgate.Size * s + 2), new Color(1, 0.1f, 0.5f));
-
-            foreach (var u in world.Units)
-                DrawRect(new Rect2(u.X * s, u.Y * s, 1.5f, 1.5f), new Color(0.5f, 0.9f, 1));
-
-            // Where waves are coming from: a red arrow on each announced side.
-            if (world.Survival is { } sv)
-                foreach (var wave in sv.Waves)
-                {
-                    if (!wave.Announced || wave.Landed) continue;
-                    foreach (var side in wave.Sides)
-                    {
-                        Vector2 at = side switch
-                        {
-                            Hellwall.Sim.Side.North => new(Px / 2f, 7), Hellwall.Sim.Side.South => new(Px / 2f, Px - 7),
-                            Hellwall.Sim.Side.West => new(7, Px / 2f), _ => new(Px - 7, Px / 2f),
-                        };
-                        var inward = (new Vector2(Px / 2f, Px / 2f) - at).Normalized();
-                        var across = new Vector2(-inward.Y, inward.X);
-                        DrawColoredPolygon([at + inward * 7, at - inward * 4 + across * 6, at - inward * 4 - across * 6], new Color(1, 0.25f, 0.2f));
-                    }
-                }
-
-            // Pings where buildings are taking damage, so a fight off screen is seen.
-            foreach (var b in world.Buildings)
-            {
-                if (_lastHp.TryGetValue(b.Id, out float was) && b.Hp < was - 0.01f) _pings[b.Id] = (new Vector2(b.CentreX, b.CentreY), 1.5f);
-                _lastHp[b.Id] = b.Hp;
-            }
-            foreach (var id in _pings.Keys.ToList())
-            {
-                var (at, life) = _pings[id];
-                life -= (float)GetProcessDeltaTime();
-                if (life <= 0) { _pings.Remove(id); continue; }
-                _pings[id] = (at, life);
-                float r = 3 + (1.5f - life) * 6;
-                DrawArc(at * s, r, 0, Mathf.Tau, 16, new Color(1, 0.3f, 0.2f, life / 1.5f), 1.5f);
-            }
-
-            // The camera's view.
-            var cam = Map.Camera;
-            // The screen's four corners on the ground: a diamond on the map, since the view is isometric.
-            var half = Map.GetViewportRect().Size / cam.Zoom / 2;
-            var c = cam.GlobalPosition;
-            Vector2[] corners = [c - half, c + new Vector2(half.X, -half.Y), c + half, c + new Vector2(-half.X, half.Y), c - half];
-            DrawPolyline(corners.Select(p => Iso.Tile(p) * s).ToArray(), Colors.White, 1);
-            DrawRect(new Rect2(Vector2.Zero, new Vector2(Px, Px)), Colors.Black, filled: false, width: 2);
+            DrawSetTransformMatrix(new Transform2D(new Vector2(s, s / 2), new Vector2(-s, s / 2), M(0, 0)));
+            DrawTexture(_terrain, Vector2.Zero);
+            DrawSetTransformMatrix(Transform2D.Identity);
         }
+
+        foreach (var b in world.Buildings)
+        {
+            var colour = b.Possessed ? new Color(0.7f, 0.2f, 0.8f) : b.IsWallLike ? new Color(0.85f, 0.85f, 0.9f) : Palette.Building(b.Kind);
+            DrawColoredPolygon([M(b.X, b.Y), M(b.X + b.W, b.Y), M(b.X + b.W, b.Y + b.H), M(b.X, b.Y + b.H)], colour);
+        }
+        foreach (var p in world.Packs)
+            if (!p.Awake) DrawCircle(M(p.X + 0.5f, p.Y + 0.5f), 1.6f, new Color(0.9f, 0.4f, 0.2f, 0.8f));
+
+        // The horde, subsampled: a dot per demon up to a few thousand, which is plenty to read.
+        var h = world.Horde;
+        int step = Math.Max(1, h.Count / 3000);
+        for (int i = 0; i < h.Count; i += step)
+            DrawRect(new Rect2(M(h.X[i], h.Y[i]), Vector2.One), new Color(1, 0.15f, 0.1f));
+        foreach (var g in world.Gates)
+            if (g.Alive) DrawColoredPolygon([M(g.X, g.Y), M(g.X + 3, g.Y), M(g.X + 3, g.Y + 3), M(g.X, g.Y + 3)], new Color(1, 0.1f, 0.5f));
+        foreach (var u in world.Units)
+            DrawRect(new Rect2(M(u.X, u.Y) - Vector2.One, new Vector2(2, 2)), new Color(0.5f, 0.9f, 1));
+
+        // Where waves are coming from: a red arrow on the middle of each announced side.
+        if (world.Survival is { } sv)
+            foreach (var wave in sv.Waves)
+            {
+                if (!wave.Announced || wave.Landed) continue;
+                foreach (var side in wave.Sides)
+                {
+                    var at = M(SideMiddle(side));
+                    var inward = (M(N / 2, N / 2) - at).Normalized();
+                    var across = new Vector2(-inward.Y, inward.X);
+                    var tip = at + inward * 4;
+                    DrawColoredPolygon([tip + inward * 7, tip - inward * 4 + across * 6, tip - inward * 4 - across * 6], new Color(1, 0.25f, 0.2f));
+                }
+            }
+
+        // Pings where buildings are taking damage, so a fight off screen is seen.
+        foreach (var b in world.Buildings)
+        {
+            if (_lastHp.TryGetValue(b.Id, out float was) && b.Hp < was - 0.01f) _pings[b.Id] = (new Vector2(b.CentreX, b.CentreY), 1.5f);
+            _lastHp[b.Id] = b.Hp;
+        }
+        foreach (var id in _pings.Keys.ToList())
+        {
+            var (at, life) = _pings[id];
+            life -= (float)GetProcessDeltaTime();
+            if (life <= 0) { _pings.Remove(id); continue; }
+            _pings[id] = (at, life);
+            DrawArc(M(at), 3 + (1.5f - life) * 6, 0, Mathf.Tau, 16, new Color(1, 0.3f, 0.2f, life / 1.5f), 1.5f);
+        }
+
+        // The camera's view: the screen's corners on the ground.
+        var half = Camera.GetViewportRect().Size / Camera.Zoom / 2;
+        var c = Camera.GlobalPosition;
+        Vector2[] corners = [c - half, c + new Vector2(half.X, -half.Y), c + half, c + new Vector2(-half.X, half.Y), c - half];
+        DrawPolyline(corners.Select(p => M(Iso.Tile(p))).ToArray(), Colors.White, 1);
+
+        DrawPolyline([.. diamond, diamond[0]], new Color(0.38f, 0.34f, 0.27f), 2);
+        // The compass: N on the north edge, which runs up and to the right, as in the main view.
+        var font = ThemeDB.FallbackFont;
+        var north = M(N * 0.75f, -N * 0.06f);
+        DrawString(font, north + new Vector2(-4, 4), "N", fontSize: 13, modulate: UiKit.Gold);
     }
+
+    Vector2 SideMiddle(Hellwall.Sim.Side side) => side switch
+    {
+        Hellwall.Sim.Side.North => new Vector2(N / 2, 0),
+        Hellwall.Sim.Side.South => new Vector2(N / 2, N),
+        Hellwall.Sim.Side.West => new Vector2(0, N / 2),
+        _ => new Vector2(N, N / 2),
+    };
 }

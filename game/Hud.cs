@@ -136,9 +136,9 @@ public partial class Hud : CanvasLayer
         float top = _bar.Size.Y + 6;
         _threat.Position = new Vector2(screen.X - _threat.Size.X - 8, top);
         Alerts.Position = new Vector2(8, top);
-        Minimap.Position = new Vector2(8, screen.Y - 208);
+        Minimap.Position = new Vector2(8, screen.Y - Minimap.Size.Y - 8);
         _inspector.Position = new Vector2(screen.X - _inspector.Size.X - 8, screen.Y - _inspector.Size.Y - 8);
-        _card.Position = new Vector2(Mathf.Max(220, (screen.X - _card.Size.X) / 2), screen.Y - _card.Size.Y - 8);
+        _card.Position = new Vector2(Mathf.Max(Minimap.Size.X + 16, (screen.X - _card.Size.X) / 2), screen.Y - _card.Size.Y - 8);
         _notices.Text = string.Join("\n", State.Log.TakeLast(3).Select(l => l.Text));
         _notices.Size = new Vector2(screen.X, 0);
         _notices.Position = new Vector2(0, _card.Position.Y - _notices.Size.Y - 6);

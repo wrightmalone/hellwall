@@ -126,4 +126,13 @@ public static class UiKit
     public static string Clock(double seconds) => seconds <= 0 ? "now" : $"{(int)seconds / 60}:{(int)seconds % 60:00}";
 
     public static string SideName(Side s) => s.ToString().ToLowerInvariant();
+
+    /// <summary>A map side and where it lies on screen: in the isometric view north runs up and to the right.</summary>
+    public static string SideOnScreen(Side s) => s switch
+    {
+        Side.North => "north (top right)",
+        Side.East => "east (bottom right)",
+        Side.South => "south (bottom left)",
+        _ => "west (top left)",
+    };
 }
