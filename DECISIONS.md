@@ -366,6 +366,16 @@ The baker fits each model to a height, counting wingspan, because the pack's mod
 own clip (Walk, Run, Flying_Idle or Fast_Flying). The style is cartoonish, cute rather than
 horrific, which reads well at 30 px but is a tone question for the commissioned art.
 
+### 40. Trees and rocks from the Nature MegaKit (you asked)
+- **Baking:** `game/tools/bake_scenery.gd` renders five broadleaf trees, five pines, three
+  rocks and some grass and flower tufts from the terrain's own angle and scale (132 px across a
+  tile, drawn at half size). Each sprite stands on its tile by a base point recorded in
+  `scenery.json`.
+- **Placement:** forest tiles get a hashed mix of trees and pines, rock tiles get boulders, and
+  one plain grass tile in fourteen gets a tuft. Ore keeps Tower Defense's crystal blocks.
+- **Bush dropped:** its red flowers read as blood.
+- **Performance:** 20,000 demons still draw at about 94 fps.
+
 ## Things I noticed that you should decide
 
 - **Scale:** addressed by 12-14 and 21. The Convergence is 9,000 plus whatever

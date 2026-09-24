@@ -19,15 +19,50 @@ public static class Art
 
     public static Texture2D Tex(string path) => Cache.TryGetValue(path, out var t) ? t : Cache[path] = GD.Load<Texture2D>(path);
 
-    /// <summary>Terrain blocks per tile kind: every image is a 132-wide block whose top diamond is 66 high.</summary>
+    /// <summary>Terrain blocks per tile kind: every image is a 132-wide block whose top diamond is 66 high.
+    /// Forest and rock tiles are grass blocks with scenery standing on them (see Scenery); ore keeps Tower Defense's crystal blocks.</summary>
     public static string[] TerrainImages(Tile tile) => tile switch
     {
-        Tile.Forest => Enumerable.Range(1, 12).Select(i => $"{TD}Details/trees_{i}.png").ToArray(),
-        Tile.Rock => Enumerable.Range(1, 8).Select(i => $"{TD}Details/rocks_{i}.png").ToArray(),
         Tile.Ore => Enumerable.Range(1, 4).Select(i => $"{TD}Details/crystals_{i}.png").ToArray(),
         Tile.Water => [$"{Land}landscapeTiles_066.png"],
         _ => [$"{TD}Landscape/landscape_13.png"],
     };
+
+    const string Baked = "res://art/baked/scenery/";
+
+    /// <summary>
+    /// Trees and rocks baked from Quaternius's Stylized Nature MegaKit
+    /// (tools/bake_scenery.gd), at the terrain's scale: what stands on a
+    /// forest or rock tile, and the tufts dotted on open grass.
+    /// </summary>
+    public static string[] Scenery(Tile tile) => tile switch
+    {
+        Tile.Forest => ["tree-1", "tree-2", "tree-3", "tree-4", "tree-5", "pine-1", "pine-2", "pine-3", "pine-4", "pine-5"],
+        Tile.Rock => ["rock-1", "rock-2", "rock-3", "rock-4"],
+        _ => [],
+    };
+
+    public static readonly string[] Tufts = ["tuft-1", "tuft-2", "tuft-3", "tuft-4"];
+
+    public static string SceneryPath(string name) => $"{Baked}{name}.png";
+
+    static Dictionary<string, Vector2>? _sceneryBase;
+
+    /// <summary>Where a scenery sprite's base (the point it stands on) is, in its image's pixels.</summary>
+    public static Vector2 SceneryBase(string name)
+    {
+        if (_sceneryBase == null)
+        {
+            _sceneryBase = new();
+            var json = Json.ParseString(Godot.FileAccess.GetFileAsString($"{Baked}scenery.json")).AsGodotDictionary();
+            foreach (var (key, value) in json)
+            {
+                var xy = value.AsGodotArray();
+                _sceneryBase[key.AsString()] = new Vector2((float)xy[0].AsDouble(), (float)xy[1].AsDouble());
+            }
+        }
+        return _sceneryBase[name];
+    }
 
     /// <summary>A diamond, for tinting ground (holy ground, placement ghosts) as a tile layer.</summary>
     public static Texture2D Diamond(Color colour)

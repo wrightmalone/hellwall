@@ -17,7 +17,7 @@ public partial class TerrainView : Node2D
     /// <summary>The y-sorted parent that buildings and soldiers also live in.</summary>
     public Node2D Sorted = null!;
 
-    TileMapLayer _ground = null!, _holy = null!, _tall = null!;
+    TileMapLayer _ground = null!, _holy = null!, _tuft = null!, _tall = null!;
     readonly Dictionary<string, int> _sources = new();
     TileSet _set = null!;
     int _holySource;
@@ -26,14 +26,21 @@ public partial class TerrainView : Node2D
     {
         _set = new TileSet { TileShape = TileSet.TileShapeEnum.Isometric, TileLayout = TileSet.TileLayoutEnum.DiamondDown, TileSize = new Vector2I(132, 66) };
         foreach (var tile in Enum.GetValues<Tile>())
+        {
             foreach (var path in Art.TerrainImages(tile))
                 _sources[path] = AddSource(Art.Tex(path));
+            foreach (var name in Art.Scenery(tile))
+                _sources[name] = AddScenery(name);
+        }
+        foreach (var name in Art.Tufts) _sources[name] = AddScenery(name);
         _holySource = AddSource(Art.Diamond(new Color(1f, 0.85f, 0.35f, 0.22f)));
 
         _ground = Layer(false);
         _holy = Layer(false);
+        _tuft = Layer(false);
         AddChild(_ground);
         AddChild(_holy);
+        AddChild(_tuft); // low enough never to hide anything, so not sorted; buildings draw over them
         _tall = Layer(true);
         Sorted.AddChild(_tall);
 
@@ -42,14 +49,23 @@ public partial class TerrainView : Node2D
             for (int x = 0; x < t.Width; x++)
             {
                 var kind = t.Get(x, y);
-                var images = Art.TerrainImages(kind);
-                bool tall = kind is Tile.Forest or Tile.Rock or Tile.Ore;
-                string ground = tall ? Art.TerrainImages(Tile.Grass)[0] : images[Pick(x, y, images.Length)];
-                _ground.SetCell(new Vector2I(x, y), _sources[ground], Vector2I.Zero);
-                if (tall) _tall.SetCell(new Vector2I(x, y), _sources[images[Pick(x, y, images.Length)]], Vector2I.Zero);
+                var cell = new Vector2I(x, y);
+                var blocks = Art.TerrainImages(kind);
+                var scenery = Art.Scenery(kind);
+                if (kind == Tile.Ore)
+                {
+                    // Crystal blocks are whole tiles: grass underneath, the crystals sorted with everything standing.
+                    _ground.SetCell(cell, _sources[Art.TerrainImages(Tile.Grass)[0]], Vector2I.Zero);
+                    _tall.SetCell(cell, _sources[blocks[Pick(x, y, blocks.Length)]], Vector2I.Zero);
+                    continue;
+                }
+                _ground.SetCell(cell, _sources[blocks[Pick(x, y, blocks.Length)]], Vector2I.Zero);
+                if (scenery.Length > 0) _tall.SetCell(cell, _sources[scenery[Pick(x, y, scenery.Length)]], Vector2I.Zero);
+                else if (kind == Tile.Grass && Pick(x * 7 + 3, y * 5 + 1, 14) == 0) _tuft.SetCell(cell, _sources[Art.Tufts[Pick(y, x, Art.Tufts.Length)]], Vector2I.Zero);
             }
         Align(_ground);
         Align(_holy);
+        Align(_tuft);
         Align(_tall);
         RepaintHoly();
     }
@@ -88,6 +104,21 @@ public partial class TerrainView : Node2D
         // down by the difference. Tall details (trees) grow upward from the same diamond.
         data.TextureOrigin = new Vector2I(0, -(int)(size.Y / 2 - 33));
         data.YSortOrigin = 16; // the diamond's lower half: sorted like something standing on the tile
+        return id;
+    }
+
+    /// <summary>A baked scenery sprite as a tile: its base point on the cell's centre.</summary>
+    int AddScenery(string name)
+    {
+        var texture = Art.Tex(Art.SceneryPath(name));
+        var size = texture.GetSize();
+        var source = new TileSetAtlasSource { Texture = texture, TextureRegionSize = new Vector2I((int)size.X, (int)size.Y) };
+        int id = _set.AddSource(source);
+        source.CreateTile(Vector2I.Zero);
+        var data = source.GetTileData(Vector2I.Zero, 0);
+        var basePoint = Art.SceneryBase(name);
+        data.TextureOrigin = new Vector2I((int)(basePoint.X - size.X / 2), (int)(basePoint.Y - size.Y / 2));
+        data.YSortOrigin = 16;
         return id;
     }
 
