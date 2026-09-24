@@ -1,6 +1,7 @@
 using Godot;
 using Hellwall.Sim;
 using Resource = Hellwall.Sim.Resource;
+using Side = Hellwall.Sim.Side;
 
 namespace Hellwall.Game;
 
@@ -21,6 +22,8 @@ public partial class Hud : CanvasLayer
     Label _debug = null!;
     Label _log = null!;
     Label _banner = null!;
+    Label _clock = null!;
+    readonly Dictionary<Side, Label> _edgeWarnings = new();
     PanelContainer _inspector = null!;
     Label _inspectorText = null!;
     HBoxContainer _trainButtons = null!;
@@ -40,6 +43,16 @@ public partial class Hud : CanvasLayer
 
         _banner = Outlined(new Label { Visible = false, HorizontalAlignment = HorizontalAlignment.Center }, 44);
         AddChild(_banner);
+
+        _clock = Outlined(new Label { HorizontalAlignment = HorizontalAlignment.Right }, 17);
+        AddChild(_clock);
+        foreach (var side in Enum.GetValues<Side>())
+        {
+            var warning = Outlined(new Label { Visible = false, HorizontalAlignment = HorizontalAlignment.Center }, 20);
+            warning.AddThemeColorOverride("font_color", new Color(1, 0.45f, 0.35f));
+            AddChild(warning);
+            _edgeWarnings[side] = warning;
+        }
 
         _buildBar = new HBoxContainer();
         _buildBar.AddThemeConstantOverride("separation", 4);
@@ -116,6 +129,7 @@ public partial class Hud : CanvasLayer
         }
 
         UpdateInspector(screen);
+        UpdateClock(screen);
 
         if (World.Outcome != Outcome.Running)
         {
@@ -127,6 +141,56 @@ public partial class Hud : CanvasLayer
     }
 
     static string Signed(double v) => v >= 0 ? $"+{v:0.0}" : $"{v:0.0}";
+
+    static string Clock(double seconds) => seconds <= 0 ? "now" : $"{(int)seconds / 60}:{(int)seconds % 60:00}";
+
+    /// <summary>Day counter top right; each announced wave pinned to the screen edge it's coming from, with its countdown.</summary>
+    void UpdateClock(Vector2 screen)
+    {
+        foreach (var w in _edgeWarnings.Values) w.Visible = false;
+        var s = World.Survival;
+        if (s == null)
+        {
+            _clock.Text = $"Day {World.Day}";
+        }
+        else
+        {
+            var next = s.Next;
+            string upcoming = next == null ? "All waves have come."
+                : next.Announced ? $"{(next.Final ? "CONVERGENCE" : $"Wave {next.Number}")}: {next.Size} in {Clock((next.LandsAtTick - World.Tick) / (double)Balance.TickHz)}"
+                : $"Next wave: day {s.DayAt(next.LandsAtTick) - 1} ({Clock((next.AnnounceTick(s.Rules) - World.Tick) / (double)Balance.TickHz)} until it's sighted)";
+            _clock.Text = $"Day {Math.Min(World.Day, s.Rules.Days)} of {s.Rules.Days}\n{upcoming}";
+
+            foreach (var wave in s.Waves)
+            {
+                if (!wave.Announced || wave.Landed) continue;
+                string eta = Clock((wave.LandsAtTick - World.Tick) / (double)Balance.TickHz);
+                foreach (var side in wave.Sides)
+                {
+                    var label = _edgeWarnings[side];
+                    label.Visible = true;
+                    int share = wave.Size / wave.Sides.Length;
+                    label.Text = side switch
+                    {
+                        Side.North => $"^  {share} from the north · {eta}  ^",
+                        Side.South => $"v  {share} from the south · {eta}  v",
+                        Side.West => $"<  {share}\nwest\n{eta}",
+                        _ => $"{share}  >\neast\n{eta}",
+                    };
+                    label.Size = new Vector2(side is Side.North or Side.South ? 420 : 110, 0);
+                    label.Position = side switch
+                    {
+                        Side.North => new Vector2(screen.X / 2 - 210, 72),
+                        Side.South => new Vector2(screen.X / 2 - 210, screen.Y - 84),
+                        Side.West => new Vector2(8, screen.Y / 2 - 40),
+                        _ => new Vector2(screen.X - 118, screen.Y / 2 - 40),
+                    };
+                }
+            }
+        }
+        _clock.Size = new Vector2(420, 0);
+        _clock.Position = new Vector2(screen.X - 430, 6);
+    }
 
     int? _inspected;
     int _unitsShown = -1;
@@ -141,6 +205,7 @@ public partial class Hud : CanvasLayer
         {
             var b = building;
             string status =
+                b.Possessed ? $"POSSESSED: {b.Occupants} still inside. [X] to purge" :
                 !b.Complete ? $"Under construction {b.Built / Math.Max(0.001f, b.Def.BuildSeconds):P0}" :
                 !b.OnGround ? "Dark: not on consecrated ground" :
                 b.NeedsCrew && !b.Staffed ? $"Idle: needs {b.Def.Workers} workers" :

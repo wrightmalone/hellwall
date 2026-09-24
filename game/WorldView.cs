@@ -65,6 +65,11 @@ public partial class WorldView : Node2D
                 float f = b.Def.BuildSeconds <= 0 ? 1 : b.Built / b.Def.BuildSeconds;
                 Bar(rect, f, new Color(0.9f, 0.9f, 0.3f));
             }
+            else if (b.Possessed)
+            {
+                DrawRect(rect, new Color(0.45f, 0.1f, 0.55f, 0.7f));
+                DrawString(font, rect.Position + new Vector2(1, rect.Size.Y - 2), $"x{b.Occupants}", HorizontalAlignment.Left, rect.Size.X, 9, new Color(1, 0.8f, 1));
+            }
             else if (!b.Active)
             {
                 // Dark: a grey veil and why.

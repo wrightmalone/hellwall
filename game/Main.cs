@@ -16,6 +16,7 @@ namespace Hellwall.Game;
 ///   --bench[=seconds]    spawn the 20k edge assault, run for N seconds (default 20),
 ///                        print frame and sim timings, then quit
 ///   --demo[=seconds]     build a walled town, send a wave at it, screenshot mid-fight
+///   --skip=seconds       fast-forward the sim before the first frame
 /// </summary>
 public partial class Main : Node2D
 {
@@ -25,7 +26,11 @@ public partial class Main : Node2D
     const double TickSeconds = 1.0 / Balance.TickHz;
 
     World _world = null!;
+    Sprite2D _terrain = null!;
     readonly ClientState _state = new();
+    static readonly string SavePath = ProjectSettings.GlobalizePath("user://quicksave.hwsave");
+    static readonly double[] Speeds = [1, 2, 4];
+    int _speed;
     Camera2D _camera = null!;
     HordeRenderer _horde = null!;
     WorldView _view = null!;
@@ -59,9 +64,11 @@ public partial class Main : Node2D
         var rules = Rules.Default;
         if (_benchSeconds > 0) rules = rules.WithBuilding(BuildingKind.Keep, k => k with { Hp = 1e9f });
         if (_demoSeconds > 0) rules = rules.WithStartingResources(new Cost { Gold = 5000, Wood = 3000, Stone = 2000, Food = 1000 });
-        _world = World.Create(new WorldOptions(seed, MapSize, _benchSeconds > 0 || _demoSeconds > 0 ? 0 : DormantPacks, rules));
+        bool scripted = _benchSeconds > 0 || _demoSeconds > 0;
+        _world = World.Create(new WorldOptions(seed, MapSize, scripted ? 0 : DormantPacks, rules, Survival: !scripted));
 
-        AddChild(new Sprite2D { Texture = BuildTerrainTexture(_world.Terrain), Centered = false, Scale = new Vector2(T, T), ZIndex = -2 });
+        _terrain = new Sprite2D { Texture = BuildTerrainTexture(_world.Terrain), Centered = false, Scale = new Vector2(T, T), ZIndex = -2 };
+        AddChild(_terrain);
         _view = new WorldView { World = _world, State = _state };
         AddChild(_view);
         _horde = new HordeRenderer(T, MapSize) { ZIndex = 1 };
@@ -75,6 +82,13 @@ public partial class Main : Node2D
 
         if (_benchSeconds > 0) StartBenchAssault();
         if (_demoSeconds > 0) StartDemo();
+
+        // Fast-forward before the first frame: for screenshots and for jumping into the middle of a run.
+        if (options.TryGetValue("skip", out var skip))
+        {
+            for (int t = 0; t < double.Parse(skip) * Balance.TickHz && _world.Outcome == Outcome.Running; t++) _world.Step();
+            HandleEvents();
+        }
 
         // scripts/verify.sh looks for this line: the engine banner alone doesn't prove the C# scene ran.
         GD.Print($"hellwall: world ready seed={_world.Seed} hash={StateHash.Hex(_world)}");
@@ -136,6 +150,9 @@ public partial class Main : Node2D
                 case UnitTrained u: _state.Say($"{u.Kind} ready"); break;
                 case UnitDied u: _state.Say($"{u.Kind} killed"); break;
                 case PackWoke p: _state.Say($"A pack of {p.Count} stirs"); break;
+                case BuildingPossessed p: _state.Say($"{p.Kind} POSSESSED: {p.Occupants} turning. [X] to purge it"); break;
+                case WaveAnnounced w: _state.Say(w.Final ? $"THE CONVERGENCE: {w.Size} from every side" : $"Wave {w.Number}: {w.Size} from the {string.Join(" and ", w.Sides)}"); break;
+                case WaveLanded w: _state.Say(w.Final ? "The Convergence is here." : $"Wave {w.Number} has arrived"); break;
                 case OutcomeChanged o: _state.Say(o.Outcome == Outcome.Lost ? "The Keep has fallen." : "Victory."); break;
             }
         }
@@ -234,6 +251,13 @@ public partial class Main : Node2D
                 _state.SelectedBuilding = null;
                 break;
             case Key.Space: _paused = !_paused; break;
+            case Key.Tab:
+                _speed = (_speed + 1) % Speeds.Length;
+                Engine.TimeScale = Speeds[_speed];
+                _state.Say($"Speed {Speeds[_speed]}x");
+                break;
+            case Key.F5: QuickSave(); break;
+            case Key.F9: QuickLoad(); break;
             case Key.X or Key.Delete when selected != null:
                 Send(new Demolish(selected.Id));
                 break;
@@ -258,6 +282,41 @@ public partial class Main : Node2D
             case Key.J:
                 foreach (var c in Scenarios.EdgeAssault(_world, 20000, points: 8)) Send(c);
                 break;
+        }
+    }
+
+    void QuickSave()
+    {
+        _world.FlushCommands();
+        System.IO.File.WriteAllBytes(SavePath, _world.Save());
+        _state.Say($"Saved (day {_world.Day})");
+    }
+
+    void QuickLoad()
+    {
+        if (!System.IO.File.Exists(SavePath))
+        {
+            _state.Say("No quicksave yet: F5 to save");
+            return;
+        }
+        try
+        {
+            var loaded = World.Load(System.IO.File.ReadAllBytes(SavePath), _world.Rules);
+            _world = loaded;
+            _view.World = loaded;
+            _hud.World = loaded;
+            _terrain.Texture = BuildTerrainTexture(loaded.Terrain);
+            _view.RepaintConsecration();
+            _state.SelectedUnits.Clear();
+            _state.SelectedBuilding = null;
+            _state.Armed = null;
+            _state.Shots.Clear();
+            _accumulator = 0;
+            _state.Say($"Loaded (day {loaded.Day})");
+        }
+        catch (FormatException e)
+        {
+            _state.Say($"Can't load: {e.Message}");
         }
     }
 
@@ -304,8 +363,8 @@ public partial class Main : Node2D
         }
         int asleep = _world.Packs.Where(p => !p.Awake).Sum(p => p.Count);
         _hud.DebugText =
-            $"t={_world.Tick / (double)Balance.TickHz:0}s{(_paused ? "  PAUSED" : "")}   demons {_world.Horde.Count} (+{asleep} asleep)   killed {_world.Stats.DemonsKilled}   " +
-            $"fps {Engine.GetFramesPerSecond():0}  sim {_simMsShown:0.00} ms   ·   debug: [N] noise  [K] wave  [J] 20k   Space pause · WASD pan · wheel zoom · Ctrl/Alt+1-9 groups";
+            $"{(_paused ? "PAUSED   " : "")}{Speeds[_speed]}x   demons {_world.Horde.Count} (+{asleep} asleep)   killed {_world.Stats.DemonsKilled}   " +
+            $"fps {Engine.GetFramesPerSecond():0}  sim {_simMsShown:0.00} ms   ·   Space pause · Tab speed · F5 save · F9 load · debug: [N] noise [K] wave [J] 20k";
     }
 
     // --- scripted runs ---
