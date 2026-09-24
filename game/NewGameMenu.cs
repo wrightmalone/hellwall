@@ -72,6 +72,15 @@ public partial class NewGameMenu : CanvasLayer
         _mode.ItemSelected += _ => Describe();
         Describe();
 
+        var volumeRow = Row(box, "Volume");
+        var volume = new HSlider { MinValue = 0, MaxValue = 1, Step = 0.05, Value = Sound.Volume, SizeFlagsHorizontal = Control.SizeFlags.ExpandFill };
+        volume.ValueChanged += v => Settings.Set("volume", (float)v);
+        volumeRow.AddChild(volume);
+
+        var hints = new CheckBox { Text = "Hints for a first run", ButtonPressed = Coach.Enabled };
+        hints.Toggled += on => Settings.Set("hints", on);
+        box.AddChild(hints);
+
         var start = new Button { Text = "Begin" };
         start.AddThemeFontSizeOverride("font_size", 22);
         start.Pressed += Begin;

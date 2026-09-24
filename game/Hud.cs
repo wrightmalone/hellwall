@@ -33,6 +33,10 @@ public partial class Hud : CanvasLayer
     public string DebugText = "";
 
     public Minimap Minimap = null!;
+    /// <summary>Back to the new-game menu.</summary>
+    public Action NewRun = null!;
+    PanelContainer _end = null!;
+    Label _endText = null!;
     Label _help = null!;
 
     const string HelpText =
@@ -71,7 +75,7 @@ public partial class Hud : CanvasLayer
         }
 
         _buildBar = new HBoxContainer();
-        _buildBar.AddThemeConstantOverride("separation", 4);
+        _buildBar.AddThemeConstantOverride("separation", 2);
         AddChild(_buildBar);
         foreach (var (kind, _, keyLabel) in Palette.BuildBar)
         {
@@ -81,7 +85,7 @@ public partial class Hud : CanvasLayer
                 Text = $"{keyLabel} {kind}",
                 TooltipText = $"{kind}\n{def.Cost}{Describe(def)}",
                 FocusMode = Control.FocusModeEnum.None,
-                CustomMinimumSize = new Vector2(88, 34),
+                CustomMinimumSize = new Vector2(0, 34), // sized to its text: nineteen buttons must fit 1600 px
             };
             button.AddThemeFontSizeOverride("font_size", 12);
             button.Pressed += () => State.Armed = State.Armed == kind ? null : kind;
@@ -93,6 +97,24 @@ public partial class Hud : CanvasLayer
 
         _help = Outlined(new Label { Visible = false, Text = HelpText }, 16);
         AddChild(_help);
+
+        // The end of a run: what happened, and the way back to the menu.
+        _end = new PanelContainer { Visible = false, CustomMinimumSize = new Vector2(420, 0) };
+        var endBox = new VBoxContainer();
+        endBox.AddThemeConstantOverride("separation", 8);
+        _endText = new Label();
+        _endText.AddThemeFontSizeOverride("font_size", 16);
+        endBox.AddChild(_endText);
+        var endRow = new HBoxContainer { Alignment = BoxContainer.AlignmentMode.Center };
+        var again = new Button { Text = "New run", FocusMode = Control.FocusModeEnum.None };
+        again.Pressed += () => NewRun();
+        var quit = new Button { Text = "Quit", FocusMode = Control.FocusModeEnum.None };
+        quit.Pressed += () => GetTree().Quit();
+        endRow.AddChild(again);
+        endRow.AddChild(quit);
+        endBox.AddChild(endRow);
+        _end.AddChild(endBox);
+        AddChild(_end);
 
         _inspector = new PanelContainer { Visible = false, CustomMinimumSize = new Vector2(300, 0) };
         var box = new VBoxContainer();
@@ -162,6 +184,19 @@ public partial class Hud : CanvasLayer
             _banner.Text = World.Outcome == Outcome.Lost ? (World.Survival is { Endless: true } ? $"The Keep has fallen on day {World.Day}" : "The Keep has fallen") : "The colony endures";
             _banner.Size = new Vector2(screen.X, 60);
             _banner.Position = new Vector2(0, screen.Y * 0.4f);
+            if (!_end.Visible)
+            {
+                var st = World.Stats;
+                var s = World.Survival;
+                string corruptions = s is { Endless: true, Corruptions.Count: > 0 }
+                    ? $"\nThe horde became: {string.Join(", ", s.Corruptions.Select(id => World.Rules.Corruption(id).Name))}" : "";
+                string mode = s == null ? "" : s.Endless ? "Endless" : "Survival";
+                _endText.Text = $"{mode} · {World.Map} · {World.Rules.Difficulty} · seed {World.Seed}\n" +
+                    $"Days survived: {World.Day}\nDemons slain: {st.DemonsKilled}\nBuildings lost: {st.BuildingsLost}\nSoldiers lost: {st.UnitsLost}" +
+                    $"\nResearched: {(World.Tech.Researched.Count == 0 ? "nothing" : string.Join(", ", World.Tech.Researched.Select(id => World.Rules.Tech(id).Name)))}{corruptions}";
+                _end.Visible = true;
+            }
+            _end.Position = new Vector2(screen.X / 2 - _end.Size.X / 2, screen.Y * 0.4f + 70);
         }
     }
 

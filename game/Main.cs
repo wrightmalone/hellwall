@@ -36,6 +36,10 @@ public partial class Main : Node2D
     /// <summary>The unscaled rules the run was made from: a quickload rescales them to the save's difficulty.</summary>
     Rules _baseRules = Rules.Default;
     Dictionary<string, string> _options = new();
+    Coach? _coach;
+    Sound _sound = null!;
+    /// <summary>Set before reloading the scene for a new run: show the menu whatever the command line said.</summary>
+    static bool _menuNext;
     Sprite2D _terrain = null!;
     readonly ClientState _state = new();
     static readonly string SavePath = ProjectSettings.GlobalizePath("user://quicksave.hwsave");
@@ -78,7 +82,7 @@ public partial class Main : Node2D
             o.ContainsKey("endless"));
         // Any flag that sets up a run (and every headless boot, which is verify.sh) skips the menu.
         bool flagged = new[] { "seed", "map", "difficulty", "endless", "autoplay", "bench", "demo", "skip", "screenshot" }.Any(o.ContainsKey);
-        if ((flagged || DisplayServer.GetName() == "headless") && !o.ContainsKey("menu")) Begin(setup);
+        if ((flagged || DisplayServer.GetName() == "headless") && !o.ContainsKey("menu") && !_menuNext) Begin(setup);
         else AddChild(new NewGameMenu { Initial = setup, Start = Begin });
     }
 
@@ -105,12 +109,20 @@ public partial class Main : Node2D
         _horde = new HordeRenderer(T, MapSize) { ZIndex = 1 };
         AddChild(_horde);
 
+        _sound = new Sound();
+        AddChild(_sound);
+
         _camera = new Camera2D { Position = new Vector2(MapSize, MapSize) * T / 2f, Zoom = new Vector2(1.6f, 1.6f) };
         AddChild(_camera);
 
         _minimap = new Minimap { World = _world, Camera = _camera, MoveCamera = p => _camera.Position = p };
-        _hud = new Hud { World = _world, State = _state, Send = Send, Minimap = _minimap };
+        _hud = new Hud { World = _world, State = _state, Send = Send, Minimap = _minimap, NewRun = NewRun };
         AddChild(_hud);
+        if (!scripted && !options.ContainsKey("autoplay") && Coach.Enabled)
+        {
+            _coach = new Coach { World = _world };
+            _hud.AddChild(_coach);
+        }
 
         if (_benchSeconds > 0) StartBenchAssault();
         if (_demoSeconds > 0) StartDemo();
@@ -139,6 +151,12 @@ public partial class Main : Node2D
     }
 
     void Send(Command command) => _world.Enqueue(command);
+
+    void NewRun()
+    {
+        _menuNext = true;
+        GetTree().ReloadCurrentScene();
+    }
 
     public override void _Process(double delta)
     {
@@ -196,6 +214,8 @@ public partial class Main : Node2D
         _bot?.See(events);
         foreach (var e in events)
         {
+            _coach?.See(e);
+            _sound.See(e);
             switch (e)
             {
                 case CommandRejected r: _state.Say($"Can't: {r.Reason}"); break;

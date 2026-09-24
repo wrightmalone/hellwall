@@ -246,6 +246,41 @@ Each of these had been costing whole maps:
 - `run` ignored `--plan`, so every trace I took of pyre or legion was
   really fortress.
 
+## Phase 6 (you said "start phase 6, download the export templates")
+
+### 30. Only the templates we ship
+Of the 1.2 GB template archive I installed only macOS and Windows x86_64
+(about 340 MB), because the disk is 93% full. Linux, Android and iOS can be added
+from the same archive later.
+
+### 31. The Mac build is signed by the script, not by Godot
+The app Godot 4.7.2 signs ad hoc is killed at launch (exit 137), even for
+`--version`. The same app signed with `codesign` (hardened runtime, plus the JIT
+entitlements .NET needs) runs. `scripts/export.sh` signs it, then boots it
+headless and requires the same world-ready line (and state hash) as the
+development build. It isn't notarized, so playtesters must right-click and choose Open;
+the READ-ME in the zip says so. Notarizing needs an Apple Developer account
+(US$99 a year), which is yours to decide on.
+
+### 32. Placeholder sound is synthesized, not downloaded
+Eight cues are generated at startup:
+- a shot and a boom
+- the wave horn
+- a howl
+- a burst
+- a chime when a building completes
+- the possession tone
+- the fall of the Keep
+
+They're positional and rate-limited. Nothing to license, and it makes the
+noise pillar audible. Real audio belongs with the asset packs.
+
+### 33. The coach watches the colony
+Eight hints, one at a time, each gone once the colony shows it's been done:
+Houses, wood and food, stone, holy ground, the first wave, packs blocking
+ground, iron, and corruptions. The keys in hints come from the build bar's own table.
+Hints turn off once the course is finished, or from the menu.
+
 ## Things I noticed that you should decide
 
 - **Scale:** addressed by 12-14 and 21. The Convergence is 9,000 plus whatever
@@ -258,9 +293,7 @@ Each of these had been costing whole maps:
 
 ## Not done, and why
 
-- **A standalone build for playtesters.** Godot's export templates are a
-  ~1 GB download, and downloading needs your go-ahead. When you want it:
-  in the Godot editor, Editor > Manage Export Templates > Download.
+- **A standalone build for playtesters:** done in phase 6 (`scripts/export.sh`).
 - **CI.** The workflow exists but there's no GitHub remote, so it has never
   run. Its timing gates may be too tight for GitHub's shared runners.
 - **Nothing was pushed or published anywhere.**

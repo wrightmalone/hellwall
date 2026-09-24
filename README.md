@@ -4,7 +4,7 @@ A colony-survival RTS: a walled human settlement against demon hordes, where
 one breach can cascade into losing everything. The plan, pillars and roadmap
 are in [PLAN.md](./PLAN.md).
 
-**Status: phase 5 (the mutation) under way.**
+**Status: phase 6 (vertical slice) under way.**
 - **Phase 3 (the clone):** a 60-day survival run, winnable and losable.
 - **Phase 4 (depth):**
   - a tech tree with three build paths
@@ -17,6 +17,11 @@ are in [PLAN.md](./PLAN.md).
   - four difficulty levels
   - an endless mode in which the horde takes a new corruption every eight days
   - a new-game menu
+- **Phase 6 so far:**
+  - standalone macOS and Windows builds
+  - an end-of-run screen with stats and a way back to the menu
+  - a coach for a first run
+  - synthesized placeholder sound, with a volume slider
 
 20,000 demons still run at 20 Hz in about 6 ms per tick.
 
@@ -111,6 +116,13 @@ Headless harness:
 
 ```bash
 dotnet run --project src/Sim.Headless -- --seed=7 --ticks=2400 --script=src/Sim.Headless/scripts/smoke.json --out=out/smoke.csv
+```
+
+Standalone builds for playtesters (macOS universal and Windows x86_64, zipped
+with a note, in `out/build/`). The script boots the Mac app to check it:
+
+```bash
+scripts/export.sh
 ```
 
 Run the game (the new-game menu picks the mode, difficulty, map and seed):
