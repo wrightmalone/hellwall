@@ -1,0 +1,56 @@
+{
+  "id": "march",
+  "name": "The Hellwall March",
+  "scenarios": [
+    {
+      "id": "first-night", "name": "The First Night", "mapX": 0.08, "mapY": 0.62,
+      "briefing": "A handful of families and four militia, a Keep, and fifteen days before the dark closes in. Build homes, gather wood and stone, and raise a wall. Nothing from the Scriptorium yet, and only the simplest towers.",
+      "seed": 101, "map": "Plains", "difficulty": "Easy", "days": 15, "waves": 0.6, "convergence": 0.12, "hellgates": 0, "packs": 60,
+      "lockedBuildings": ["Scriptorium", "Bombard", "LanceTower", "Belfry", "Skyspire", "Censer"],
+      "objectives": [ { "kind": "Survive" } ]
+    },
+    {
+      "id": "iron-hills", "name": "Iron in the Hills", "mapX": 0.24, "mapY": 0.44, "requires": ["first-night"],
+      "briefing": "The highlands have stone and iron to spare, and room for little else. Grow the colony to forty souls, arm them, and hold for twenty days.",
+      "seed": 202, "map": "Highlands", "difficulty": "Easy", "days": 20, "waves": 0.8, "convergence": 0.2, "hellgates": 0, "packs": 100,
+      "lockedBuildings": ["Scriptorium", "LanceTower", "Belfry"],
+      "objectives": [ { "kind": "Population", "count": 40 }, { "kind": "Survive" } ]
+    },
+    {
+      "id": "gatekeepers", "name": "The Gatekeepers", "mapX": 0.42, "mapY": 0.24, "requires": ["iron-hills"],
+      "briefing": "Two Hellgates have torn open in the plains, and they feed every wave. Go out and close them. The walls only have to hold until you do.",
+      "seed": 11, "map": "Plains", "difficulty": "Normal", "days": 30, "waves": 0.9, "convergence": 0.35, "hellgates": 2,
+      "objectives": [ { "kind": "CloseGates", "count": 2 } ]
+    },
+    {
+      "id": "drowned", "name": "Drowned Country", "mapX": 0.42, "mapY": 0.7, "requires": ["iron-hills"],
+      "briefing": "Lakes everywhere and little dry ground. The water will hold the horde for you where the land narrows: find the chokepoints and wall them.",
+      "seed": 404, "map": "Lakes", "difficulty": "Normal", "days": 30, "waves": 0.9, "convergence": 0.4,
+      "objectives": [ { "kind": "Survive" } ]
+    },
+    {
+      "id": "the-pass", "name": "The Pass", "mapX": 0.6, "mapY": 0.3, "requires": ["gatekeepers"],
+      "briefing": "A narrow way through the ridges, and everything the mountains hold coming down it. Forty days, and four thousand of them to put down.",
+      "seed": 505, "map": "Highlands", "difficulty": "Normal", "days": 40, "convergence": 0.6,
+      "objectives": [ { "kind": "Survive" }, { "kind": "Slay", "count": 4000 } ]
+    },
+    {
+      "id": "wildwood", "name": "Wildwood Watch", "mapX": 0.6, "mapY": 0.72, "requires": ["drowned"],
+      "briefing": "Deep forest: wood for a hundred walls, and no clear ground to see them coming. Forty-five days.",
+      "seed": 606, "map": "Wildwood", "difficulty": "Normal", "days": 45, "convergence": 0.8,
+      "objectives": [ { "kind": "Survive" } ]
+    },
+    {
+      "id": "long-siege", "name": "The Long Siege", "mapX": 0.78, "mapY": 0.5, "requires": ["the-pass", "wildwood"],
+      "briefing": "The full sixty days, and the Convergence at the end of them. Everything you have learned.",
+      "seed": 707, "map": "Plains", "difficulty": "Normal", "days": 60,
+      "objectives": [ { "kind": "Survive" } ]
+    },
+    {
+      "id": "hellwall", "name": "The Hellwall", "mapX": 0.93, "mapY": 0.42, "requires": ["long-siege"],
+      "briefing": "The last line. Four Hellgates, a harder horde, sixty days. Close every gate, and survive what comes through before you do.",
+      "seed": 808, "map": "Plains", "difficulty": "Hard", "days": 60,
+      "objectives": [ { "kind": "CloseGates", "count": 4 }, { "kind": "Survive" } ]
+    }
+  ]
+}

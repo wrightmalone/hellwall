@@ -119,7 +119,9 @@ public static class StateHash
             foreach (var id in s.Corruptions) h = MixString(h, id);
             h = MixString(h, s.PendingCorruption ?? "");
             h = Mix(h, (uint)s.NextCorruptionTick);
+            h = MixByte(h, s.ConvergenceSpent ? (byte)1 : (byte)0);
         }
+        foreach (bool done in world.GoalsDone) h = MixByte(h, done ? (byte)1 : (byte)0);
         // Flow field and spatial hash are pure functions of the above, so they aren't hashed.
         return h;
     }

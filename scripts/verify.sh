@@ -60,6 +60,13 @@ if [[ $FULL_RUNS == 1 ]]; then
   cat out/endless.txt
   [[ $(awk '{print $7}' out/endless.txt | sort -u | wc -l) -ge 2 ]] || { echo "FAIL: every endless run ended the same day"; exit 1; }
   [[ $(sed 's/.*\[//' out/endless.txt | sort -u | wc -l) -ge 3 ]] || { echo "FAIL: endless runs drew the same corruptions"; exit 1; }
+
+  # The campaign's difficulty curve: the opening missions are won by every path, the last is not a walkover.
+  step "campaign (the curve rises)"
+  scripts/campaign.sh > out/campaign.txt
+  grep -E '^mission (first-night|iron-hills|hellwall) ' out/campaign.txt
+  [[ $(grep -cE '^mission (first-night|iron-hills) .* Won ' out/campaign.txt) -eq 6 ]] || { echo "FAIL: an opening mission was lost"; exit 1; }
+  grep -qE '^mission hellwall .* Lost ' out/campaign.txt || { echo "FAIL: every path won the final mission: the curve is too flat"; exit 1; }
 fi
 
 if [[ $RUN_GODOT == 1 ]]; then

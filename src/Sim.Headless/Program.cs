@@ -14,6 +14,7 @@ if (args.Length > 0 && args[0] == "run") return RunProbe.Run(ParseArgs(args[1..]
 if (args.Length > 0 && args[0] == "paths") return RunProbe.Paths(ParseArgs(args[1..]));
 if (args.Length > 0 && args[0] == "maps") return MapReport.Run(ParseArgs(args[1..]));
 if (args.Length > 0 && args[0] == "endless") return RunProbe.Endless(ParseArgs(args[1..]));
+if (args.Length > 0 && args[0] == "campaign") return RunProbe.Campaign(ParseArgs(args[1..]));
 
 var args_ = ParseArgs(args);
 if (args_.ContainsKey("help"))
@@ -35,6 +36,9 @@ if (args_.ContainsKey("help"))
 
         hellwall-sim endless [--seeds=3,5,7 --plan=fortress --difficulty=normal --max-days=200 --trace]
           endless mode: how long the bot lasts on each seed, and what the horde became
+
+        hellwall-sim campaign [--missions=first-night,iron-hills --plans=fortress,pyre]
+          the bot through each campaign mission: outcome, day reached, goals met
 
         hellwall-sim maps [--seeds=3,11 --size=256]
           what each start offers within reach

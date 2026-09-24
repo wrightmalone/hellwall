@@ -236,10 +236,11 @@ public partial class CommandCard : PanelContainer
         foreach (var (button, kind) in _build)
         {
             var def = World.Def(kind);
-            bool locked = def.RequiresTech is { } needs && !World.Tech.Has(needs);
+            bool mission = World.Scenario?.Locks(kind) == true;
+            bool locked = mission || (def.RequiresTech is { } needs && !World.Tech.Has(needs));
             bool affordable = colony.CanAfford(def.Cost);
             button.Modulate = State.Armed == kind ? new Color(0.75f, 1, 0.7f) : locked ? new Color(1, 1, 1, 0.3f) : affordable ? Colors.White : new Color(1, 0.75f, 0.75f, 0.75f);
-            button.TooltipText = $"{kind}\n{def.Cost}{Hud.Describe(def)}" + (locked ? $"\nneeds {World.Rules.Tech(def.RequiresTech!).Name}" : affordable ? "" : "\nyou can't afford it yet");
+            button.TooltipText = $"{kind}\n{def.Cost}{Hud.Describe(def)}" + (mission ? "\nnot in this mission" : locked ? $"\nneeds {World.Rules.Tech(def.RequiresTech!).Name}" : affordable ? "" : "\nyou can't afford it yet");
         }
         foreach (var t in _tabs) t.ButtonPressed = _tabs.IndexOf(t) == _tab;
 
@@ -249,11 +250,12 @@ public partial class CommandCard : PanelContainer
             foreach (var (button, kind) in _train)
             {
                 var def = World.Def(kind);
-                bool locked = def.RequiresTech is { } needs && !World.Tech.Has(needs);
+                bool mission = World.Scenario?.Locks(kind) == true;
+                bool locked = mission || (def.RequiresTech is { } needs && !World.Tech.Has(needs));
                 bool affordable = colony.CanAfford(def.Cost);
                 button.Modulate = locked ? new Color(1, 1, 1, 0.3f) : affordable ? Colors.White : new Color(1, 0.75f, 0.75f, 0.75f);
                 button.TooltipText = $"{kind}: {def.Cost}\n{def.Hp:0} hp, range {def.Weapon.Range}, {def.Weapon.Damage:0} dmg every {def.Weapon.Cooldown}s" +
-                    (locked ? $"\nneeds {World.Rules.Tech(def.RequiresTech!).Name}" : "") + "\nshift-click: five";
+                    (mission ? "\nnot in this mission" : locked ? $"\nneeds {World.Rules.Tech(def.RequiresTech!).Name}" : "") + "\nshift-click: five";
             }
             for (int i = 0; i < _queue.Count; i++)
             {

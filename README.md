@@ -23,6 +23,8 @@ are in [PLAN.md](./PLAN.md).
   - a coach for a first run
   - synthesized placeholder sound, with a volume slider
   - an isometric view, with Kenney's CC0 art (see [CREDITS.md](./CREDITS.md))
+  - the interface redesign, with queues and rally points
+  - a first campaign (see below)
 
 20,000 demons still run at 20 Hz in about 6 ms per tick.
 
@@ -182,6 +184,26 @@ To watch the probe's town hold a wave at 4x speed:
 - **Difficulty:** Easy, Normal, Hard or Nightmare. Each scales wave, Convergence, pack and
   Hellgate band sizes, and starting resources, from Normal (which is `rules.json` as written).
   Only the numbers change, never the rules.
+
+## The campaign
+
+*The Hellwall March* is eight missions on a map. Each opens once the missions
+before it are won, and it grows harder as it goes:
+- the first is Easy, fifteen days, with most towers and all research locked;
+- the last is Hard, sixty days, with four Hellgates to close.
+
+Missions are data, in [src/Sim/data/campaign.json](src/Sim/data/campaign.json). Each sets:
+- map, seed and difficulty;
+- clock length, wave and Convergence size, Hellgates and packs;
+- starting stockpile;
+- locked buildings, soldiers and techs;
+- goals: Survive, CloseGates, Population or Slay;
+- the missions it requires.
+
+A mission is won when every goal is met, and lost if the Keep falls or the
+Convergence breaks with goals still unmet. Progress is kept in `user://campaign.cfg`.
+`scripts/campaign.sh` plays every mission with every research path. verify.sh
+checks the curve: the opening missions are won by all three paths, and the last is not.
 
 ## A survival run
 

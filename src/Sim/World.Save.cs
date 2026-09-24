@@ -17,7 +17,7 @@ namespace Hellwall.Sim;
 public sealed partial class World
 {
     const uint Magic = 0x56535748; // "HWSV"
-    const int FormatVersion = 5;
+    const int FormatVersion = 6;
 
     public byte[] Save()
     {
@@ -34,6 +34,7 @@ public sealed partial class World
             w.Write(Survival?.Endless ?? false);
             w.Write((byte)Rules.Difficulty);
             w.Write((byte)Map);
+            w.Write(Scenario?.Id ?? "");
 
             w.Write(Tick);
             w.Write((byte)Outcome);
@@ -144,6 +145,7 @@ public sealed partial class World
             {
                 w.Write(s.FinalLanded);
                 w.Write(s.FinalLandedTick);
+                w.Write(s.ConvergenceSpent);
                 w.Write(s.Waves.Count);
                 foreach (var wave in s.Waves)
                 {
@@ -158,6 +160,7 @@ public sealed partial class World
                 w.Write(s.PendingCorruption ?? "");
                 w.Write(s.NextCorruptionTick);
             }
+            foreach (bool done in GoalsDone) w.Write(done);
         }
         return stream.ToArray();
     }
@@ -176,9 +179,12 @@ public sealed partial class World
         bool endless = r.ReadBoolean();
         var difficulty = (Difficulty)r.ReadByte();
         var map = (MapKind)r.ReadByte();
+        string scenarioId = r.ReadString();
+        var scenario = scenarioId.Length == 0 ? null : Campaign.Default.Find(scenarioId) ?? throw new FormatException($"this save is from a mission this build doesn't have ('{scenarioId}')");
+        if (scenario != null) rules = scenario.RulesFrom(rules);
         if (rulesHash != rules.ForDifficulty(difficulty).Hash) throw new FormatException("this save was made under different rules");
 
-        var world = new World(new WorldOptions(seed, size, 0, rules, survival, difficulty, endless, map));
+        var world = new World(new WorldOptions(seed, size, 0, rules, survival, difficulty, endless, map, scenario));
         world.Tick = r.ReadInt32();
         world.Outcome = (Outcome)r.ReadByte();
         world.Rng.State = r.ReadUInt32();
@@ -281,6 +287,7 @@ public sealed partial class World
         {
             s.FinalLanded = r.ReadBoolean();
             s.FinalLandedTick = r.ReadInt32();
+            s.ConvergenceSpent = r.ReadBoolean();
             int waves = r.ReadInt32();
             if (s.Endless) s.Extend(waves); // planned as the run went on
             if (waves != s.Waves.Count) throw new FormatException("wave schedule doesn't match the rules");
@@ -300,6 +307,8 @@ public sealed partial class World
             s.NextCorruptionTick = r.ReadInt32();
             CorruptionSystem.Recompute(world);
         }
+
+        for (int i = 0; i < world.GoalsDone.Length; i++) world.GoalsDone[i] = r.ReadBoolean();
 
         // Derived state: rebuilt, not stored.
         world._flowDirty = true;

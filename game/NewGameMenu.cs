@@ -4,7 +4,7 @@ using Hellwall.Sim;
 namespace Hellwall.Game;
 
 /// <summary>What a new run is: every choice the menu offers, and what the command line can set instead.</summary>
-public sealed record GameSetup(uint Seed, MapKind Map, Difficulty Difficulty, bool Endless);
+public sealed record GameSetup(uint Seed, MapKind Map, Difficulty Difficulty, bool Endless, ScenarioDef? Mission = null);
 
 /// <summary>
 /// The screen before a run: survival or endless, difficulty, kind of map and
@@ -13,6 +13,8 @@ public sealed record GameSetup(uint Seed, MapKind Map, Difficulty Difficulty, bo
 public partial class NewGameMenu : CanvasLayer
 {
     public Action<GameSetup> Start = null!;
+    /// <summary>Open the campaign map instead.</summary>
+    public Action OpenCampaign = null!;
     public GameSetup Initial = new(11, MapKind.Plains, Difficulty.Normal, false);
 
     OptionButton _mode = null!, _difficulty = null!, _map = null!;
@@ -56,6 +58,11 @@ public partial class NewGameMenu : CanvasLayer
         var version = new Label { Text = $"playtest build {ProjectSettings.GetSetting("application/config/version", "dev")}", HorizontalAlignment = HorizontalAlignment.Center };
         version.AddThemeColorOverride("font_color", new Color(0.6f, 0.55f, 0.5f));
         box.AddChild(version);
+
+        var campaign = UiKit.TextButton($"Campaign: {Campaign.Default.Name}", 18);
+        campaign.Pressed += () => { OpenCampaign(); QueueFree(); };
+        box.AddChild(campaign);
+        box.AddChild(UiKit.Label("Or a single run:", 13, new Color(0.7f, 0.67f, 0.6f)));
 
         _mode = Options(box, "Mode", ["Survival: 60 days, then the Convergence", "Endless: until the Keep falls"], Initial.Endless ? 1 : 0);
         _difficulty = Options(box, "Difficulty", Enum.GetNames<Difficulty>(), (int)Initial.Difficulty);

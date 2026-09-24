@@ -40,6 +40,8 @@ public partial class Main : Node2D
     Sound _sound = null!;
     /// <summary>Set before reloading the scene for a new run: show the menu whatever the command line said.</summary>
     static bool _menuNext;
+    /// <summary>Set before reloading for "back to the campaign": the campaign map comes up instead of the menu.</summary>
+    static bool _campaignNext;
     TerrainView? _terrainView;
     /// <summary>Trees, buildings and soldiers, drawn back to front.</summary>
     Node2D? _sorted;
@@ -81,11 +83,36 @@ public partial class Main : Node2D
             o.TryGetValue("seed", out var s) ? uint.Parse(s) : 11u,
             o.TryGetValue("map", out var m) ? Enum.Parse<MapKind>(m, ignoreCase: true) : MapKind.Plains,
             o.TryGetValue("difficulty", out var d) ? Enum.Parse<Difficulty>(d, ignoreCase: true) : Difficulty.Normal,
-            o.ContainsKey("endless"));
+            o.ContainsKey("endless"),
+            o.TryGetValue("mission", out var mid) ? Campaign.Default.Find(mid) ?? throw new ArgumentException($"no mission '{mid}'") : null);
         // Any flag that sets up a run (and every headless boot, which is verify.sh) skips the menu.
-        bool flagged = new[] { "seed", "map", "difficulty", "endless", "autoplay", "bench", "demo", "skip", "screenshot" }.Any(o.ContainsKey);
-        if ((flagged || DisplayServer.GetName() == "headless") && !o.ContainsKey("menu") && !_menuNext) Begin(setup);
-        else AddChild(new NewGameMenu { Initial = setup, Start = Begin });
+        bool flagged = new[] { "seed", "map", "difficulty", "endless", "autoplay", "bench", "demo", "skip", "screenshot", "mission" }.Any(o.ContainsKey);
+        if (_retry != null)
+        {
+            var again = _retry;
+            _retry = null;
+            Begin(new GameSetup(again.Seed, again.Map, again.Difficulty, false, again));
+        }
+        else if (_campaignNext || o.ContainsKey("campaign"))
+        {
+            _campaignNext = false;
+            OpenCampaign();
+        }
+        else if ((flagged || DisplayServer.GetName() == "headless") && !o.ContainsKey("menu") && !_menuNext) Begin(setup);
+        else ShowMenu(setup);
+    }
+
+    void ShowMenu(GameSetup setup) => AddChild(new NewGameMenu { Initial = setup, Start = Begin, OpenCampaign = OpenCampaign });
+
+    void OpenCampaign()
+    {
+        CampaignMap? map = null;
+        map = new CampaignMap
+        {
+            Begin = mission => { map!.QueueFree(); Begin(new GameSetup(mission.Seed, mission.Map, mission.Difficulty, false, mission)); },
+            Back = () => { map!.QueueFree(); ShowMenu(new GameSetup(11, MapKind.Plains, Difficulty.Normal, false)); },
+        };
+        AddChild(map);
     }
 
     void Begin(GameSetup setup)
@@ -102,7 +129,9 @@ public partial class Main : Node2D
         bool scripted = _benchSeconds > 0 || _demoSeconds > 0;
         _baseRules = rules;
         // A survival run takes its packs from rules.json (wilds).
-        _world = World.Create(new WorldOptions(seed, MapSize, 0, rules, Survival: !scripted, Difficulty: setup.Difficulty, Endless: setup.Endless && !scripted, Map: setup.Map));
+        _world = setup.Mission is { } mission && !scripted
+            ? World.Create(mission.Options(rules))
+            : World.Create(new WorldOptions(seed, MapSize, 0, rules, Survival: !scripted, Difficulty: setup.Difficulty, Endless: setup.Endless && !scripted, Map: setup.Map));
 
         BuildViews();
         _horde = new HordeRenderer(MapSize) { ZIndex = 1 };
@@ -156,6 +185,7 @@ public partial class Main : Node2D
         _hud = new Hud
         {
             World = _world, State = _state, Send = Send, Minimap = _minimap, NewRun = NewRun,
+            BackToCampaign = BackToCampaign, Retry = RetryMission,
             JumpTo = tile => _camera.Position = Iso.P(tile),
             Speed = () => (_paused ? "PAUSED  ·  " : "") + $"{Speeds[_speed]}x  ·  F1 help",
             Order = OrderSelected,
@@ -248,6 +278,25 @@ public partial class Main : Node2D
         AddChild(_view);
     }
 
+    /// <summary>Back to the campaign map (a mission just ended).</summary>
+    void BackToCampaign()
+    {
+        _campaignNext = true;
+        Input.MouseMode = Input.MouseModeEnum.Visible;
+        DisarmAttackMove();
+        GetTree().ReloadCurrentScene();
+    }
+
+    void RetryMission()
+    {
+        _retry = _world.Scenario;
+        Input.MouseMode = Input.MouseModeEnum.Visible;
+        DisarmAttackMove();
+        GetTree().ReloadCurrentScene();
+    }
+
+    static ScenarioDef? _retry;
+
     void NewRun()
     {
         _menuNext = true;
@@ -328,7 +377,10 @@ public partial class Main : Node2D
                 case WaveLanded w: _state.Say(w.Final ? "The Convergence is here." : $"Wave {w.Number} has arrived"); break;
                 case DemonBurst d: _state.Bursts.Add((d, 0)); break;
                 case DemonHowled h: _state.Howls.Add((h, 0)); break;
-                case OutcomeChanged o: _state.Say(o.Outcome == Outcome.Lost ? $"The Keep has fallen on day {_world.Day}." : "Victory."); break;
+                case OutcomeChanged o:
+                    _state.Say(o.Outcome == Outcome.Lost ? $"The Keep has fallen on day {_world.Day}." : "Victory.");
+                    if (_world.Scenario is { } done) CampaignProgress.Record(Campaign.Default.Id, done.Id, o.Outcome == Outcome.Won, _world.Day);
+                    break;
                 case CorruptionTook c: _state.Say($"The horde is corrupted: {c.Name}"); break;
             }
         }

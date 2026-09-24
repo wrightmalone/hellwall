@@ -48,7 +48,8 @@ public sealed class Bot
         _world = world;
         _style = style;
         _plan = Plans[plan];
-        _raids = plan == "legion";
+        // Legion raids gates by doctrine; any plan does when closing them is the mission.
+        _raids = plan == "legion" || world.Goals.Any(g => g.Kind == ObjectiveKind.CloseGates);
         _c = world.Terrain.Width / 2;
     }
 
@@ -125,7 +126,9 @@ public sealed class Bot
         double untilWave = next == null ? double.MaxValue : (next.LandsAtTick - _world.Tick) / (double)Balance.TickHz;
         if (_raidGate is { } current && _world.Gates.FirstOrDefault(g => g.Id == current) is { Alive: true }) return; // under way
         _raidGate = null;
-        if (_world.Units.Count < homeGuard + 12 || untilWave < 150 || next is { Announced: true }) return;
+        // When closing gates is the mission, go with a smaller force: waiting for a big one runs out the clock.
+        int force = _world.Goals.Any(g => g.Kind == ObjectiveKind.CloseGates) ? 8 : 12;
+        if (_world.Units.Count < homeGuard + force || untilWave < 150 || next is { Announced: true }) return;
         var gate = _world.Gates.Where(g => g.Alive).OrderBy(g => MathF.Abs(g.CentreX - _c) + MathF.Abs(g.CentreY - _c)).FirstOrDefault();
         if (gate == null) return;
         var raiders = _world.Units.OrderByDescending(u => u.Hp).Skip(homeGuard).Select(u => u.Id).ToArray();

@@ -31,6 +31,9 @@ public partial class Hud : CanvasLayer
     public Minimap Minimap = null!;
     /// <summary>Back to the new-game menu.</summary>
     public Action NewRun = null!;
+    /// <summary>A mission ended: back to the campaign map, or play it again.</summary>
+    public Action BackToCampaign = null!;
+    public Action Retry = null!;
 
     public AlertFeed Alerts = null!;
     ResourceBar _bar = null!;
@@ -95,11 +98,24 @@ public partial class Hud : CanvasLayer
         _endText = UiKit.Label("", 16);
         endBox.AddChild(_endText);
         var endRow = new HBoxContainer { Alignment = BoxContainer.AlignmentMode.Center };
-        var again = UiKit.TextButton("New run", 15);
-        again.Pressed += () => NewRun();
+        endRow.AddThemeConstantOverride("separation", 8);
+        if (World.Scenario != null)
+        {
+            var campaign = UiKit.TextButton("Back to the campaign", 15);
+            campaign.Pressed += () => BackToCampaign();
+            var retry = UiKit.TextButton("Play it again", 15);
+            retry.Pressed += () => Retry();
+            endRow.AddChild(campaign);
+            endRow.AddChild(retry);
+        }
+        else
+        {
+            var again = UiKit.TextButton("New run", 15);
+            again.Pressed += () => NewRun();
+            endRow.AddChild(again);
+        }
         var quit = UiKit.TextButton("Quit", 15);
         quit.Pressed += () => GetTree().Quit();
-        endRow.AddChild(again);
         endRow.AddChild(quit);
         endBox.AddChild(endRow);
         _end.AddChild(endBox);
@@ -151,7 +167,10 @@ public partial class Hud : CanvasLayer
         if (World.Outcome != Outcome.Running)
         {
             _banner.Visible = true;
-            _banner.Text = World.Outcome == Outcome.Lost ? (World.Survival is { Endless: true } ? $"The Keep has fallen on day {World.Day}" : "The Keep has fallen") : "The colony endures";
+            bool keepStands = World.Buildings.Any(b => b.Kind == BuildingKind.Keep);
+            _banner.Text = World.Outcome == Outcome.Won ? (World.Scenario != null ? "Mission won" : "The colony endures")
+                : !keepStands ? (World.Survival is { Endless: true } ? $"The Keep has fallen on day {World.Day}" : "The Keep has fallen")
+                : "Out of time: the Convergence came and went";
             _banner.Size = new Vector2(screen.X, 60);
             _banner.Position = new Vector2(0, screen.Y * 0.3f);
             if (!_end.Visible)
@@ -160,10 +179,19 @@ public partial class Hud : CanvasLayer
                 var s = World.Survival;
                 string corruptions = s is { Endless: true, Corruptions.Count: > 0 }
                     ? $"\nThe horde became: {string.Join(", ", s.Corruptions.Select(id => World.Rules.Corruption(id).Name))}" : "";
-                string mode = s == null ? "" : s.Endless ? "Endless" : "Survival";
-                _endText.Text = $"{mode} · {World.Map} · {World.Rules.Difficulty} · seed {World.Seed}\n" +
+                string mode = World.Scenario is { } m ? m.Name : s == null ? "" : s.Endless ? "Endless" : "Survival";
+                string goals = World.Scenario == null ? "" : "\n" + string.Join("\n", World.Goals.Select((g, i) => $"{(World.GoalsDone[i] ? "done" : "not done")}:  {g.Describe()}")) + "\n";
+                string opens = "";
+                if (World.Scenario is { } won && World.Outcome == Outcome.Won)
+                {
+                    var c = Campaign.Default;
+                    var wonSet = CampaignProgress.Won(c.Id);
+                    var next = c.Scenarios.Where(x => x.Requires.Contains(won.Id) && c.IsOpen(x, wonSet)).Select(x => x.Name).ToList();
+                    if (next.Count > 0) opens = $"\nNow open: {string.Join(", ", next)}";
+                }
+                _endText.Text = $"{mode} · {World.Map} · {World.Rules.Difficulty} · seed {World.Seed}\n{goals}" +
                     $"Days survived: {World.Day}\nDemons slain: {st.DemonsKilled}\nBuildings lost: {st.BuildingsLost}\nSoldiers lost: {st.UnitsLost}" +
-                    $"\nResearched: {(World.Tech.Researched.Count == 0 ? "nothing" : string.Join(", ", World.Tech.Researched.Select(id => World.Rules.Tech(id).Name)))}{corruptions}";
+                    $"\nResearched: {(World.Tech.Researched.Count == 0 ? "nothing" : string.Join(", ", World.Tech.Researched.Select(id => World.Rules.Tech(id).Name)))}{corruptions}{opens}";
                 _end.Visible = true;
             }
             _end.Position = new Vector2(screen.X / 2 - _end.Size.X / 2, screen.Y * 0.3f + 70);

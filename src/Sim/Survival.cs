@@ -95,6 +95,8 @@ public sealed class Survival
     public readonly List<PlannedWave> Waves = new();
     public bool FinalLanded;
     public int FinalLandedTick;
+    /// <summary>The Convergence has broken on the walls: no demon left, or the Keep still standing long after it landed. The Survive goal.</summary>
+    public bool ConvergenceSpent;
 
     /// <summary>Endless: corruption ids taken so far, in order.</summary>
     public readonly List<string> Corruptions = new();
@@ -182,7 +184,7 @@ internal static class SurvivalSystem
         }
 
         if (s.FinalLanded && (world.Horde.Count == 0 || world.Tick - s.FinalLandedTick >= s.Rules.ConvergenceHoldSeconds * Balance.TickHz))
-            world.Win();
+            s.ConvergenceSpent = true; // the objectives decide whether that wins
     }
 
     static int SidesFor(SurvivalRules rules, int number) =>

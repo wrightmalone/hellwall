@@ -81,6 +81,29 @@ public static class RunProbe
 
     static string lastCorruptions = "";
 
+    /// <summary>
+    /// The campaign's difficulty curve, measured: each mission (--missions, or
+    /// all) played by each research plan (--plans), with the day reached and
+    /// the goals met. scripts/campaign.sh runs the missions in parallel.
+    /// </summary>
+    public static int Campaign(Dictionary<string, string> args)
+    {
+        var campaign = Hellwall.Sim.Campaign.Default;
+        var ids = args.TryGetValue("missions", out var m) ? m.Split(',') : campaign.Scenarios.Select(s => s.Id).ToArray();
+        var plans = args.GetValueOrDefault("plans", string.Join(",", Bot.Plans.Keys)).Split(',');
+        foreach (var id in ids)
+        {
+            var s = campaign.Find(id) ?? throw new ArgumentException($"no mission '{id}'");
+            foreach (var plan in plans)
+            {
+                string goals = "";
+                var r = Play(s.Seed, Bot.Style.Full, args.ContainsKey("trace"), plan: plan, scenario: s, onEnd: w => goals = string.Join(" ", w.Goals.Select((g, i) => $"{g.Kind}{(w.GoalsDone[i] ? "+" : "-")}")));
+                Console.WriteLine(string.Create(CultureInfo.InvariantCulture, $"mission {id,-12} {plan,-9} {r.Outcome,-7} day {r.Day,2}/{(s.Days > 0 ? s.Days : 60)}  {s.Map,-9} {s.Difficulty,-6} [{goals}]"));
+            }
+        }
+        return 0;
+    }
+
     public static int Paths(Dictionary<string, string> args)
     {
         var seeds = args.GetValueOrDefault("seeds", "11").Split(',').Select(v => uint.Parse(v, CultureInfo.InvariantCulture)).ToList();
@@ -116,11 +139,13 @@ public static class RunProbe
         if (args.TryGetValue("map", out var m)) args_map = Enum.Parse<MapKind>(m, ignoreCase: true);
     }
 
-    public static Result Play(uint seed, Bot.Style style, bool trace, double snapshotAt = -1, string plan = "fortress", Rules? rules = null, int endlessDays = 0, Action<World>? onEnd = null)
+    public static Result Play(uint seed, Bot.Style style, bool trace, double snapshotAt = -1, string plan = "fortress", Rules? rules = null, int endlessDays = 0, Action<World>? onEnd = null, ScenarioDef? scenario = null)
     {
         var clock = Stopwatch.StartNew();
         bool endless = endlessDays > 0;
-        var world = World.Create(new WorldOptions(seed, 256, 0, rules ?? Rules.Default, Survival: true, Difficulty: args_difficulty, Endless: endless, Map: args_map));
+        var world = scenario != null
+            ? World.Create(scenario.Options(rules ?? Rules.Default))
+            : World.Create(new WorldOptions(seed, 256, 0, rules ?? Rules.Default, Survival: true, Difficulty: args_difficulty, Endless: endless, Map: args_map));
         var bot = new Bot(world, style, plan) { Verbose = trace };
         int possessed = 0;
         int limit = (endless ? endlessDays : world.Rules.Survival.Days + 5) * (int)(world.Rules.Survival.DaySeconds * Balance.TickHz);

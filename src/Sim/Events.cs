@@ -55,6 +55,9 @@ public sealed record CorruptionAnnounced(int Tick, string Id, string Name, strin
 
 public sealed record CorruptionTook(int Tick, string Id, string Name) : SimEvent(Tick);
 
+/// <summary>A mission goal was met (index into the world's Goals).</summary>
+public sealed record ObjectiveCompleted(int Tick, int Index, ObjectiveKind Kind) : SimEvent(Tick);
+
 public sealed record WaveLanded(int Tick, int Number, int Spawned, bool Final) : SimEvent(Tick);
 
 public sealed record TechResearched(int Tick, string TechId) : SimEvent(Tick);

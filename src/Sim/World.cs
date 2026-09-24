@@ -13,7 +13,8 @@ public enum Outcome : byte
 /// <param name="Difficulty">Scales Rules (which must be unscaled, Normal) by the level's multipliers.</param>
 /// <param name="Endless">With Survival: no Convergence, no win; waves and corruptions until the Keep falls.</param>
 /// <param name="Map">Which kind of terrain the seed grows.</param>
-public readonly record struct WorldOptions(uint Seed, int MapSize = Balance.DefaultMapSize, int DormantPacks = 0, Rules? Rules = null, bool Survival = false, Difficulty Difficulty = Difficulty.Normal, bool Endless = false, MapKind Map = MapKind.Plains);
+/// <param name="Scenario">A campaign mission: its locks and goals (Rules should already be its RulesFrom; ScenarioDef.Options does both).</param>
+public readonly record struct WorldOptions(uint Seed, int MapSize = Balance.DefaultMapSize, int DormantPacks = 0, Rules? Rules = null, bool Survival = false, Difficulty Difficulty = Difficulty.Normal, bool Endless = false, MapKind Map = MapKind.Plains, ScenarioDef? Scenario = null);
 
 public sealed class WorldStats
 {
@@ -57,6 +58,11 @@ public sealed partial class World
     public DemonDef[] Demons { get; internal set; } = [];
 
     public MapKind Map { get; }
+
+    /// <summary>The campaign mission being played, if any.</summary>
+    public ScenarioDef? Scenario { get; }
+    public ObjectiveDef[] Goals { get; }
+    public bool[] GoalsDone { get; }
 
     public DemonDef Def(DemonKind kind) => Demons[(int)kind];
 
@@ -136,6 +142,10 @@ public sealed partial class World
         Noise = new NoiseGrid(Terrain.Width, Terrain.Height);
         Spatial = new SpatialHash(Terrain.Width, Terrain.Height);
         if (options.Survival) Survival = new Survival(Rules.Survival, options.Endless);
+        Scenario = options.Scenario;
+        // What winning takes: the mission's goals, or for a plain survival run, surviving.
+        Goals = Scenario?.Goals ?? (options.Survival ? [new ObjectiveDef { Kind = ObjectiveKind.Survive }] : []);
+        GoalsDone = new bool[Goals.Length];
         Tech.Recompute(Rules);
         Demons = Rules.Demons;
     }
@@ -178,6 +188,7 @@ public sealed partial class World
         HellgateSystem.Step(this, dt);
         SurvivalSystem.Step(this);
         CorruptionSystem.Step(this);
+        ObjectiveSystem.Step(this);
 
         Spatial.Build(Horde);
         _spatialStale = false;
@@ -218,6 +229,14 @@ public sealed partial class World
     }
 
     internal void Emit(SimEvent e) => _events.Add(e);
+
+    /// <summary>A mission ran out of time: the Convergence broke on the walls with its goals still unmet.</summary>
+    internal void Lose()
+    {
+        if (Outcome != Outcome.Running) return;
+        Outcome = Outcome.Lost;
+        _events.Add(new OutcomeChanged(Tick, Outcome));
+    }
 
     internal void Win()
     {
@@ -290,6 +309,7 @@ public sealed partial class World
     public string? CheckPlacement(BuildingKind kind, int x, int y)
     {
         if (kind == BuildingKind.Keep) return "only one Keep";
+        if (Scenario?.Locks(kind) == true) return "not in this mission";
         var def = Def(kind);
         if (def.RequiresTech is { } needs && !Tech.Has(needs)) return $"needs {Rules.Tech(needs).Name}";
         if (x < 0 || y < 0 || x + def.W > Terrain.Width || y + def.H > Terrain.Height) return "out of bounds";
@@ -597,6 +617,7 @@ public sealed partial class World
         if (Array.IndexOf(b.Def.Trains, t.Kind) < 0) return $"{b.Kind} can't train {t.Kind}";
         if (!b.Complete) return "still under construction";
         if (Def(t.Kind).RequiresTech is { } needs && !Tech.Has(needs)) return $"needs {Rules.Tech(needs).Name}";
+        if (Scenario?.Locks(t.Kind) == true) return "not in this mission";
         if (b.Queue.Count >= Balance.QueueLimit) return "the queue is full";
         var cost = Def(t.Kind).Cost;
         string? shortfall = Colony.Shortfall(cost);
@@ -612,6 +633,7 @@ public sealed partial class World
         var tech = Rules.Techs.FirstOrDefault(t => t.Id == id);
         if (tech == null) return "no such tech";
         if (Tech.Has(id)) return "already researched";
+        if (Scenario?.Locks(id) == true) return "not in this mission";
         if (_buildings.Any(b => b.Researching == id)) return "already being researched";
         if (tech.ExclusiveWith is { } other && (Tech.Has(other) || _buildings.Any(b => b.Researching == other)))
             return $"locked out by {Rules.Tech(other).Name}";

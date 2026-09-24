@@ -13,7 +13,7 @@ public partial class ThreatCard : PanelContainer
 {
     public World World = null!;
 
-    Label _day = null!, _next = null!, _detail = null!, _corrupt = null!;
+    Label _day = null!, _next = null!, _detail = null!, _corrupt = null!, _goals = null!;
     Timeline _line = null!;
 
     public override void _Ready()
@@ -34,6 +34,8 @@ public partial class ThreatCard : PanelContainer
         box.AddChild(_line);
         _detail = UiKit.Label("", 13, UiKit.Muted);
         box.AddChild(_detail);
+        _goals = UiKit.Label("", 13, UiKit.Gold);
+        box.AddChild(_goals);
         _corrupt = UiKit.Label("", 13, new Color(0.85f, 0.55f, 0.95f));
         _corrupt.AutowrapMode = TextServer.AutowrapMode.WordSmart;
         box.AddChild(_corrupt);
@@ -75,6 +77,10 @@ public partial class ThreatCard : PanelContainer
             if (s.PendingCorruption is { } p) corrupt = $"Corruption in {UiKit.Clock((s.NextCorruptionTick - World.Tick) / tps)}: {World.Rules.Corruption(p).Name}\n";
             if (s.Corruptions.Count > 0) corrupt += "The horde: " + string.Join(", ", s.Corruptions.Select(id => World.Rules.Corruption(id).Name));
         }
+        // A mission's goals, ticked off as they're met.
+        _goals.Visible = World.Scenario != null;
+        if (World.Scenario is { } m)
+            _goals.Text = m.Name + ":  " + string.Join("   ", World.Goals.Select((g, i) => $"{(World.GoalsDone[i] ? "[x]" : "[ ]")} {g.Describe()}"));
         _corrupt.Text = corrupt.TrimEnd();
         _corrupt.Visible = corrupt.Length > 0;
         _line.QueueRedraw();

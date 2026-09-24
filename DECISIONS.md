@@ -429,6 +429,30 @@ The same artist as the demons, so the two sides now have the same level of detai
 
 They're baked a little taller than the demons and with more fill light, because their textures are darker. KayKit's characters are gone; its coin, plate and goblet remain as resource icons.
 
+### 46. The campaign's scaffolding (you asked for a campaign map with harder scenarios over time)
+- **Missions are data.** A ScenarioDef turns into the same WorldOptions as a free run: the
+  rules adjusted, plus locks and goals.
+- **Winning moved into objectives.** A free survival run has a single Survive goal, so it
+  plays as before; the sweep's results didn't move. The Convergence is every mission's
+  deadline: goals still unmet when it has broken on the walls lose the mission, so every
+  mission ends.
+- **The first campaign** is eight missions in a branching line, from Easy and fifteen days to
+  Hard and sixty days with four gates. The bot wins the first six with every path, the Long
+  Siege with two paths of three, and the Hellwall only with legion. That's a rising curve, and
+  verify.sh now guards it.
+- **Mission seeds are the maps the bot plays well.** The Gatekeepers moved from seed 303 to 11
+  because on 303 the bot never builds a Mine, so its army stays at eight and can't raid. That's
+  the bot's known expansion weakness, not the mission's.
+- **The gates missions favour the army path.** Fortress and pyre don't raise a big enough army
+  to go out, and lose The Gatekeepers on time. That seems right to me for a mission about
+  going on the offensive.
+- **The screen** is a board of mission markers with lines, and a briefing panel with goals.
+  Won missions are gold, open ones red, locked ones grey. Missions record wins and best days,
+  and the end panel says what opened.
+- **Still placeholder:** the campaign map is a plain brown board, not an illustrated
+  map. Missions have no scripted events or story beats yet: the data has room for them, and
+  that's the next layer (a trigger list: "on day N, say X, spawn Y").
+
 ## Things I noticed that you should decide
 
 - **Scale:** addressed by 12-14 and 21. The Convergence is 9,000 plus whatever

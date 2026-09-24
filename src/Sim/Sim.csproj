@@ -25,6 +25,7 @@
   <ItemGroup>
     <!-- Default rules ship inside the assembly: the sim does no IO. -->
     <EmbeddedResource Include="data/rules.json" LogicalName="Hellwall.Sim.rules.json" />
+    <EmbeddedResource Include="data/campaign.json" LogicalName="Hellwall.Sim.campaign.json" />
   </ItemGroup>
 
   <ItemGroup>
