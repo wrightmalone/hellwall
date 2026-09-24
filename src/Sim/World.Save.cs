@@ -1,0 +1,256 @@
+namespace Hellwall.Sim;
+
+/// <summary>
+/// Save and load: a full snapshot of the world between ticks.
+///
+/// A snapshot, not a replay, because replaying an hour's commands would mean
+/// re-simulating 72,000 ticks to load a save. The risk with snapshots is a
+/// forgotten field, so SaveTests checks that a loaded world has the same
+/// StateHash as the one saved and then stays identical, tick for tick, as
+/// both play on. Derived state (flow fields, spatial hash, soldiers' route
+/// maps) is rebuilt rather than stored.
+///
+/// The sim still does no IO: Save returns bytes, Load takes them, and the
+/// host decides where they live. A save only loads under the rules it was
+/// made with; the rules' hash is in the header.
+/// </summary>
+public sealed partial class World
+{
+    const uint Magic = 0x56535748; // "HWSV"
+    const int FormatVersion = 1;
+
+    public byte[] Save()
+    {
+        if (_pending.Count > 0) throw new InvalidOperationException("flush or step before saving: commands are pending");
+        using var stream = new MemoryStream();
+        using (var w = new BinaryWriter(stream))
+        {
+            w.Write(Magic);
+            w.Write(FormatVersion);
+            w.Write(Rules.Hash);
+            w.Write(Seed);
+            w.Write(Terrain.Width);
+            w.Write(Survival != null);
+
+            w.Write(Tick);
+            w.Write((byte)Outcome);
+            w.Write(Rng.State);
+            w.Write(_nextId);
+            w.Write(NetworkDirty);
+            foreach (var t in Terrain.Tiles) w.Write((byte)t);
+
+            w.Write(Stats.DemonsKilled);
+            w.Write(Stats.BuildingsLost);
+            w.Write(Stats.UnitsLost);
+
+            foreach (var v in Colony.Stock) w.Write(v);
+            foreach (var v in Colony.NetPerSecond) w.Write(v);
+            w.Write(Colony.Colonists);
+            w.Write(Colony.WorkersUsed);
+            w.Write(Colony.SanctitySupply);
+            w.Write(Colony.SanctityDemand);
+            w.Write(Colony.Power);
+            w.Write(Colony.Starving);
+            foreach (var c in Colony.Consecrated) w.Write(c);
+
+            w.Write(_buildings.Count);
+            foreach (var b in _buildings)
+            {
+                w.Write(b.Id);
+                w.Write((byte)b.Kind);
+                w.Write(b.X);
+                w.Write(b.Y);
+                w.Write(b.Hp);
+                w.Write(b.Built);
+                w.Write(b.Complete);
+                w.Write(b.OnGround);
+                w.Write(b.Staffed);
+                w.Write(b.Rate);
+                w.Write(b.Cooldown);
+                w.Write(b.TrainProgress);
+                w.Write(b.Queue.Count);
+                foreach (var q in b.Queue) w.Write((byte)q);
+                w.Write(b.Possessed);
+                w.Write(b.Occupants);
+                w.Write(b.PossessTimer);
+            }
+
+            w.Write(_units.Count);
+            foreach (var u in _units)
+            {
+                w.Write(u.Id);
+                w.Write((byte)u.Kind);
+                w.Write(u.X);
+                w.Write(u.Y);
+                w.Write(u.PrevX);
+                w.Write(u.PrevY);
+                w.Write(u.Hp);
+                w.Write(u.Cooldown);
+                w.Write((byte)u.Order);
+                w.Write(u.DestX);
+                w.Write(u.DestY);
+                w.Write(u.Field != null);
+            }
+
+            var h = Horde;
+            w.Write(h.Count);
+            for (int i = 0; i < h.Count; i++)
+            {
+                w.Write(h.X[i]);
+                w.Write(h.Y[i]);
+                w.Write(h.PrevX[i]);
+                w.Write(h.PrevY[i]);
+                w.Write(h.VX[i]);
+                w.Write(h.VY[i]);
+                w.Write((byte)h.Kind[i]);
+                w.Write(h.Hp[i]);
+                w.Write(h.Cooldown[i]);
+            }
+
+            w.Write(_packs.Count);
+            foreach (var p in _packs)
+            {
+                w.Write(p.Id);
+                w.Write(p.X);
+                w.Write(p.Y);
+                w.Write(p.Count);
+                w.Write((byte)p.Kind);
+                w.Write(p.Awake);
+            }
+
+            foreach (var level in Noise.Level) w.Write(level);
+
+            if (Survival is { } s)
+            {
+                w.Write(s.FinalLanded);
+                w.Write(s.Waves.Count);
+                foreach (var wave in s.Waves)
+                {
+                    w.Write(wave.Announced);
+                    w.Write(wave.Landed);
+                    w.Write(wave.Sides.Length);
+                    foreach (var side in wave.Sides) w.Write((byte)side);
+                }
+            }
+        }
+        return stream.ToArray();
+    }
+
+    /// <summary>Rebuild a world from Save's bytes. The rules must be the ones it was saved under.</summary>
+    public static World Load(byte[] data, Rules rules)
+    {
+        using var r = new BinaryReader(new MemoryStream(data));
+        if (r.ReadUInt32() != Magic) throw new FormatException("not a Hellwall save");
+        int version = r.ReadInt32();
+        if (version != FormatVersion) throw new FormatException($"save format {version}, this build reads {FormatVersion}");
+        ulong rulesHash = r.ReadUInt64();
+        if (rulesHash != rules.Hash) throw new FormatException("this save was made under different rules");
+        uint seed = r.ReadUInt32();
+        int size = r.ReadInt32();
+        bool survival = r.ReadBoolean();
+
+        var world = new World(new WorldOptions(seed, size, 0, rules, survival));
+        world.Tick = r.ReadInt32();
+        world.Outcome = (Outcome)r.ReadByte();
+        world.Rng.State = r.ReadUInt32();
+        world._nextId = r.ReadInt32();
+        world.NetworkDirty = r.ReadBoolean();
+        var tiles = world.Terrain.Tiles;
+        for (int i = 0; i < tiles.Length; i++) tiles[i] = (Tile)r.ReadByte();
+
+        world.Stats.DemonsKilled = r.ReadInt32();
+        world.Stats.BuildingsLost = r.ReadInt32();
+        world.Stats.UnitsLost = r.ReadInt32();
+
+        var colony = world.Colony;
+        for (int i = 0; i < colony.Stock.Length; i++) colony.Stock[i] = r.ReadDouble();
+        for (int i = 0; i < colony.NetPerSecond.Length; i++) colony.NetPerSecond[i] = r.ReadDouble();
+        colony.Colonists = r.ReadInt32();
+        colony.WorkersUsed = r.ReadInt32();
+        colony.SanctitySupply = r.ReadSingle();
+        colony.SanctityDemand = r.ReadSingle();
+        colony.Power = r.ReadSingle();
+        colony.Starving = r.ReadBoolean();
+        for (int i = 0; i < colony.Consecrated.Length; i++) colony.Consecrated[i] = r.ReadBoolean();
+
+        int buildings = r.ReadInt32();
+        for (int n = 0; n < buildings; n++)
+        {
+            int id = r.ReadInt32();
+            var kind = (BuildingKind)r.ReadByte();
+            var def = rules[kind];
+            var b = new Building
+            {
+                Id = id, Kind = kind, Def = def, X = r.ReadInt32(), Y = r.ReadInt32(), W = def.W, H = def.H,
+                Hp = r.ReadSingle(), Built = r.ReadSingle(), Complete = r.ReadBoolean(), OnGround = r.ReadBoolean(),
+                Staffed = r.ReadBoolean(), Rate = r.ReadDouble(), Cooldown = r.ReadSingle(), TrainProgress = r.ReadSingle(),
+            };
+            int queued = r.ReadInt32();
+            for (int q = 0; q < queued; q++) b.Queue.Add((UnitKind)r.ReadByte());
+            b.Possessed = r.ReadBoolean();
+            b.Occupants = r.ReadInt32();
+            b.PossessTimer = r.ReadSingle();
+            world._buildings.Add(b);
+            world._buildingById[b.Id] = b;
+            world.Stamp(b, b.Id);
+        }
+
+        int units = r.ReadInt32();
+        var needsField = new List<Unit>();
+        for (int n = 0; n < units; n++)
+        {
+            int id = r.ReadInt32();
+            var kind = (UnitKind)r.ReadByte();
+            var u = new Unit
+            {
+                Id = id, Kind = kind, Def = rules[kind], X = r.ReadSingle(), Y = r.ReadSingle(), PrevX = r.ReadSingle(), PrevY = r.ReadSingle(),
+                Hp = r.ReadSingle(), Cooldown = r.ReadSingle(), Order = (OrderKind)r.ReadByte(), DestX = r.ReadInt32(), DestY = r.ReadInt32(),
+            };
+            if (r.ReadBoolean()) needsField.Add(u);
+            world._units.Add(u);
+        }
+
+        int demons = r.ReadInt32();
+        var h = world.Horde;
+        for (int i = 0; i < demons; i++)
+        {
+            float x = r.ReadSingle(), y = r.ReadSingle(), px = r.ReadSingle(), py = r.ReadSingle(), vx = r.ReadSingle(), vy = r.ReadSingle();
+            var kind = (DemonKind)r.ReadByte();
+            h.Add(kind, x, y, r.ReadSingle());
+            h.PrevX[i] = px;
+            h.PrevY[i] = py;
+            h.VX[i] = vx;
+            h.VY[i] = vy;
+            h.Cooldown[i] = r.ReadSingle();
+        }
+
+        int packs = r.ReadInt32();
+        for (int n = 0; n < packs; n++)
+            world._packs.Add(new Pack { Id = r.ReadInt32(), X = r.ReadInt32(), Y = r.ReadInt32(), Count = r.ReadInt32(), Kind = (DemonKind)r.ReadByte(), Awake = r.ReadBoolean() });
+
+        var noise = world.Noise.Level;
+        for (int i = 0; i < noise.Length; i++) noise[i] = r.ReadSingle();
+
+        if (world.Survival is { } s)
+        {
+            s.FinalLanded = r.ReadBoolean();
+            int waves = r.ReadInt32();
+            if (waves != s.Waves.Count) throw new FormatException("wave schedule doesn't match the rules");
+            foreach (var wave in s.Waves)
+            {
+                wave.Announced = r.ReadBoolean();
+                wave.Landed = r.ReadBoolean();
+                var sides = new Side[r.ReadInt32()];
+                for (int i = 0; i < sides.Length; i++) sides[i] = (Side)r.ReadByte();
+                wave.Sides = sides;
+            }
+        }
+
+        // Derived state: rebuilt, not stored.
+        world._flowDirty = true;
+        world._spatialStale = true;
+        world.EnsureFlow();
+        foreach (var u in needsField) u.Field = world.HumanFieldTo(u.DestX, u.DestY);
+        return world;
+    }
+}

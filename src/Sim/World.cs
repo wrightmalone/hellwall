@@ -24,7 +24,7 @@ public sealed class WorldStats
 /// systems that advance it; Godot and the headless runner are both just
 /// consumers that enqueue commands and read state and events.
 /// </summary>
-public sealed class World
+public sealed partial class World
 {
     public int Tick { get; private set; }
     public uint Seed { get; }
