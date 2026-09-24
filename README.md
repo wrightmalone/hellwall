@@ -4,11 +4,13 @@ A colony-survival RTS: a walled human settlement against demon hordes, where
 one breach can cascade into losing everything. The plan, pillars and roadmap
 are in [PLAN.md](./PLAN.md).
 
-**Status: phase 3 (survival loop) complete: the clone is complete.** A
-60-day survival run with announced waves, possession, and a final
-Convergence is winnable (a scripted bot wins it on the designated map and a
-second one) and losable (an economy-only bot falls by day 9 on every map
-tried). 20,000 demons still run at 20 Hz in ~6 ms/tick.
+**Status: phase 4 (depth) mostly done.** The clone is complete (phase 3):
+a 60-day survival run with announced waves, possession and a final
+Convergence is winnable and losable. Phase 4 adds a tech tree with three
+build paths, three new demons, Stone Walls, Lance Towers, Crossbowmen, and
+Hellgates. The three paths are balanced against each other, but whole maps
+are won or lost by every path alike: map fairness is the open problem, and
+phase 5's. 20,000 demons still run at 20 Hz in ~6 ms/tick.
 
 ## Layout
 
@@ -104,12 +106,28 @@ To watch the probe's town hold a wave at 4x speed:
 
 ## A survival run
 
-60 one-minute days. From day 6 a wave lands every three days, each larger
+60 one-minute days, on the designated map (seed 11) by default. From day 6 a wave lands every three days, each larger
 than the last and from more sides as the run goes on; each is announced a
 minute ahead with its size and direction, pinned to the edge of the screen.
 At the end of day 60 the Convergence (2,500) comes from every side at once.
 Survive it and the run is won; lose the Keep and it's over. Forty dormant
 packs (about 10,000 demons) sleep across the map until noise wakes them.
+
+**Hellgates** stand far out on the map (four of them). From day 8 each sends
+a small band at the colony every minute, bigger from day 20 and again from
+day 40, and every wave is scaled by how many still stand (down to 40% with
+none). Soldiers attack a gate in reach when no demon is nearer; closing
+gates is how offense pays. At the Convergence the gates empty themselves
+into it and fall silent. The run is won when the Convergence is spent: no
+demon left, or the Keep still standing four minutes after it lands.
+
+**Demons:** Imps; fast Hounds; Thralls (colonists and soldiers the horde has
+taken); Gargoyles, which fly over walls (from wave 5); Bloaters, which burst
+against buildings and when killed (from wave 7); and siege Brutes (from wave 10).
+
+**Research** happens at a Scriptorium. Twelve techs in three tiers; tier 3
+is two exclusive pairs (Bastions or Holy Fire, Standing Army or Artillery),
+so paths part for good. Holy Fire makes consecrated ground burn demons.
 
 **Possession is the cascade.** A demon reaching an inhabited building
 (a House, or a workplace with its crew in) takes it: its people come out as
@@ -184,7 +202,8 @@ p99 9.1 ms, sim 4.8 ms/tick.
 | right-click with soldiers | attack-move; shift+right-click for a plain move |
 | `H` / `Shift+S` | hold / stop |
 | `Ctrl+1`–`9` / `Alt+1`–`9` | set / recall a control group |
-| `Q` `E` `R` with a Barracks selected | train Militia / Marksman / Templar |
+| `Q` `E` `R` with a Barracks selected | train Militia / Marksman / Templar (Crossbowmen by button) |
+| `9`, `=`, `G`, `B`, `U` | Stone Wall, Lance Tower, Gate, Barracks, Scriptorium |
 | `X` or Delete | demolish the selected building (half refund once built) |
 | space / Tab | pause (building and orders still work) / cycle 1x, 2x, 4x |
 | F5 / F9 | quicksave / quickload |
@@ -193,16 +212,25 @@ p99 9.1 ms, sim 4.8 ms/tick.
 
 ## Bot results
 
-`hellwall-sim run` plays the bot on the designated map (seed 7) and seed 3 and
-requires wins; other maps are informational. At the time of writing:
+`hellwall-sim run` plays the bot (fortress plan) on the designated map (seed
+11) and seed 3 and requires wins, and the passive bot on five maps and
+requires losses. `hellwall-sim paths` plays all three research plans. Both
+are in verify.sh. On six maps, with Hellgates and the full roster:
 
-| Seed | Full bot | Passive bot |
-|---|---|---|
-| 7 | won, day 63, 4,663 demons killed | lost day 9 |
-| 3 | won, day 62, 4,594 killed | lost day 8 |
-| 11 | lost at the Convergence, day 62 | lost day 8 |
-| 19 | lost day 50 | lost day 8 |
-| 42 | lost day 49 | lost day 8 |
+| Seed | Fortress | Pyre | Legion |
+|---|---|---|---|
+| 3 | won | won | won |
+| 11 | won | won | won |
+| 5 | won | won | won (Keep 850) |
+| 7 | lost day 62 | lost day 20 | lost day 63 |
+| 19 | lost day 41 | lost day 41 | lost day 17 |
+| 42 | lost day 29 | lost day 30 | lost day 30 |
+
+Every path wins exactly the same three maps. The paths are even with each
+other; the map is what decides. Before Hellgates, seed 7 was won by all
+three paths, so gates shift which maps are fair rather than breaking
+balance outright. Making every generated map fair is phase 5's job.
 
 The bot is a lower bound, not a target: it packs towers into blocks, builds
-over its own farmland, and doesn't plan chokepoints.
+over its own farmland, doesn't plan chokepoints, and only the legion plan
+raids gates.

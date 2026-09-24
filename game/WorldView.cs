@@ -79,6 +79,16 @@ public partial class WorldView : Node2D
             if (b.Hp < b.Def.Hp) Bar(rect, b.Hp / b.Def.Hp, new Color(0.9f, 0.2f, 0.2f), top: true);
         }
 
+        foreach (var g in World.Gates)
+        {
+            if (!g.Alive) continue;
+            var rect = new Rect2(g.X * T, g.Y * T, Hellgate.Size * T, Hellgate.Size * T);
+            DrawRect(rect.Grow(2), new Color(0.2f, 0, 0.05f));
+            DrawRect(rect, new Color(0.75f, 0.1f, 0.25f));
+            DrawRect(rect.Grow(-4), new Color(0.15f, 0, 0.1f));
+            Bar(rect, g.Hp / World.Rules.Hellgates.Hp, new Color(0.9f, 0.2f, 0.4f), top: true);
+        }
+
         foreach (var p in World.Packs)
         {
             if (p.Awake) continue;

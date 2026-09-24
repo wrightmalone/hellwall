@@ -32,18 +32,23 @@ public sealed class Bot
     readonly World _world;
     readonly Style _style;
     readonly string[] _plan;
+
+    /// <summary>Only the army path goes out after Hellgates; turtles lose too much when raiders die far from home.</summary>
+    readonly bool _raids;
     readonly int _c;
     readonly List<Side> _incoming = new();
 
     /// <summary>Print each decision, for working out why a run went wrong.</summary>
     public bool Verbose;
     int _lastWaveMoved = -1;
+    int? _raidGate;
 
     public Bot(World world, Style style, string plan = "fortress")
     {
         _world = world;
         _style = style;
         _plan = Plans[plan];
+        _raids = plan == "legion";
         _c = world.Terrain.Width / 2;
     }
 
@@ -102,6 +107,27 @@ public sealed class Bot
         Defend();
     }
 
+    /// <summary>
+    /// Go out and close a Hellgate when there's time: a big enough army, a
+    /// gate standing, and the next wave well off. Everyone but a home guard
+    /// attack-moves to the nearest gate; the next announced wave calls them back.
+    /// </summary>
+    void Raid()
+    {
+        if (!_raids) return;
+        const int homeGuard = 8;
+        var next = _world.Survival?.Next;
+        double untilWave = next == null ? double.MaxValue : (next.LandsAtTick - _world.Tick) / (double)Balance.TickHz;
+        if (_raidGate is { } current && _world.Gates.FirstOrDefault(g => g.Id == current) is { Alive: true }) return; // under way
+        _raidGate = null;
+        if (_world.Units.Count < homeGuard + 12 || untilWave < 150 || next is { Announced: true }) return;
+        var gate = _world.Gates.Where(g => g.Alive).OrderBy(g => MathF.Abs(g.CentreX - _c) + MathF.Abs(g.CentreY - _c)).FirstOrDefault();
+        if (gate == null) return;
+        var raiders = _world.Units.OrderByDescending(u => u.Hp).Skip(homeGuard).Select(u => u.Id).ToArray();
+        _raidGate = gate.Id;
+        Do(new OrderUnits(raiders, OrderKind.AttackMove, (int)gate.CentreX, gate.Y + Hellgate.Size + 1));
+    }
+
     /// <summary>What defense may spend: keep enough back that a House and a Shrine are always affordable.</summary>
     bool CanSpend(Cost cost) =>
         Colony[Resource.Wood] - cost.Wood >= Rules[BuildingKind.House].Cost.Wood + 10
@@ -115,7 +141,7 @@ public sealed class Bot
         int free = Colony.Colonists - Colony.WorkersUsed;
         // Towers once there's a direction to face: the first wave's announcement, then steadily.
         int towers = Count(BuildingKind.Watchtower) + Count(BuildingKind.Bombard) + Count(BuildingKind.LanceTower);
-        bool warned = _world.Survival?.Waves.Any(w => w.Announced) ?? true;
+        bool warned = (_world.Survival?.Waves.Any(w => w.Announced) ?? true) || _world.Horde.Count > 0;
         int wantTowers = !warned ? 0 : 3 + (int)(Seconds / 100);
         // Rich and fed: turn surplus gold into towers. Not while hungry, or the new crews starve the colony.
         bool fed = Colony.NetPerSecond[(int)Resource.Food] > 0.05 && Colony[Resource.Food] > 100;
@@ -146,11 +172,14 @@ public sealed class Bot
             Do(new TrainUnit(barracks.Id, _world.Units.Count % 4 == 3 ? UnitKind.Templar : ranged));
         }
 
+        Raid();
+
         // Meet each wave: once it's announced, stand the garrison just inside the ring on its side.
         var next = _world.Survival?.Next;
         if (next is { Announced: true } && next.Number != _lastWaveMoved && _world.Units.Count > 0)
         {
             _lastWaveMoved = next.Number;
+            _raidGate = null; // any raid is called home
             var units = _world.Units.Select(u => u.Id).ToArray();
             if (next.Final)
             {

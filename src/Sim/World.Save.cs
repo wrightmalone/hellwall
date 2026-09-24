@@ -17,7 +17,7 @@ namespace Hellwall.Sim;
 public sealed partial class World
 {
     const uint Magic = 0x56535748; // "HWSV"
-    const int FormatVersion = 2;
+    const int FormatVersion = 3;
 
     public byte[] Save()
     {
@@ -125,14 +125,26 @@ public sealed partial class World
 
             foreach (var level in Noise.Level) w.Write(level);
 
+            w.Write(_gates.Count);
+            foreach (var g in _gates)
+            {
+                w.Write(g.Id);
+                w.Write(g.X);
+                w.Write(g.Y);
+                w.Write(g.Hp);
+                w.Write(g.SpawnTimer);
+            }
+
             if (Survival is { } s)
             {
                 w.Write(s.FinalLanded);
+                w.Write(s.FinalLandedTick);
                 w.Write(s.Waves.Count);
                 foreach (var wave in s.Waves)
                 {
                     w.Write(wave.Announced);
                     w.Write(wave.Landed);
+                    w.Write(wave.Size);
                     w.Write(wave.Sides.Length);
                     foreach (var side in wave.Sides) w.Write((byte)side);
                 }
@@ -243,15 +255,25 @@ public sealed partial class World
         var noise = world.Noise.Level;
         for (int i = 0; i < noise.Length; i++) noise[i] = r.ReadSingle();
 
+        int gates = r.ReadInt32();
+        for (int n = 0; n < gates; n++)
+        {
+            var g = new Hellgate { Id = r.ReadInt32(), X = r.ReadInt32(), Y = r.ReadInt32(), Hp = r.ReadSingle(), SpawnTimer = r.ReadSingle() };
+            world._gates.Add(g);
+            if (g.Alive) world.StampGate(g, true);
+        }
+
         if (world.Survival is { } s)
         {
             s.FinalLanded = r.ReadBoolean();
+            s.FinalLandedTick = r.ReadInt32();
             int waves = r.ReadInt32();
             if (waves != s.Waves.Count) throw new FormatException("wave schedule doesn't match the rules");
             foreach (var wave in s.Waves)
             {
                 wave.Announced = r.ReadBoolean();
                 wave.Landed = r.ReadBoolean();
+                wave.Size = r.ReadInt32();
                 var sides = new Side[r.ReadInt32()];
                 for (int i = 0; i < sides.Length; i++) sides[i] = (Side)r.ReadByte();
                 wave.Sides = sides;

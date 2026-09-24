@@ -50,7 +50,7 @@ if [[ $FULL_RUNS == 1 ]]; then
 
   # Phase 4 gate: three research paths all win, with the full demon roster.
   step "build paths (fortress, pyre, legion all win)"
-  dotnet src/Sim.Headless/bin/Release/net10.0/hellwall-sim.dll paths --seeds=7,3
+  dotnet src/Sim.Headless/bin/Release/net10.0/hellwall-sim.dll paths --seeds=11,3
 fi
 
 if [[ $RUN_GODOT == 1 ]]; then

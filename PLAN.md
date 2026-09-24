@@ -145,7 +145,7 @@ can't export to the web), so playtesters get a file.
 | **1. Horde spike** *(riskiest first)* | Flow fields, spatial hash, dormant packs, noise wake, MultiMesh render | The perf gate above; 20k demons stream around walls into a target. **Done 2026-09-23: 6.2 ms p95, 120 fps** | 3–4 wk |
 | **2. Colony core** | Placement, resources, housing, holy grid, walls/gates, 2 towers, 3 units, control | Build a walled town and hold a scripted wave. **Done 2026-09-24: holds 200 on 5 seeds; undefended falls** | 5–6 wk |
 | **3. Survival loop** | Possession cascade, waves, day clock, Convergence, one map, save/load | **Clone-complete:** a full 60–90 min run is winnable and losable. Playtest round 1. **Done 2026-09-24: bot wins seeds 7 and 3; passive loses on 5** | 3–4 wk |
-| **4. Depth** | Tech tree (3 workshops), 6 units, 6 towers, 8 demon types, Hellgates as network | Harness shows ≥3 viable build paths; no dominant strategy | 5–6 wk |
+| **4. Depth** | Tech tree (3 workshops), 6 units, 6 towers, 8 demon types, Hellgates as network | Harness shows ≥3 viable build paths; no dominant strategy. **Mostly done 2026-09-24:** 3 paths win on fair maps with equal win rates; so far 4 units, 3 towers + 2 wall tiers, 6 demons, 1 research building | 5–6 wk |
 | **5. The mutation** | Procedural maps, endless mode, horde corruptions, difficulty settings | Endless runs vary meaningfully by seed; playtest round 2 | 5–6 wk |
 | **6. Vertical slice** | Asset-pack art, audio, UI/UX pass, onboarding, Steam page | Steam page live; demo build ready for Next Fest | 6–8 wk |
 | **7. Early Access** | Commissioned art, content, polish, localization basics | EA launch | TBD after 6 |

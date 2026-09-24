@@ -96,12 +96,21 @@ public static class StateHash
 
         foreach (var level in world.Noise.Level) h = Mix(h, Bits(level));
 
+        foreach (var g in world.Gates)
+        {
+            h = Mix(h, (uint)g.Id);
+            h = Mix(h, Bits(g.Hp));
+            h = Mix(h, Bits(g.SpawnTimer));
+        }
+
         if (world.Survival is { } s)
         {
             h = MixByte(h, s.FinalLanded ? (byte)1 : (byte)0);
+            h = Mix(h, (uint)s.FinalLandedTick);
             foreach (var w in s.Waves)
             {
                 h = MixByte(h, (byte)((w.Announced ? 1 : 0) | (w.Landed ? 2 : 0)));
+                h = Mix(h, (uint)w.Size);
                 foreach (var side in w.Sides) h = MixByte(h, (byte)side);
             }
         }

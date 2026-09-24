@@ -4,6 +4,12 @@
   "colonistFoodPerSecond": 0.025,
   "refundFraction": 0.5,
   "possessionSpawnSeconds": 1.0,
+  "startingUnits": [ { "kind": "Militia", "count": 4 } ],
+
+  "hellgates": {
+    "count": 4, "minDistance": 70, "hp": 2500, "spawnSeconds": 60, "firstBandDay": 8, "bandSize": 4,
+    "tierDays": [20, 40], "waveFloor": 0.4
+  },
 
   "survival": {
     "daySeconds": 60, "days": 60,
@@ -103,8 +109,8 @@
       "modifiers": [ { "group": "walls", "stat": "hp", "mul": 2.5 }, { "group": "towers", "stat": "hp", "mul": 2 } ] },
     { "id": "holyfire", "name": "Holy Fire", "tier": 3, "requires": ["hallowing"], "exclusiveWith": "bastions",
       "cost": { "gold": 500, "stone": 150 }, "seconds": 80,
-      "description": "Consecrated ground burns every demon on it, 3 a second. Excludes Bastions.",
-      "modifiers": [ { "stat": "holyGroundDps", "add": 3 } ] },
+      "description": "Consecrated ground burns every demon on it, 2.5 a second. Excludes Bastions.",
+      "modifiers": [ { "stat": "holyGroundDps", "add": 2.5 } ] },
     { "id": "standingarmy", "name": "Standing Army", "tier": 3, "requires": ["drill"], "exclusiveWith": "artillery",
       "cost": { "gold": 450, "wood": 150 }, "seconds": 80,
       "description": "Soldiers train twice as fast and cost 40% less upkeep. Excludes Artillery.",

@@ -126,7 +126,7 @@ public class TechTests
         Assert.False(world.Colony.Consecrated[world.Terrain.Index(far.X, far.Y)]);
         Run(world, new SpawnDemons(DemonKind.Imp, C + 6, C + 6, 1), new SpawnDemons(DemonKind.Imp, far.X, far.Y, 1));
         Assert.Equal(2, world.Horde.Count);
-        RunSeconds(world, 15);
+        RunSeconds(world, world.Rules[DemonKind.Imp].Hp / world.Tech.HolyGroundDps + 2);
         Assert.Equal(1, world.Horde.Count);
         Assert.True(world.Horde.X[0] > C + 15, "the survivor should be the one off holy ground");
     }

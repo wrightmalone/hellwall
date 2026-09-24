@@ -128,7 +128,19 @@ internal static class UnitSystem
             if (reach > 0) target = Combat.NearestDemon(world, u.X, u.Y, reach);
 
             float vx = 0, vy = 0;
-            if (target >= 0)
+            // No demon to fight: a Hellgate within reach is the next best thing.
+            if (target < 0 && reach > 0 && world.GateNear(u.X, u.Y, weapon.Range) is { } gate)
+            {
+                if (u.Cooldown <= 0)
+                {
+                    float gx = Math.Clamp(u.X, gate.X, gate.X + Hellgate.Size), gy = Math.Clamp(u.Y, gate.Y, gate.Y + Hellgate.Size);
+                    world.DamageGate(gate, weapon.Damage);
+                    world.Emit(new ShotFired(world.Tick, u.X, u.Y, gx, gy, 0, true));
+                    if (weapon.Noise > 0) world.Noise.Emit(u.X, u.Y, weapon.Noise, Balance.CombatNoiseIntensity);
+                    u.Cooldown = weapon.Cooldown;
+                }
+            }
+            else if (target >= 0)
             {
                 float tx = world.Horde.X[target], ty = world.Horde.Y[target];
                 float dx = tx - u.X, dy = ty - u.Y;

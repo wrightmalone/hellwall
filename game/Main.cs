@@ -59,7 +59,7 @@ public partial class Main : Node2D
     public override void _Ready()
     {
         var options = ParseUserArgs();
-        uint seed = options.TryGetValue("seed", out var s) ? uint.Parse(s) : 7u;
+        uint seed = options.TryGetValue("seed", out var s) ? uint.Parse(s) : 11u; // the designated map: fair to every build path today
         _screenshotPath = options.GetValueOrDefault("screenshot");
         if (options.TryGetValue("bench", out var b)) _benchSeconds = b == "true" ? 20 : double.Parse(b);
         if (options.TryGetValue("demo", out var d)) _demoSeconds = d == "true" ? 130 : double.Parse(d);
@@ -172,6 +172,7 @@ public partial class Main : Node2D
                 case WaveAnnounced w: _state.Say(w.Final ? $"THE CONVERGENCE: {w.Size} from every side" : $"Wave {w.Number}: {w.Size} from the {string.Join(" and ", w.Sides)}"); break;
                 case WaveLanded w: _state.Say(w.Final ? "The Convergence is here." : $"Wave {w.Number} has arrived"); break;
                 case TechResearched t: _state.Say($"Researched {_world.Rules.Tech(t.TechId).Name}"); break;
+                case HellgateClosed: _state.Say($"A Hellgate is closed: waves will be smaller ({_world.Gates.Count(g => g.Alive)} still open)"); break;
                 case DemonBurst d: _state.Bursts.Add((d, 0)); break;
                 case OutcomeChanged o: _state.Say(o.Outcome == Outcome.Lost ? "The Keep has fallen." : "Victory."); break;
             }

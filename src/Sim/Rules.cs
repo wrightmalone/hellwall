@@ -49,6 +49,12 @@ public sealed class Cost
     }
 }
 
+public sealed record StartingUnit
+{
+    public UnitKind Kind { get; init; }
+    public int Count { get; init; }
+}
+
 public sealed record WeaponDef
 {
     /// <summary>Tiles.</summary>
@@ -162,7 +168,12 @@ public sealed class Rules
     /// <summary>Seconds between Thralls leaving a possessed building.</summary>
     public float PossessionSpawnSeconds { get; private init; }
 
+    /// <summary>The garrison a colony starts with, beside the Keep.</summary>
+    public StartingUnit[] StartingUnits { get; private init; } = [];
+
     public SurvivalRules Survival { get; private init; } = new();
+
+    public HellgateRules Hellgates { get; private init; } = new();
 
     public TechDef[] Techs { get; private init; } = [];
 
@@ -191,7 +202,9 @@ public sealed class Rules
         public double ColonistFoodPerSecond { get; init; }
         public double RefundFraction { get; init; }
         public float PossessionSpawnSeconds { get; init; }
+        public StartingUnit[] StartingUnits { get; init; } = [];
         public SurvivalRules Survival { get; init; } = new();
+        public HellgateRules Hellgates { get; init; } = new();
         public TechDef[] Techs { get; init; } = [];
         public Dictionary<BuildingKind, BuildingDef> Buildings { get; init; } = new();
         public Dictionary<UnitKind, UnitDef> Units { get; init; } = new();
@@ -216,7 +229,9 @@ public sealed class Rules
             ColonistFoodPerSecond = file.ColonistFoodPerSecond,
             RefundFraction = file.RefundFraction,
             PossessionSpawnSeconds = file.PossessionSpawnSeconds,
+            StartingUnits = file.StartingUnits,
             Survival = file.Survival,
+            Hellgates = file.Hellgates,
             Techs = file.Techs,
             Buildings = Dense(file.Buildings, "building"),
             Units = Dense(file.Units, "unit"),
@@ -251,6 +266,13 @@ public sealed class Rules
         return Copy(r => r.Demons = demons);
     }
 
+    /// <summary>A copy with different Hellgate rules (none, for runs about something else).</summary>
+    public Rules WithHellgates(Func<HellgateRules, HellgateRules> change)
+    {
+        var gates = change(Hellgates);
+        return Copy(r => r.Hellgates = gates);
+    }
+
     /// <summary>A copy with a different survival schedule (short runs for tests, tuning sweeps).</summary>
     public Rules WithSurvival(Func<SurvivalRules, SurvivalRules> change)
     {
@@ -264,11 +286,12 @@ public sealed class Rules
         public BuildingDef[] Buildings = [];
         public DemonDef[] Demons = [];
         public SurvivalRules Survival = new();
+        public HellgateRules Hellgates = new();
     }
 
     Rules Copy(Action<Builder> change)
     {
-        var b = new Builder { StartingResources = StartingResources, Buildings = Buildings, Demons = Demons, Survival = Survival };
+        var b = new Builder { StartingResources = StartingResources, Buildings = Buildings, Demons = Demons, Survival = Survival, Hellgates = Hellgates };
         change(b);
         return new Rules
         {
@@ -277,7 +300,9 @@ public sealed class Rules
             ColonistFoodPerSecond = ColonistFoodPerSecond,
             RefundFraction = RefundFraction,
             PossessionSpawnSeconds = PossessionSpawnSeconds,
+            StartingUnits = StartingUnits,
             Survival = b.Survival,
+            Hellgates = b.Hellgates,
             Techs = Techs,
             Buildings = b.Buildings,
             Units = Units,
@@ -288,7 +313,7 @@ public sealed class Rules
     }
 
     static string Describe(Builder b) =>
-        JsonSerializer.Serialize(new { b.StartingResources, b.Buildings, b.Demons, b.Survival }, Options);
+        JsonSerializer.Serialize(new { b.StartingResources, b.Buildings, b.Demons, b.Survival, b.Hellgates }, Options);
 
     static T[] Dense<TKey, T>(Dictionary<TKey, T> map, string what) where TKey : struct, Enum
     {

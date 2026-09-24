@@ -28,6 +28,14 @@ public sealed record SurvivalRules
     public int ConvergenceSize { get; init; } = 4000;
 
     /// <summary>
+    /// After the Convergence lands, the run is won when no demon is left, or
+    /// when the Keep still stands this long after: the Convergence has broken
+    /// on the walls. (A few stragglers stuck out on the map shouldn't hold a
+    /// won run hostage.)
+    /// </summary>
+    public float ConvergenceHoldSeconds { get; init; } = 240;
+
+    /// <summary>
     /// What each wave is made of, beyond Imps: a kind joins from a given wave
     /// number and takes that share of every wave after. Whatever's left over
     /// is Imps.
@@ -68,6 +76,7 @@ public sealed class Survival
     public readonly SurvivalRules Rules;
     public readonly List<PlannedWave> Waves = new();
     public bool FinalLanded;
+    public int FinalLandedTick;
 
     public Survival(SurvivalRules rules)
     {
@@ -113,14 +122,21 @@ internal static class SurvivalSystem
             }
             if (wave.Announced && world.Tick >= wave.LandsAtTick)
             {
+                // Waves are fed by the Hellgates: fewer standing, smaller waves.
+                wave.Size = (int)Math.Round(wave.Size * HellgateSystem.WaveScale(world));
                 int spawned = Land(world, wave, s.Rules.Mix);
                 wave.Landed = true;
-                if (wave.Final) s.FinalLanded = true;
+                if (wave.Final)
+                {
+                    s.FinalLanded = true;
+                    s.FinalLandedTick = world.Tick;
+                }
                 world.Emit(new WaveLanded(world.Tick, wave.Number, spawned, wave.Final));
             }
         }
 
-        if (s.FinalLanded && world.Horde.Count == 0) world.Win();
+        if (s.FinalLanded && (world.Horde.Count == 0 || world.Tick - s.FinalLandedTick >= s.Rules.ConvergenceHoldSeconds * Balance.TickHz))
+            world.Win();
     }
 
     static int SidesFor(SurvivalRules rules, int number) =>

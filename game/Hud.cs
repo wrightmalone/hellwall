@@ -144,6 +144,12 @@ public partial class Hud : CanvasLayer
 
     static string Signed(double v) => v >= 0 ? $"+{v:0.0}" : $"{v:0.0}";
 
+    double HellgateScale()
+    {
+        double floor = World.Rules.Hellgates.WaveFloor;
+        return floor + (1 - floor) * World.Gates.Count(g => g.Alive) / Math.Max(1, World.Gates.Count);
+    }
+
     static string Clock(double seconds) => seconds <= 0 ? "now" : $"{(int)seconds / 60}:{(int)seconds % 60:00}";
 
     /// <summary>Day counter top right; each announced wave pinned to the screen edge it's coming from, with its countdown.</summary>
@@ -161,7 +167,9 @@ public partial class Hud : CanvasLayer
             string upcoming = next == null ? "All waves have come."
                 : next.Announced ? $"{(next.Final ? "CONVERGENCE" : $"Wave {next.Number}")}: {next.Size} in {Clock((next.LandsAtTick - World.Tick) / (double)Balance.TickHz)}"
                 : $"Next wave: day {s.DayAt(next.LandsAtTick) - 1} ({Clock((next.AnnounceTick(s.Rules) - World.Tick) / (double)Balance.TickHz)} until it's sighted)";
-            _clock.Text = $"Day {Math.Min(World.Day, s.Rules.Days)} of {s.Rules.Days}\n{upcoming}";
+            int open = World.Gates.Count(g => g.Alive);
+            string gates = World.Gates.Count == 0 ? "" : $"\nHellgates open: {open} of {World.Gates.Count} (waves at {HellgateScale():P0})";
+            _clock.Text = $"Day {Math.Min(World.Day, s.Rules.Days)} of {s.Rules.Days}\n{upcoming}{gates}";
 
             foreach (var wave in s.Waves)
             {

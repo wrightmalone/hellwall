@@ -62,6 +62,10 @@ public sealed partial class World
     /// <summary>Ordered by id, ascending.</summary>
     public IReadOnlyList<Pack> Packs => _packs;
 
+    /// <summary>Every Hellgate the map started with, standing or not. Ordered by id.</summary>
+    public IReadOnlyList<Hellgate> Gates => _gates;
+    internal List<Hellgate> GateList => _gates;
+
     /// <summary>
     /// The concrete lists, for the systems. foreach over an IReadOnlyList
     /// boxes its enumerator, which would allocate every tick.
@@ -76,6 +80,10 @@ public sealed partial class World
     readonly Dictionary<int, Building> _buildingById = new();
     readonly List<Unit> _units = new();
     readonly List<Pack> _packs = new();
+    readonly List<Hellgate> _gates = new();
+
+    /// <summary>Per tile: a standing Hellgate is here. Blocks walkers like rock.</summary>
+    readonly bool[] _gateTile;
 
     /// <summary>Soldier route maps by destination tile, shared by every unit sent there; rebuilt when buildings change.</summary>
     readonly Dictionary<int, FlowField> _humanFields = new();
@@ -99,6 +107,7 @@ public sealed partial class World
         Rules = options.Rules ?? Rules.Default;
         Terrain = MapGen.Generate(options.Seed, options.MapSize);
         _occupancy = new int[Terrain.Width * Terrain.Height];
+        _gateTile = new bool[Terrain.Width * Terrain.Height];
         Colony = new Colony(Terrain.Width * Terrain.Height, Rules.StartingResources);
         Flow = new FlowField(Terrain.Width, Terrain.Height);
         Noise = new NoiseGrid(Terrain.Width, Terrain.Height);
@@ -117,6 +126,13 @@ public sealed partial class World
         keep.Built = def.BuildSeconds;
         ColonySystem.RecomputeNetwork(world);
         world.EnsureFlow();
+        if (options.Survival)
+        {
+            // The survival scenario: Hellgates out on the map and a garrison at home.
+            world.PlaceGates();
+            foreach (var start in world.Rules.StartingUnits)
+                for (int i = 0; i < start.Count; i++) world.TrySpawnUnit(start.Kind, keep);
+        }
         world.ScatterPacks(options.DormantPacks);
         return world;
     }
@@ -135,6 +151,7 @@ public sealed partial class World
         RebuildHumanFieldsIfNeeded();
         Noise.Decay();
         WakePacks();
+        HellgateSystem.Step(this, dt);
         SurvivalSystem.Step(this);
 
         Spatial.Build(Horde);
@@ -216,12 +233,12 @@ public sealed partial class World
 
     /// <summary>Demons can stand here: walkable terrain with no building on it.</summary>
     public bool IsWalkable(int x, int y) =>
-        Terrain.InBounds(x, y) && Terrain.IsWalkable(Terrain.Get(x, y)) && _occupancy[Terrain.Index(x, y)] == 0;
+        Terrain.InBounds(x, y) && Terrain.IsWalkable(Terrain.Get(x, y)) && _occupancy[Terrain.Index(x, y)] == 0 && !_gateTile[Terrain.Index(x, y)];
 
     /// <summary>Soldiers can stand here: like demons, but they pass through gates.</summary>
     public bool IsHumanWalkable(int x, int y)
     {
-        if (!Terrain.InBounds(x, y) || !Terrain.IsWalkable(Terrain.Get(x, y))) return false;
+        if (!Terrain.InBounds(x, y) || !Terrain.IsWalkable(Terrain.Get(x, y)) || _gateTile[Terrain.Index(x, y)]) return false;
         int id = _occupancy[Terrain.Index(x, y)];
         return id == 0 || _buildingById[id].Kind == BuildingKind.Gate;
     }
@@ -754,6 +771,73 @@ public sealed partial class World
         }
         if (spawned > 0) _spatialStale = true;
         return spawned;
+    }
+
+    /// <summary>
+    /// Put the map's Hellgates on open ground far from the Keep, spread apart,
+    /// each able to reach the colony.
+    /// </summary>
+    void PlaceGates()
+    {
+        var rules = Rules.Hellgates;
+        int centre = Terrain.Width / 2;
+        int min2 = rules.MinDistance * rules.MinDistance;
+        for (int n = 0, attempts = 0; n < rules.Count && attempts < rules.Count * 400; attempts++)
+        {
+            int x = Rng.NextInt(Terrain.Width - Hellgate.Size), y = Rng.NextInt(Terrain.Height - Hellgate.Size);
+            int dx = x - centre, dy = y - centre;
+            if (dx * dx + dy * dy < min2) continue;
+            if (_gates.Any(g => Math.Abs(g.X - x) + Math.Abs(g.Y - y) < 40)) continue;
+            bool clear = true;
+            for (int ty = y; ty < y + Hellgate.Size && clear; ty++)
+                for (int tx = x; tx < x + Hellgate.Size && clear; tx++)
+                    clear = Terrain.IsWalkable(Terrain.Get(tx, ty)) && Flow.DistAt(tx, ty) != FlowField.Unreachable;
+            if (!clear) continue;
+            var gate = new Hellgate { Id = _nextId++, X = x, Y = y, Hp = rules.Hp, SpawnTimer = Rng.NextInt((int)rules.SpawnSeconds) };
+            _gates.Add(gate);
+            StampGate(gate, true);
+            n++;
+        }
+        if (_gates.Count > 0) _flowDirty = true;
+    }
+
+    void StampGate(Hellgate g, bool on)
+    {
+        for (int ty = g.Y; ty < g.Y + Hellgate.Size; ty++)
+            for (int tx = g.X; tx < g.X + Hellgate.Size; tx++)
+                _gateTile[Terrain.Index(tx, ty)] = on;
+    }
+
+    /// <summary>A Hellgate's band: a small mixed group that heads straight for the colony.</summary>
+    internal void SpawnBand(int x, int y, int count)
+    {
+        int hounds = count / 4;
+        int spawned = SpawnCluster(DemonKind.Imp, x, y, count - hounds) + SpawnCluster(DemonKind.Hound, x, y, hounds);
+        if (spawned > 0) _events.Add(new DemonsSpawned(Tick, DemonKind.Imp, spawned));
+    }
+
+    /// <summary>A standing gate whose footprint lies within range of a point, or null.</summary>
+    internal Hellgate? GateNear(float x, float y, float range)
+    {
+        foreach (var g in _gates)
+        {
+            if (!g.Alive) continue;
+            float ex = MathF.Max(MathF.Max(g.X - x, 0), x - (g.X + Hellgate.Size));
+            float ey = MathF.Max(MathF.Max(g.Y - y, 0), y - (g.Y + Hellgate.Size));
+            if (ex * ex + ey * ey <= range * range) return g;
+        }
+        return null;
+    }
+
+    /// <summary>A soldier's shot at a gate.</summary>
+    internal void DamageGate(Hellgate gate, float damage)
+    {
+        if (!gate.Alive) return;
+        gate.Hp -= damage;
+        if (gate.Alive) return;
+        StampGate(gate, false);
+        OnLayoutChanged();
+        _events.Add(new HellgateClosed(Tick, gate.Id, gate.X, gate.Y));
     }
 
     void ScatterPacks(int count)
