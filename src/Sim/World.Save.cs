@@ -17,7 +17,7 @@ namespace Hellwall.Sim;
 public sealed partial class World
 {
     const uint Magic = 0x56535748; // "HWSV"
-    const int FormatVersion = 4;
+    const int FormatVersion = 5;
 
     public byte[] Save()
     {
@@ -76,6 +76,8 @@ public sealed partial class World
                 w.Write(b.TrainProgress);
                 w.Write(b.Queue.Count);
                 foreach (var q in b.Queue) w.Write((byte)q);
+                w.Write(b.RallyX);
+                w.Write(b.RallyY);
                 w.Write(b.Possessed);
                 w.Write(b.Occupants);
                 w.Write(b.PossessTimer);
@@ -218,6 +220,8 @@ public sealed partial class World
             };
             int queued = r.ReadInt32();
             for (int q = 0; q < queued; q++) b.Queue.Add((UnitKind)r.ReadByte());
+            b.RallyX = r.ReadInt32();
+            b.RallyY = r.ReadInt32();
             b.Possessed = r.ReadBoolean();
             b.Occupants = r.ReadInt32();
             b.PossessTimer = r.ReadSingle();

@@ -66,6 +66,9 @@ public static class Balance
     /// built that close to a pack anyway: building never wakes the wilds;
     /// fighting (shots carry much further) does.
     /// </summary>
+    /// <summary>Soldiers a Barracks can have waiting, the one in training included.</summary>
+    public const int QueueLimit = 8;
+
     public const float BuildNoiseRadius = 10f;
     public const float BuildNoiseIntensity = 2f;
 

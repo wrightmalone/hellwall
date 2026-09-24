@@ -28,6 +28,12 @@ public sealed record MakeNoise(int X, int Y, float Radius, float Intensity) : Co
 /// <summary>Queue a unit at a Barracks. Paid for when queued; refunded if the Barracks is lost.</summary>
 public sealed record TrainUnit(int BarracksId, UnitKind Kind) : Command;
 
+/// <summary>Take a queued unit off a Barracks' queue (Index 0 is the one in training), for a full refund.</summary>
+public sealed record CancelTraining(int BarracksId, int Index) : Command;
+
+/// <summary>Where a Barracks sends the soldiers it trains; X = -1 clears it.</summary>
+public sealed record SetRally(int BuildingId, int X, int Y) : Command;
+
 /// <summary>Start researching a tech at a Scriptorium. Paid for up front; refunded if the building is lost.</summary>
 public sealed record Research(int BuildingId, string TechId) : Command;
 

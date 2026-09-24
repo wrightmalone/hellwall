@@ -46,6 +46,8 @@ public static class StateHash
             h = Mix(h, Bits(b.ResearchProgress));
             h = Mix(h, (uint)b.Queue.Count);
             foreach (var q in b.Queue) h = MixByte(h, (byte)q);
+            h = Mix(h, (uint)b.RallyX);
+            h = Mix(h, (uint)b.RallyY);
         }
 
         h = Mix(h, (uint)world.Tech.Researched.Count);

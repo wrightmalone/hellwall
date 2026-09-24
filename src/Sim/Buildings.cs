@@ -61,6 +61,10 @@ public sealed class Building
     public readonly List<UnitKind> Queue = new();
     public float TrainProgress;
 
+    /// <summary>Barracks: where new soldiers attack-move to once they're out (RallyX -1: nowhere, they wait by the door).</summary>
+    public int RallyX = -1;
+    public int RallyY;
+
     /// <summary>Scriptorium: the tech being researched here, if any, and seconds of work done on it.</summary>
     public string? Researching;
     public float ResearchProgress;

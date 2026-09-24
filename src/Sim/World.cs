@@ -426,6 +426,9 @@ public sealed partial class World
         u.PrevY = u.Y;
         _units.Add(u);
         Emit(new UnitTrained(Tick, u.Id, kind, barracks.Id));
+        // Off to the rally point, fighting anything on the way.
+        if (barracks.RallyX >= 0 && TryOrder(new OrderUnits([u.Id], OrderKind.AttackMove, barracks.RallyX, barracks.RallyY)) is { } why)
+            _events.Add(new CommandRejected(Tick, why, new SetRally(barracks.Id, barracks.RallyX, barracks.RallyY)));
         return true;
     }
 
@@ -492,6 +495,8 @@ public sealed partial class World
             SpawnDemons s => TrySpawn(s),
             MakeNoise m => TryNoise(m.X + 0.5f, m.Y + 0.5f, m.Radius, m.Intensity),
             TrainUnit t => TryTrain(t),
+            CancelTraining c => TryCancel(c),
+            SetRally r => TrySetRally(r),
             Research r => TryResearch(r),
             OrderUnits o => TryOrder(o),
             _ => "unknown command",
@@ -592,6 +597,7 @@ public sealed partial class World
         if (Array.IndexOf(b.Def.Trains, t.Kind) < 0) return $"{b.Kind} can't train {t.Kind}";
         if (!b.Complete) return "still under construction";
         if (Def(t.Kind).RequiresTech is { } needs && !Tech.Has(needs)) return $"needs {Rules.Tech(needs).Name}";
+        if (b.Queue.Count >= Balance.QueueLimit) return "the queue is full";
         var cost = Def(t.Kind).Cost;
         string? shortfall = Colony.Shortfall(cost);
         if (shortfall != null) return shortfall;
@@ -657,6 +663,31 @@ public sealed partial class World
         }
         MarkNetworkDirty(); // radii and gather rates may have changed
         _events.Add(new TechResearched(Tick, id));
+    }
+
+    string? TryCancel(CancelTraining c)
+    {
+        if (!_buildingById.TryGetValue(c.BarracksId, out var b)) return "no such building";
+        if (c.Index < 0 || c.Index >= b.Queue.Count) return "nothing queued there";
+        Colony.Refund(Def(b.Queue[c.Index]).Cost, 1);
+        b.Queue.RemoveAt(c.Index);
+        if (c.Index == 0) b.TrainProgress = 0;
+        return null;
+    }
+
+    string? TrySetRally(SetRally r)
+    {
+        if (!_buildingById.TryGetValue(r.BuildingId, out var b)) return "no such building";
+        if (b.Def.Trains.Length == 0) return $"{b.Kind} trains no one";
+        if (r.X < 0)
+        {
+            b.RallyX = -1;
+            return null;
+        }
+        if (!Terrain.InBounds(r.X, r.Y)) return "out of bounds";
+        b.RallyX = r.X;
+        b.RallyY = r.Y;
+        return null;
     }
 
     string? TryOrder(OrderUnits o)
