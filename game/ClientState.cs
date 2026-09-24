@@ -27,6 +27,7 @@ public sealed class ClientState
     public float Alpha;
 
     public readonly List<(ShotFired Shot, double Age)> Shots = new();
+    public readonly List<(DemonBurst Burst, double Age)> Bursts = new();
     public readonly List<(string Text, double Age)> Log = new();
 
     public void Say(string text)

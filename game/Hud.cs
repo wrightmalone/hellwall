@@ -26,7 +26,7 @@ public partial class Hud : CanvasLayer
     readonly Dictionary<Side, Label> _edgeWarnings = new();
     PanelContainer _inspector = null!;
     Label _inspectorText = null!;
-    HBoxContainer _trainButtons = null!;
+    HFlowContainer _trainButtons = null!;
     HBoxContainer _buildBar = null!;
     readonly List<(Button Button, BuildingKind Kind)> _buildButtons = new();
 
@@ -57,16 +57,15 @@ public partial class Hud : CanvasLayer
         _buildBar = new HBoxContainer();
         _buildBar.AddThemeConstantOverride("separation", 4);
         AddChild(_buildBar);
-        for (int i = 0; i < Palette.BuildBar.Length; i++)
+        foreach (var (kind, _, keyLabel) in Palette.BuildBar)
         {
-            var kind = Palette.BuildBar[i];
             var def = World.Rules[kind];
             var button = new Button
             {
-                Text = $"{Palette.BuildKeys[i]} {kind}",
+                Text = $"{keyLabel} {kind}",
                 TooltipText = $"{kind}\n{def.Cost}{Describe(def)}",
                 FocusMode = Control.FocusModeEnum.None,
-                CustomMinimumSize = new Vector2(92, 34),
+                CustomMinimumSize = new Vector2(88, 34),
             };
             button.AddThemeFontSizeOverride("font_size", 12);
             button.Pressed += () => State.Armed = State.Armed == kind ? null : kind;
@@ -79,7 +78,7 @@ public partial class Hud : CanvasLayer
         _inspectorText = new Label();
         _inspectorText.AddThemeFontSizeOverride("font_size", 14);
         box.AddChild(_inspectorText);
-        _trainButtons = new HBoxContainer();
+        _trainButtons = new HFlowContainer { CustomMinimumSize = new Vector2(420, 0) };
         box.AddChild(_trainButtons);
         _inspector.AddChild(box);
         AddChild(_inspector);
@@ -124,8 +123,11 @@ public partial class Hud : CanvasLayer
         _buildBar.Position = new Vector2(10, screen.Y - 44);
         foreach (var (button, kind) in _buildButtons)
         {
-            bool affordable = colony.CanAfford(World.Rules[kind].Cost);
-            button.Modulate = State.Armed == kind ? new Color(0.6f, 1, 0.6f) : affordable ? Colors.White : new Color(1, 1, 1, 0.45f);
+            var def = World.Def(kind);
+            bool locked = def.RequiresTech is { } needs && !World.Tech.Has(needs);
+            bool affordable = colony.CanAfford(def.Cost);
+            button.Modulate = State.Armed == kind ? new Color(0.6f, 1, 0.6f) : locked ? new Color(1, 1, 1, 0.25f) : affordable ? Colors.White : new Color(1, 1, 1, 0.5f);
+            button.TooltipText = $"{kind}\n{def.Cost}{Describe(def)}" + (locked ? $"\nneeds {World.Rules.Tech(def.RequiresTech!).Name}" : "");
         }
 
         UpdateInspector(screen);
@@ -194,6 +196,7 @@ public partial class Hud : CanvasLayer
 
     int? _inspected;
     int _unitsShown = -1;
+    string _researchKey = "";
 
     void UpdateInspector(Vector2 screen)
     {
@@ -212,8 +215,12 @@ public partial class Hud : CanvasLayer
                 "Working";
             text = $"{b.Kind}   {b.Hp:0}/{b.Def.Hp:0} hp\n{status}";
             if (b.Def.Produces is { } r && b.Complete) text += $"\n{b.Rate * World.Colony.Power:0.00} {r.ToString().ToLowerInvariant()}/s";
+            if (b.Researching is { } rid)
+                text += $"\nResearching {World.Rules.Tech(rid).Name} {b.ResearchProgress / World.Rules.Tech(rid).Seconds:P0}";
+            if (b.Def.Researches)
+                text += $"\nKnown: {(World.Tech.Researched.Count == 0 ? "nothing yet" : string.Join(", ", World.Tech.Researched.Select(t => World.Rules.Tech(t).Name)))}";
             if (b.Queue.Count > 0)
-                text += $"\nTraining {b.Queue[0]} {b.TrainProgress / World.Rules[b.Queue[0]].TrainSeconds:P0}" +
+                text += $"\nTraining {b.Queue[0]} {b.TrainProgress / World.Def(b.Queue[0]).TrainSeconds:P0}" +
                         (b.Queue.Count > 1 ? $"  (+{b.Queue.Count - 1} queued)" : "");
             if (b.Kind != BuildingKind.Keep) text += "\n[X] demolish";
         }
@@ -229,11 +236,15 @@ public partial class Hud : CanvasLayer
         _inspector.Visible = text.Length > 0;
         _inspectorText.Text = text;
 
-        // Rebuild the train buttons only when the selection changes.
-        if (_inspected != building?.Id || (building == null && _unitsShown != State.SelectedUnits.Count))
+        // Rebuild the buttons only when the selection (or, for a Scriptorium, what can be researched) changes.
+        string researchKey = building is { Def.Researches: true }
+            ? string.Join(",", World.Rules.Techs.Where(t => World.CheckResearch(t.Id) == null).Select(t => t.Id)) + (building.Researching ?? "")
+            : "";
+        if (_inspected != building?.Id || (building == null && _unitsShown != State.SelectedUnits.Count) || researchKey != _researchKey)
         {
             _inspected = building?.Id;
             _unitsShown = State.SelectedUnits.Count;
+            _researchKey = researchKey;
             foreach (var child in _trainButtons.GetChildren()) child.QueueFree();
             if (building is { Def.Trains.Length: > 0 })
             {
@@ -250,6 +261,23 @@ public partial class Hud : CanvasLayer
                     };
                     int bid = building.Id;
                     button.Pressed += () => Send(new TrainUnit(bid, kind));
+                    _trainButtons.AddChild(button);
+                }
+            }
+            if (building is { Def.Researches: true, Researching: null })
+            {
+                foreach (var tech in World.Rules.Techs.Where(t => World.CheckResearch(t.Id) == null))
+                {
+                    var button = new Button
+                    {
+                        Text = $"{tech.Name}",
+                        TooltipText = $"{tech.Name} (tier {tech.Tier}): {tech.Cost}, {tech.Seconds:0}s\n{tech.Description}",
+                        FocusMode = Control.FocusModeEnum.None,
+                    };
+                    button.AddThemeFontSizeOverride("font_size", 12);
+                    int bid = building.Id;
+                    string techId = tech.Id;
+                    button.Pressed += () => Send(new Research(bid, techId));
                     _trainButtons.AddChild(button);
                 }
             }

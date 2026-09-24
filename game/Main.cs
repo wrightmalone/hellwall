@@ -18,6 +18,7 @@ namespace Hellwall.Game;
 ///   --demo[=seconds]     build a walled town, send a wave at it, screenshot mid-fight
 ///   --skip=seconds       fast-forward the sim before the first frame
 ///   --autoplay           let the headless harness's bot play (watch it, or take over any time with Esc)
+///   --inspect=Kind       select the first building of that kind (for screenshots)
 /// </summary>
 public partial class Main : Node2D
 {
@@ -99,6 +100,10 @@ public partial class Main : Node2D
             HandleEvents();
         }
 
+        // Select a building of a kind before the first frame, for screenshots of its inspector.
+        if (options.TryGetValue("inspect", out var inspect) && Enum.TryParse<BuildingKind>(inspect, true, out var kindToInspect))
+            _state.SelectedBuilding = _world.Buildings.FirstOrDefault(b => b.Kind == kindToInspect)?.Id;
+
         // scripts/verify.sh looks for this line: the engine banner alone doesn't prove the C# scene ran.
         GD.Print($"hellwall: world ready seed={_world.Seed} hash={StateHash.Hex(_world)}");
     }
@@ -131,6 +136,7 @@ public partial class Main : Node2D
 
         HandleEvents();
         Age(_state.Shots, delta, ClientState.ShotLife);
+        Age(_state.Bursts, delta, 0.4);
         Age(_state.Log, delta, 8);
 
         _state.Alpha = _paused ? 1f : (float)Math.Clamp(_accumulator / TickSeconds, 0, 1);
@@ -165,6 +171,8 @@ public partial class Main : Node2D
                 case BuildingPossessed p: _state.Say($"{p.Kind} POSSESSED: {p.Occupants} turning. [X] to purge it"); break;
                 case WaveAnnounced w: _state.Say(w.Final ? $"THE CONVERGENCE: {w.Size} from every side" : $"Wave {w.Number}: {w.Size} from the {string.Join(" and ", w.Sides)}"); break;
                 case WaveLanded w: _state.Say(w.Final ? "The Convergence is here." : $"Wave {w.Number} has arrived"); break;
+                case TechResearched t: _state.Say($"Researched {_world.Rules.Tech(t.TechId).Name}"); break;
+                case DemonBurst d: _state.Bursts.Add((d, 0)); break;
                 case OutcomeChanged o: _state.Say(o.Outcome == Outcome.Lost ? "The Keep has fallen." : "Victory."); break;
             }
         }
@@ -240,17 +248,9 @@ public partial class Main : Node2D
             return;
         }
 
-        int slot = key.Keycode switch
+        foreach (var (kind, hotkey, _) in Palette.BuildBar)
         {
-            >= Key.Key1 and <= Key.Key9 => (int)(key.Keycode - Key.Key1),
-            Key.Key0 => 9,
-            Key.Minus => 10,
-            Key.Equal => 11,
-            _ => -1,
-        };
-        if (slot >= 0 && slot < Palette.BuildBar.Length)
-        {
-            var kind = Palette.BuildBar[slot];
+            if (key.Keycode != hotkey) continue;
             _state.Armed = _state.Armed == kind ? null : kind;
             return;
         }

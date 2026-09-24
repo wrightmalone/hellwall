@@ -31,6 +31,9 @@ public static class Palette
         BuildingKind.Bombard => new(0.35f, 0.38f, 0.55f),
         BuildingKind.Barracks => new(0.70f, 0.30f, 0.30f),
         BuildingKind.Farm => new(0.85f, 0.80f, 0.40f),
+        BuildingKind.StoneWall => new(0.50f, 0.50f, 0.56f),
+        BuildingKind.LanceTower => new(0.28f, 0.42f, 0.70f),
+        BuildingKind.Scriptorium => new(0.62f, 0.46f, 0.78f),
         _ => Colors.Magenta,
     };
 
@@ -47,6 +50,8 @@ public static class Palette
         BuildingKind.Bombard => "Bo",
         BuildingKind.Barracks => "Bar",
         BuildingKind.Farm => "Farm",
+        BuildingKind.LanceTower => "La",
+        BuildingKind.Scriptorium => "Scr",
         _ => "",
     };
 
@@ -55,6 +60,7 @@ public static class Palette
         UnitKind.Militia => new(0.55f, 0.75f, 1.0f),
         UnitKind.Marksman => new(0.70f, 1.0f, 0.70f),
         UnitKind.Templar => new(1.0f, 0.95f, 0.75f),
+        UnitKind.Crossbowman => new(0.45f, 0.95f, 0.95f),
         _ => Colors.White,
     };
 
@@ -64,13 +70,13 @@ public static class Palette
     public static readonly Color GhostBad = new(1f, 0.25f, 0.25f, 0.45f);
     public static readonly Color Tracer = new(1f, 0.95f, 0.6f);
 
-    /// <summary>Build bar order; hotkeys 1-9, 0, minus follow it.</summary>
-    public static readonly BuildingKind[] BuildBar =
+    /// <summary>Build bar order, with each slot's hotkey.</summary>
+    public static readonly (BuildingKind Kind, Key Key, string Label)[] BuildBar =
     [
-        BuildingKind.House, BuildingKind.Farm, BuildingKind.Hunter, BuildingKind.Woodcutter, BuildingKind.Quarry,
-        BuildingKind.Shrine, BuildingKind.Wardstone, BuildingKind.Wall, BuildingKind.Gate,
-        BuildingKind.Watchtower, BuildingKind.Bombard, BuildingKind.Barracks,
+        (BuildingKind.House, Key.Key1, "1"), (BuildingKind.Farm, Key.Key2, "2"), (BuildingKind.Hunter, Key.Key3, "3"),
+        (BuildingKind.Woodcutter, Key.Key4, "4"), (BuildingKind.Quarry, Key.Key5, "5"), (BuildingKind.Shrine, Key.Key6, "6"),
+        (BuildingKind.Wardstone, Key.Key7, "7"), (BuildingKind.Wall, Key.Key8, "8"), (BuildingKind.StoneWall, Key.Key9, "9"),
+        (BuildingKind.Watchtower, Key.Key0, "0"), (BuildingKind.Bombard, Key.Minus, "-"), (BuildingKind.LanceTower, Key.Equal, "="),
+        (BuildingKind.Gate, Key.G, "G"), (BuildingKind.Barracks, Key.B, "B"), (BuildingKind.Scriptorium, Key.U, "U"),
     ];
-
-    public static readonly string[] BuildKeys = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "0", "-", "="];
 }

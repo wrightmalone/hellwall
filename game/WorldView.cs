@@ -118,6 +118,12 @@ public partial class WorldView : Node2D
                 if (shot.Splash > 0) DrawArc(to, shot.Splash * T, 0, Mathf.Tau, 20, new Color(1, 0.6f, 0.2f, a), 2);
             }
 
+            foreach (var (burst, age) in state.Bursts)
+            {
+                float t = (float)(age / 0.4);
+                DrawCircle(new Vector2(burst.X, burst.Y) * T, burst.Radius * T * (0.4f + 0.6f * t), new Color(0.6f, 0.9f, 0.2f, 0.5f * (1 - t)));
+            }
+
             foreach (var u in world.Units)
             {
                 var p = new Vector2(Mathf.Lerp(u.PrevX, u.X, state.Alpha), Mathf.Lerp(u.PrevY, u.Y, state.Alpha)) * T;
