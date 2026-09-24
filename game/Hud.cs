@@ -250,18 +250,19 @@ public partial class Hud : CanvasLayer
                     int share = wave.Size / wave.Sides.Length;
                     label.Text = side switch
                     {
-                        Side.North => $"^  {share} from the north · {eta}  ^",
-                        Side.South => $"v  {share} from the south · {eta}  v",
-                        Side.West => $"<  {share}\nwest\n{eta}",
-                        _ => $"{share}  >\neast\n{eta}",
+                        // In the isometric view each map side lies along a screen diagonal.
+                        Side.North => $"{share} from the NORTH  >>\n{eta}",
+                        Side.East => $"{share} from the EAST  >>\n{eta}",
+                        Side.South => $"<<  {share} from the SOUTH\n{eta}",
+                        _ => $"<<  {share} from the WEST\n{eta}",
                     };
-                    label.Size = new Vector2(side is Side.North or Side.South ? 420 : 110, 0);
+                    label.Size = new Vector2(300, 0);
                     label.Position = side switch
                     {
-                        Side.North => new Vector2(screen.X / 2 - 210, 72),
-                        Side.South => new Vector2(screen.X / 2 - 210, screen.Y - 84),
-                        Side.West => new Vector2(8, screen.Y / 2 - 40),
-                        _ => new Vector2(screen.X - 118, screen.Y / 2 - 40),
+                        Side.North => new Vector2(screen.X * 0.72f, 150),
+                        Side.East => new Vector2(screen.X * 0.72f, screen.Y - 150),
+                        Side.South => new Vector2(screen.X * 0.28f - 300, screen.Y - 150),
+                        _ => new Vector2(screen.X * 0.28f - 300, 150),
                     };
                 }
             }

@@ -67,7 +67,7 @@ public partial class Sound : Node2D
         player.Stream = _streams[cue];
         player.VolumeDb = db;
         player.PitchScale = 0.92f + (float)_random.NextDouble() * 0.16f; // a little variety
-        player.GlobalPosition = tile * Palette.TilePx;
+        player.GlobalPosition = Iso.P(tile);
         player.Play();
     }
 

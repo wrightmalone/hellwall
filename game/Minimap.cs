@@ -60,7 +60,7 @@ public partial class Minimap : Control
     void Jump(Vector2 local)
     {
         float scale = World.Terrain.Width / (float)Px;
-        MoveCamera(local * scale * Palette.TilePx);
+        MoveCamera(Iso.P(local * scale));
         AcceptEvent();
     }
 
@@ -96,9 +96,11 @@ public partial class Minimap : Control
 
             // The camera's view.
             var cam = Map.Camera;
-            var view = Map.GetViewportRect().Size / cam.Zoom;
-            var topLeft = (cam.GlobalPosition - view / 2) / Palette.TilePx * s;
-            DrawRect(new Rect2(topLeft, view / Palette.TilePx * s), Colors.White, filled: false, width: 1);
+            // The screen's four corners on the ground: a diamond on the map, since the view is isometric.
+            var half = Map.GetViewportRect().Size / cam.Zoom / 2;
+            var c = cam.GlobalPosition;
+            Vector2[] corners = [c - half, c + new Vector2(half.X, -half.Y), c + half, c + new Vector2(-half.X, half.Y), c - half];
+            DrawPolyline(corners.Select(p => Iso.Tile(p) * s).ToArray(), Colors.White, 1);
             DrawRect(new Rect2(Vector2.Zero, new Vector2(Px, Px)), Colors.Black, filled: false, width: 2);
         }
     }

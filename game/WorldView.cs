@@ -4,112 +4,156 @@ using Hellwall.Sim;
 namespace Hellwall.Game;
 
 /// <summary>
-/// Everything drawn in world space except terrain and the horde: buildings
-/// and their state, holy ground, dormant packs, soldiers, shots, selection,
-/// and the placement ghost. Two layers so soldiers and effects draw above the
-/// horde while buildings draw below it.
+/// Everything in world space except terrain and the horde. Buildings and
+/// soldiers are sprites in the y-sorted layer (so trees and walls overlap
+/// them properly); state that has to read at a glance (build progress,
+/// damage, possession, dark buildings, labels, packs, gates, shots,
+/// selection, ranges and the placement ghost) is drawn on an overlay above.
 /// </summary>
 public partial class WorldView : Node2D
 {
-    const int T = Palette.TilePx;
-
     public World World = null!;
     public ClientState State = null!;
+    /// <summary>The y-sorted layer the terrain's trees are in.</summary>
+    public Node2D Sorted = null!;
 
-    readonly Sprite2D _consecrated = new() { Centered = false, Scale = new Vector2(T, T), ZIndex = -1 };
-    Image? _consecratedImage;
+    readonly Dictionary<int, BuildingSprite> _buildings = new();
+    readonly Dictionary<int, Sprite2D> _units = new();
     readonly Overlay _overlay = new();
+    readonly Ground _ground = new();
 
     public override void _Ready()
     {
-        AddChild(_consecrated);
+        _ground.View = this;
+        _ground.ZIndex = 0;
+        AddChild(_ground); // footprint shadows and gates, on the ground under everything that stands
         _overlay.View = this;
-        _overlay.ZIndex = 2; // above the horde (z 1)
+        _overlay.ZIndex = 3; // above the sorted layer and the horde
         AddChild(_overlay);
-        RepaintConsecration();
-    }
-
-    public void RepaintConsecration()
-    {
-        var t = World.Terrain;
-        _consecratedImage ??= Image.CreateEmpty(t.Width, t.Height, false, Image.Format.Rgba8);
-        for (int y = 0; y < t.Height; y++)
-            for (int x = 0; x < t.Width; x++)
-                _consecratedImage.SetPixel(x, y, World.Colony.Consecrated[t.Index(x, y)] ? Palette.Consecrated : Colors.Transparent);
-        _consecrated.Texture = ImageTexture.CreateFromImage(_consecratedImage);
     }
 
     public void Refresh()
     {
-        QueueRedraw();
+        SyncBuildings();
+        SyncUnits();
+        _ground.QueueRedraw();
         _overlay.QueueRedraw();
     }
 
-    public override void _Draw()
+    void SyncBuildings()
     {
-        var font = ThemeDB.FallbackFont;
+        var seen = new HashSet<int>();
         foreach (var b in World.Buildings)
         {
-            var rect = new Rect2(b.X * T, b.Y * T, b.W * T, b.H * T);
-            var colour = Palette.Building(b.Kind);
-            if (!b.Complete) colour = colour.Darkened(0.55f);
-            DrawRect(rect, colour);
-            DrawRect(rect, State.SelectedBuilding == b.Id ? Palette.Selected : Colors.Black, filled: false, width: State.SelectedBuilding == b.Id ? 2 : 1);
-
-            string label = Palette.Label(b.Kind);
-            if (label.Length > 0 && b.W >= 2)
-                DrawString(font, rect.Position + new Vector2(2, T + 2), label, HorizontalAlignment.Left, rect.Size.X - 2, 9, Colors.Black);
-
-            if (!b.Complete)
+            seen.Add(b.Id);
+            if (!_buildings.TryGetValue(b.Id, out var sprite))
             {
-                float f = b.Def.BuildSeconds <= 0 ? 1 : b.Built / b.Def.BuildSeconds;
-                Bar(rect, f, new Color(0.9f, 0.9f, 0.3f));
+                sprite = new BuildingSprite(b);
+                _buildings[b.Id] = sprite;
+                Sorted.AddChild(sprite);
             }
-            else if (b.Possessed)
-            {
-                DrawRect(rect, new Color(0.45f, 0.1f, 0.55f, 0.7f));
-                DrawString(font, rect.Position + new Vector2(1, rect.Size.Y - 2), $"x{b.Occupants}", HorizontalAlignment.Left, rect.Size.X, 9, new Color(1, 0.8f, 1));
-            }
-            else if (!b.Active)
-            {
-                // Dark: a grey veil and why.
-                DrawRect(rect, new Color(0, 0, 0, 0.45f));
-                DrawString(font, rect.Position + new Vector2(1, rect.Size.Y - 2), b.OnGround ? "crew" : "dark", HorizontalAlignment.Left, rect.Size.X, 8, new Color(1, 0.6f, 0.6f));
-            }
-            if (b.Hp < b.Def.Hp) Bar(rect, b.Hp / b.Def.Hp, new Color(0.9f, 0.2f, 0.2f), top: true);
+            sprite.Modulate = !b.Complete ? new Color(0.55f, 0.55f, 0.6f, 0.75f)
+                : b.Possessed ? new Color(0.75f, 0.4f, 0.95f)
+                : !b.Active ? new Color(0.6f, 0.6f, 0.6f)
+                : Colors.White;
         }
-
-        foreach (var g in World.Gates)
+        foreach (var id in _buildings.Keys.Where(id => !seen.Contains(id)).ToList())
         {
-            if (!g.Alive) continue;
-            var rect = new Rect2(g.X * T, g.Y * T, Hellgate.Size * T, Hellgate.Size * T);
-            DrawRect(rect.Grow(2), new Color(0.2f, 0, 0.05f));
-            DrawRect(rect, new Color(0.75f, 0.1f, 0.25f));
-            DrawRect(rect.Grow(-4), new Color(0.15f, 0, 0.1f));
-            Bar(rect, g.Hp / World.Rules.Hellgates.Hp, new Color(0.9f, 0.2f, 0.4f), top: true);
-        }
-
-        foreach (var p in World.Packs)
-        {
-            if (p.Awake) continue;
-            var centre = new Vector2(p.X + 0.5f, p.Y + 0.5f) * T;
-            float r = Mathf.Sqrt(p.Count / (Mathf.Pi * Balance.SpawnDensity)) * T;
-            var tint = p.Kind == DemonKind.Hound ? new Color(1f, 0.55f, 0.15f) : new Color(0.85f, 0.12f, 0.10f);
-            DrawCircle(centre, r, new Color(tint, 0.18f));
-            DrawArc(centre, r, 0, Mathf.Tau, 32, new Color(tint, 0.8f), 2);
-            DrawString(font, centre + new Vector2(-14, 6), p.Count.ToString(), fontSize: 16, modulate: Colors.White);
+            _buildings[id].QueueFree();
+            _buildings.Remove(id);
         }
     }
 
-    void Bar(Rect2 rect, float fraction, Color colour, bool top = false)
+    void SyncUnits()
     {
-        float y = top ? rect.Position.Y - 3 : rect.End.Y - 3;
-        DrawRect(new Rect2(rect.Position.X, y, rect.Size.X, 2), new Color(0, 0, 0, 0.7f));
-        DrawRect(new Rect2(rect.Position.X, y, rect.Size.X * Mathf.Clamp(fraction, 0, 1), 2), colour);
+        var seen = new HashSet<int>();
+        foreach (var u in World.Units)
+        {
+            seen.Add(u.Id);
+            if (!_units.TryGetValue(u.Id, out var sprite))
+            {
+                var tex = Art.Tex(Art.Unit(u.Kind));
+                sprite = new Sprite2D { Texture = tex, Centered = false, TextureFilter = TextureFilterEnum.Nearest };
+                float s = Art.UnitSize / tex.GetHeight();
+                sprite.Scale = new Vector2(s, s);
+                sprite.Offset = new Vector2(-tex.GetWidth() / 2f, -tex.GetHeight()); // feet on the ground point
+                _units[u.Id] = sprite;
+                Sorted.AddChild(sprite);
+            }
+            sprite.Position = Iso.P(Mathf.Lerp(u.PrevX, u.X, State.Alpha), Mathf.Lerp(u.PrevY, u.Y, State.Alpha));
+        }
+        foreach (var id in _units.Keys.Where(id => !seen.Contains(id)).ToList())
+        {
+            _units[id].QueueFree();
+            _units.Remove(id);
+        }
     }
 
-    /// <summary>Soldiers, shots, selection box, ranges and the placement ghost.</summary>
-    partial class Overlay : Node2D
+    /// <summary>A building: Tower Defense pieces stacked bottom first, standing on its footprint's centre.</summary>
+    sealed partial class BuildingSprite : Node2D
+    {
+        public BuildingSprite(Building b)
+        {
+            // Sorted by the footprint's front corner, so it draws after anything standing behind it.
+            Position = Iso.P(b.X + b.W, b.Y + b.H);
+            var centre = Iso.P(b.X + b.W / 2f, b.Y + b.H / 2f) - Position;
+            if (Art.Ground(b.Kind) is { } ground)
+            {
+                var tex = Art.Tex(ground);
+                for (int y = 0; y < b.H; y++)
+                    for (int x = 0; x < b.W; x++)
+                    {
+                        var at = Iso.P(b.X + x + 0.5f, b.Y + y + 0.5f) - Position;
+                        AddChild(new Sprite2D { Texture = tex, Centered = false, Scale = new Vector2(0.5f, 0.5f), Position = at - new Vector2(33, 16.5f), ZIndex = -1 });
+                    }
+            }
+            float lift = 0;
+            foreach (var path in Art.BuildingPieces(b.Kind))
+            {
+                var tex = Art.Tex(path);
+                float w = tex.GetWidth(), h = tex.GetHeight();
+                // Scaled so the piece spans that share of the footprint's diamond width.
+                float scale = Art.Fill(b.Kind) * (b.W + b.H) * Iso.HalfW / w;
+                // A piece's base diamond is its bottom w/2 pixels; its centre sits w/4 above the bottom edge.
+                var sprite = new Sprite2D { Texture = tex, Centered = false, Scale = new Vector2(scale, scale) };
+                sprite.Position = centre + new Vector2(-w / 2 * scale, -(h - w / 4) * scale - lift);
+                AddChild(sprite);
+                lift += (h - w / 2) * scale; // the next piece stands on this one's top
+            }
+        }
+    }
+
+    /// <summary>On the ground: footprints, Hellgates, sleeping packs.</summary>
+    sealed partial class Ground : Node2D
+    {
+        public WorldView View = null!;
+
+        public override void _Draw()
+        {
+            var world = View.World;
+            var font = ThemeDB.FallbackFont;
+            foreach (var g in world.Gates)
+            {
+                if (!g.Alive) continue;
+                DrawColoredPolygon(Iso.Diamond(g.X, g.Y, Hellgate.Size, Hellgate.Size), new Color(0.25f, 0f, 0.06f, 0.9f));
+                DrawColoredPolygon(Iso.Diamond(g.X + 0.6f, g.Y + 0.6f, Hellgate.Size - 1.2f, Hellgate.Size - 1.2f), new Color(0.85f, 0.1f, 0.3f, 0.9f));
+            }
+            foreach (var p in world.Packs)
+            {
+                if (p.Awake) continue;
+                float r = Mathf.Sqrt(p.Count / (Mathf.Pi * Balance.SpawnDensity));
+                var tint = p.Kind == DemonKind.Hound ? new Color(1f, 0.55f, 0.15f) : new Color(0.85f, 0.12f, 0.10f);
+                var c = new Vector2(p.X + 0.5f, p.Y + 0.5f);
+                Iso.Ellipse(this, c, r, new Color(tint, 0.2f), filled: true);
+                Iso.Ellipse(this, c, r, new Color(tint, 0.85f), 2);
+                var at = Iso.P(c);
+                DrawString(font, at + new Vector2(-10, 6), p.Count.ToString(), fontSize: 16, modulate: Colors.White);
+            }
+        }
+    }
+
+    /// <summary>Above everything: what state things are in, and what the player is doing.</summary>
+    sealed partial class Overlay : Node2D
     {
         public WorldView View = null!;
 
@@ -119,46 +163,56 @@ public partial class WorldView : Node2D
             var state = View.State;
             var font = ThemeDB.FallbackFont;
 
+            foreach (var b in world.Buildings)
+            {
+                var top = Iso.P(b.X, b.Y);
+                var front = Iso.P(b.X + b.W, b.Y + b.H);
+                float width = (b.W + b.H) * Iso.HalfW;
+                var barAt = new Vector2(front.X - width / 4, front.Y + 3);
+                if (state.SelectedBuilding == b.Id) DrawPolyline([.. Iso.Diamond(b.X, b.Y, b.W, b.H), top], Palette.Selected, 2);
+                if (!b.Complete) Bar(barAt, width / 2, b.Def.BuildSeconds <= 0 ? 1 : b.Built / b.Def.BuildSeconds, new Color(0.95f, 0.9f, 0.3f));
+                if (b.Hp < b.Def.Hp) Bar(barAt + new Vector2(0, 4), width / 2, b.Hp / b.Def.Hp, new Color(0.95f, 0.25f, 0.2f));
+                string tag = b.Possessed ? $"POSSESSED x{b.Occupants}" : b.Complete && !b.Active ? (b.OnGround ? "no crew" : "dark") : "";
+                if (tag.Length > 0) Text(font, front + new Vector2(-24, 18), tag, 11, b.Possessed ? new Color(1, 0.7f, 1) : new Color(1, 0.65f, 0.6f));
+            }
+
+            // What's under the cursor, by name: the art is placeholder and not every building is obvious.
+            if (state.Armed == null && world.BuildingById(world.BuildingIdAt(state.HoveredTile.X, state.HoveredTile.Y)) is { } hovered)
+                Text(font, state.MouseWorld + new Vector2(14, -6), hovered.Kind.ToString(), 14, Colors.White);
+
             foreach (var (shot, age) in state.Shots)
             {
                 float a = 1 - (float)(age / ClientState.ShotLife);
-                var from = new Vector2(shot.FromX, shot.FromY) * T;
-                var to = new Vector2(shot.ToX, shot.ToY) * T;
+                var from = Iso.P(shot.FromX, shot.FromY) - new Vector2(0, shot.FromUnit ? 12 : 30);
+                var to = Iso.P(shot.ToX, shot.ToY) - new Vector2(0, 8);
                 DrawLine(from, to, new Color(Palette.Tracer, a), shot.FromUnit ? 1 : 2);
-                if (shot.Splash > 0) DrawArc(to, shot.Splash * T, 0, Mathf.Tau, 20, new Color(1, 0.6f, 0.2f, a), 2);
+                if (shot.Splash > 0) Iso.Ellipse(this, new Vector2(shot.ToX, shot.ToY), shot.Splash, new Color(1, 0.6f, 0.2f, a), 2);
             }
 
-            // A howl: a thin ring spreading to the radius it wakes the wilds within.
             foreach (var (howl, age) in state.Howls)
             {
                 float t = (float)(age / 1.2);
-                DrawArc(new Vector2(howl.X, howl.Y) * T, howl.Radius * 0.5f * T * t, 0, Mathf.Tau, 32, new Color(0.9f, 0.3f, 0.9f, 0.6f * (1 - t)), 1.5f);
+                Iso.Ellipse(this, new Vector2(howl.X, howl.Y), howl.Radius * 0.5f * t, new Color(0.9f, 0.3f, 0.9f, 0.6f * (1 - t)), 1.5f);
             }
 
             foreach (var (burst, age) in state.Bursts)
             {
                 float t = (float)(age / 0.4);
-                DrawCircle(new Vector2(burst.X, burst.Y) * T, burst.Radius * T * (0.4f + 0.6f * t), new Color(0.6f, 0.9f, 0.2f, 0.5f * (1 - t)));
+                Iso.Ellipse(this, new Vector2(burst.X, burst.Y), burst.Radius * (0.4f + 0.6f * t), new Color(0.6f, 0.9f, 0.2f, 0.5f * (1 - t)), filled: true);
             }
 
             foreach (var u in world.Units)
             {
-                var p = new Vector2(Mathf.Lerp(u.PrevX, u.X, state.Alpha), Mathf.Lerp(u.PrevY, u.Y, state.Alpha)) * T;
-                bool selected = state.SelectedUnits.Contains(u.Id);
-                DrawCircle(p, 0.42f * T, Colors.Black);
-                DrawCircle(p, 0.34f * T, Palette.Unit(u.Kind));
-                if (selected) DrawArc(p, 0.6f * T, 0, Mathf.Tau, 16, Palette.Selected, 1.5f);
-                if (u.Hp < u.Def.Hp)
-                {
-                    var r = new Rect2(p.X - 0.5f * T, p.Y - 0.75f * T, T, 2);
-                    DrawRect(r, new Color(0, 0, 0, 0.7f));
-                    DrawRect(new Rect2(r.Position, new Vector2(r.Size.X * u.Hp / u.Def.Hp, 2)), new Color(0.3f, 1, 0.3f));
-                }
+                var feet = new Vector2(Mathf.Lerp(u.PrevX, u.X, state.Alpha), Mathf.Lerp(u.PrevY, u.Y, state.Alpha));
+                var p = Iso.P(feet);
+                if (state.SelectedUnits.Contains(u.Id)) Iso.Ellipse(this, feet, 0.45f, Palette.Selected, 1.5f);
+                if (u.Hp < u.Def.Hp) Bar(p + new Vector2(-10, -Art.UnitSize - 5), 20, u.Hp / u.Def.Hp, new Color(0.3f, 1, 0.3f));
             }
 
-            // Range of the selected tower.
             if (state.SelectedBuilding is { } sb && world.BuildingById(sb) is { Def.Weapon: { } w } tower)
-                DrawArc(new Vector2(tower.CentreX, tower.CentreY) * T, w.Range * T, 0, Mathf.Tau, 48, new Color(1, 1, 1, 0.35f), 1);
+                Iso.Ellipse(this, new Vector2(tower.CentreX, tower.CentreY), w.Range, new Color(1, 1, 1, 0.4f), 1);
+            if (state.SelectedBuilding is { } sb2 && world.BuildingById(sb2) is { Def.SlowRadius: > 0 } bell)
+                Iso.Ellipse(this, new Vector2(bell.CentreX, bell.CentreY), bell.Def.SlowRadius, new Color(0.6f, 0.8f, 1, 0.4f), 1);
 
             if (state.DragStart is { } ds && state.Armed == null)
             {
@@ -173,20 +227,27 @@ public partial class WorldView : Node2D
                 foreach (var (tx, ty) in state.GhostTiles())
                 {
                     string? why = world.CheckPlacement(kind, tx, ty);
-                    DrawRect(new Rect2(tx * T, ty * T, def.W * T, def.H * T), why == null ? Palette.GhostOk : Palette.GhostBad);
+                    DrawColoredPolygon(Iso.Diamond(tx, ty, def.W, def.H), why == null ? Palette.GhostOk : Palette.GhostBad);
                 }
                 var (hx, hy) = state.HoveredTile;
                 string? reason = world.CheckPlacement(kind, hx, hy);
                 string note = reason ?? (def.Produces is { } res ? $"+{world.EstimateGathering(kind, hx, hy):0.00} {res.ToString().ToLowerInvariant()}/s" : "");
-                if (def.Weapon is { } weapon)
-                    DrawArc(new Vector2(hx + def.W / 2f, hy + def.H / 2f) * T, weapon.Range * T, 0, Mathf.Tau, 48, new Color(1, 1, 1, 0.3f), 1);
-                if (note.Length > 0)
-                {
-                    var at = new Vector2((hx + def.W) * T + 4, hy * T + 10);
-                    DrawString(font, at + Vector2.One, note, fontSize: 12, modulate: Colors.Black);
-                    DrawString(font, at, note, fontSize: 12, modulate: reason == null ? Colors.White : new Color(1, 0.6f, 0.6f));
-                }
+                if (def.Weapon is { } weapon) Iso.Ellipse(this, new Vector2(hx + def.W / 2f, hy + def.H / 2f), weapon.Range, new Color(1, 1, 1, 0.35f), 1);
+                if (def.SlowRadius > 0) Iso.Ellipse(this, new Vector2(hx + def.W / 2f, hy + def.H / 2f), def.SlowRadius, new Color(0.6f, 0.8f, 1, 0.35f), 1);
+                if (note.Length > 0) Text(font, Iso.P(hx + def.W, hy) + new Vector2(8, 0), note, 13, reason == null ? Colors.White : new Color(1, 0.6f, 0.6f));
             }
+        }
+
+        void Bar(Vector2 at, float width, float fraction, Color colour)
+        {
+            DrawRect(new Rect2(at, new Vector2(width, 3)), new Color(0, 0, 0, 0.7f));
+            DrawRect(new Rect2(at, new Vector2(width * Mathf.Clamp(fraction, 0, 1), 3)), colour);
+        }
+
+        void Text(Font font, Vector2 at, string text, int size, Color colour)
+        {
+            DrawString(font, at + Vector2.One, text, fontSize: size, modulate: Colors.Black);
+            DrawString(font, at, text, fontSize: size, modulate: colour);
         }
     }
 }

@@ -28,7 +28,6 @@ namespace Hellwall.Game;
 public partial class Main : Node2D
 {
     const int MapSize = 256;
-    const int T = Palette.TilePx;
     const double TickSeconds = 1.0 / Balance.TickHz;
 
     World _world = null!;
@@ -40,7 +39,9 @@ public partial class Main : Node2D
     Sound _sound = null!;
     /// <summary>Set before reloading the scene for a new run: show the menu whatever the command line said.</summary>
     static bool _menuNext;
-    Sprite2D _terrain = null!;
+    TerrainView? _terrainView;
+    /// <summary>Trees, buildings and soldiers, drawn back to front.</summary>
+    Node2D? _sorted;
     readonly ClientState _state = new();
     static readonly string SavePath = ProjectSettings.GlobalizePath("user://quicksave.hwsave");
     /// <summary>Barracks train keys, in the order of its Trains list.</summary>
@@ -102,17 +103,14 @@ public partial class Main : Node2D
         // A survival run takes its packs from rules.json (wilds).
         _world = World.Create(new WorldOptions(seed, MapSize, 0, rules, Survival: !scripted, Difficulty: setup.Difficulty, Endless: setup.Endless && !scripted, Map: setup.Map));
 
-        _terrain = new Sprite2D { Texture = BuildTerrainTexture(_world.Terrain), Centered = false, Scale = new Vector2(T, T), ZIndex = -2 };
-        AddChild(_terrain);
-        _view = new WorldView { World = _world, State = _state };
-        AddChild(_view);
-        _horde = new HordeRenderer(T, MapSize) { ZIndex = 1 };
+        BuildViews();
+        _horde = new HordeRenderer(MapSize) { ZIndex = 1 };
         AddChild(_horde);
 
         _sound = new Sound();
         AddChild(_sound);
 
-        _camera = new Camera2D { Position = new Vector2(MapSize, MapSize) * T / 2f, Zoom = new Vector2(1.6f, 1.6f) };
+        _camera = new Camera2D { Position = Iso.P(MapSize / 2f, MapSize / 2f), Zoom = new Vector2(1.1f, 1.1f) };
         AddChild(_camera);
 
         _minimap = new Minimap { World = _world, Camera = _camera, MoveCamera = p => _camera.Position = p };
@@ -151,6 +149,20 @@ public partial class Main : Node2D
     }
 
     void Send(Command command) => _world.Enqueue(command);
+
+    /// <summary>The world-space views, (re)built for the current world: at the start, and after a quickload.</summary>
+    void BuildViews()
+    {
+        _terrainView?.QueueFree();
+        _sorted?.QueueFree();
+        _view?.QueueFree();
+        _sorted = new Node2D { YSortEnabled = true };
+        _terrainView = new TerrainView { World = _world, Sorted = _sorted, ZIndex = -2 };
+        AddChild(_terrainView);
+        AddChild(_sorted);
+        _view = new WorldView { World = _world, State = _state, Sorted = _sorted };
+        AddChild(_view);
+    }
 
     void NewRun()
     {
@@ -196,7 +208,7 @@ public partial class Main : Node2D
 
         _state.Alpha = _paused ? 1f : (float)Math.Clamp(_accumulator / TickSeconds, 0, 1);
         _state.MouseWorld = GetGlobalMousePosition();
-        _state.HoveredTile = ((int)Mathf.Floor(_state.MouseWorld.X / T), (int)Mathf.Floor(_state.MouseWorld.Y / T));
+        _state.HoveredTile = Iso.TileAt(_state.MouseWorld);
 
         _horde.Sync(_world.Horde, _state.Alpha);
         _view.Refresh();
@@ -221,7 +233,7 @@ public partial class Main : Node2D
                 case CommandRejected r: _state.Say($"Can't: {r.Reason}"); break;
                 case ShotFired shot: _state.Shots.Add((shot, 0)); break;
                 case ConsecrationChanged:
-                    _view.RepaintConsecration();
+                    _terrainView!.RepaintHoly();
                     _minimap.Repaint();
                     break;
                 case BuildingDestroyed b: _state.Say($"{b.Kind} destroyed"); break;
@@ -387,12 +399,11 @@ public partial class Main : Node2D
         {
             var loaded = World.Load(System.IO.File.ReadAllBytes(SavePath), _baseRules);
             _world = loaded;
-            _view.World = loaded;
+            BuildViews();
+            MoveChild(_horde, -1);
             _hud.World = loaded;
             _minimap.World = loaded;
             _minimap.Repaint();
-            _terrain.Texture = BuildTerrainTexture(loaded.Terrain);
-            _view.RepaintConsecration();
             _state.SelectedUnits.Clear();
             _state.SelectedBuilding = null;
             _state.Armed = null;
@@ -418,10 +429,11 @@ public partial class Main : Node2D
         var end = GetGlobalMousePosition();
         if (!additive) _state.SelectedUnits.Clear();
 
+        // Soldiers are picked by their figures on screen (feet to head), not by the ground under the cursor.
+        static Vector2 Body(Unit u) => Iso.P(u.X, u.Y) - new Vector2(0, Art.UnitSize / 2);
         if (start.DistanceTo(end) < 6)
         {
-            var p = end / T;
-            var unit = _world.Units.Where(u => new Vector2(u.X, u.Y).DistanceTo(p) < 0.6f).OrderBy(u => new Vector2(u.X, u.Y).DistanceTo(p)).FirstOrDefault();
+            var unit = _world.Units.Where(u => Body(u).DistanceTo(end) < 16).OrderBy(u => Body(u).DistanceTo(end)).FirstOrDefault();
             if (unit != null)
             {
                 _state.SelectedUnits.Add(unit.Id);
@@ -433,9 +445,9 @@ public partial class Main : Node2D
             return;
         }
 
-        var box = new Rect2(start / T, (end - start) / T).Abs();
+        var box = new Rect2(start, end - start).Abs();
         foreach (var u in _world.Units)
-            if (box.HasPoint(new Vector2(u.X, u.Y))) _state.SelectedUnits.Add(u.Id);
+            if (box.HasPoint(Body(u))) _state.SelectedUnits.Add(u.Id);
         if (_state.SelectedUnits.Count > 0) _state.SelectedBuilding = null;
     }
 
@@ -558,15 +570,6 @@ public partial class Main : Node2D
     {
         float z = Mathf.Clamp(_camera.Zoom.X * factor, 0.2f, 6f);
         _camera.Zoom = new Vector2(z, z);
-    }
-
-    static ImageTexture BuildTerrainTexture(Terrain terrain)
-    {
-        var image = Image.CreateEmpty(terrain.Width, terrain.Height, false, Image.Format.Rgb8);
-        for (int y = 0; y < terrain.Height; y++)
-            for (int x = 0; x < terrain.Width; x++)
-                image.SetPixel(x, y, Palette.Tiles[(int)terrain.Get(x, y)]);
-        return ImageTexture.CreateFromImage(image);
     }
 
     static Dictionary<string, string> ParseUserArgs()

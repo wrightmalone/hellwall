@@ -15,7 +15,7 @@ public partial class HordeRenderer : Node2D
     const int FloatsPerInstance = 8;
 
     readonly Layer[] _layers;
-    readonly float _tilePx;
+    readonly float[] _lift;
 
     sealed class Layer
     {
@@ -24,37 +24,30 @@ public partial class HordeRenderer : Node2D
         public int Capacity;
     }
 
-    public HordeRenderer(float tilePx, int mapTiles)
+    public HordeRenderer(int mapTiles)
     {
-        _tilePx = tilePx;
         var kinds = Enum.GetValues<DemonKind>();
         _layers = new Layer[kinds.Length];
+        _lift = new float[kinds.Length];
         foreach (var kind in kinds)
         {
-            var (size, color) = kind switch
-            {
-                DemonKind.Hound => (0.55f, new Color(1.0f, 0.55f, 0.15f)),
-                DemonKind.Thrall => (0.62f, new Color(0.72f, 0.45f, 0.85f)),
-                DemonKind.Gargoyle => (0.6f, new Color(0.55f, 0.65f, 0.75f)),
-                DemonKind.Bloater => (0.95f, new Color(0.55f, 0.75f, 0.20f)),
-                DemonKind.Brute => (0.9f, new Color(0.45f, 0.05f, 0.05f)),
-                DemonKind.Howler => (0.62f, new Color(0.95f, 0.35f, 0.95f)),
-                DemonKind.Broodmother => (1.05f, new Color(0.35f, 0.10f, 0.25f)),
-                _ => (0.62f, new Color(0.85f, 0.12f, 0.10f)),
-            };
+            var tex = Art.Tex(Art.Demon(kind));
+            float size = Art.DemonSize(kind);
+            // Feet on the ground point: the quad is centred on its origin, so lift it half its height (fliers more).
+            _lift[(int)kind] = size / 2 + (kind == DemonKind.Gargoyle ? 16 : 0);
             var mesh = new MultiMesh
             {
                 TransformFormat = MultiMesh.TransformFormatEnum.Transform2D,
-                Mesh = new QuadMesh { Size = new Vector2(size * tilePx, size * tilePx) },
+                Mesh = new QuadMesh { Size = new Vector2(size, size) },
                 // A fixed box around the whole map. Otherwise Godot culls the
                 // MultiMesh by bounds it computed from an earlier buffer (an
                 // empty one, or a horde far away), and a horde that has since
                 // walked on screen isn't drawn. It also spares recomputing the
                 // bounds of 20k instances every frame.
-                CustomAabb = new Aabb(new Vector3(-tilePx, -tilePx, -1), new Vector3((mapTiles + 2) * tilePx, (mapTiles + 2) * tilePx, 2)),
+                CustomAabb = new Aabb(new Vector3(-(mapTiles + 2) * Iso.HalfW, -64, -1), new Vector3((mapTiles + 2) * Iso.HalfW * 2, (mapTiles + 2) * Iso.HalfH * 2 + 128, 2)),
             };
             _layers[(int)kind] = new Layer { Mesh = mesh };
-            AddChild(new MultiMeshInstance2D { Multimesh = mesh, Modulate = color });
+            AddChild(new MultiMeshInstance2D { Multimesh = mesh, Texture = tex, TextureFilter = TextureFilterEnum.Nearest });
         }
     }
 
@@ -70,12 +63,15 @@ public partial class HordeRenderer : Node2D
         {
             int k = (int)horde.Kind[i];
             var layer = _layers[k];
-            float x = (horde.PrevX[i] + (horde.X[i] - horde.PrevX[i]) * alpha) * _tilePx;
-            float y = (horde.PrevY[i] + (horde.Y[i] - horde.PrevY[i]) * alpha) * _tilePx;
+            float tx = horde.PrevX[i] + (horde.X[i] - horde.PrevX[i]) * alpha;
+            float ty = horde.PrevY[i] + (horde.Y[i] - horde.PrevY[i]) * alpha;
+            float x = (tx - ty) * Iso.HalfW, y = (tx + ty) * Iso.HalfH - _lift[k];
             int o = counts[k]++ * FloatsPerInstance;
             var b = layer.Buffer;
-            b[o] = 1; b[o + 1] = 0; b[o + 2] = 0; b[o + 3] = x;
-            b[o + 4] = 0; b[o + 5] = 1; b[o + 6] = 0; b[o + 7] = y;
+            // Face the way it walks: flip the figure horizontally when it heads screen-left.
+            float face = horde.VX[i] - horde.VY[i] < 0 ? -1 : 1;
+            b[o] = face; b[o + 1] = 0; b[o + 2] = 0; b[o + 3] = x;
+            b[o + 4] = 0; b[o + 5] = -1; b[o + 6] = 0; b[o + 7] = y; // QuadMesh UVs run bottom-up in 2D
         }
 
         for (int k = 0; k < _layers.Length; k++)

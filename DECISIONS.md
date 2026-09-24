@@ -281,6 +281,28 @@ Houses, wood and food, stone, holy ground, the first wave, packs blocking
 ground, iron, and corruptions. The keys in hints come from the build bar's own table.
 Hints turn off once the course is finished, or from the menu.
 
+### 34. Isometric, drawn by the client alone (you asked for isometric with Kenney CC0 art)
+The sim is still a square grid. The client projects each tile to a 2:1
+diamond, 66 x 33 px (Kenney's 132 px blocks at half scale), and every
+coordinate goes through `game/Iso.cs`. Picking, box selection, drag lines,
+the minimap view and the wave warnings all changed. The warnings now sit at the corners, because each map
+side runs along a screen diagonal. Ground is a tile layer; trees, rocks and ore are a
+y-sorted tile layer that sorts with buildings and soldiers. The horde stays one
+MultiMesh per kind, drawn above everything it walks past: 20,000 demons still
+run at 120 fps (the display's cap).
+
+### 35. Which Kenney packs, and what's missing
+- **Tower Defense:** terrain blocks, trees, rocks, crystals for ore, tower
+  pieces for every building.
+- **Isometric Tiles Landscape:** water and farm dirt.
+- **Tiny Dungeon:** 16 px pixel figures for soldiers and demons.
+
+Kenney has no isometric soldiers or monsters, so the figures are front-facing
+and mixed pixel art sits on smooth blocks. Buildings are one tower piece each,
+except the Keep and the Lance Tower (stacked pieces buried the town), with the
+building's name shown on hover. These are the weakest part of the look, and the first thing to
+commission.
+
 ## Things I noticed that you should decide
 
 - **Scale:** addressed by 12-14 and 21. The Convergence is 9,000 plus whatever

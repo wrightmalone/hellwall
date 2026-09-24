@@ -22,6 +22,7 @@ are in [PLAN.md](./PLAN.md).
   - an end-of-run screen with stats and a way back to the menu
   - a coach for a first run
   - synthesized placeholder sound, with a volume slider
+  - an isometric view, with Kenney's CC0 art (see [CREDITS.md](./CREDITS.md))
 
 20,000 demons still run at 20 Hz in about 6 ms per tick.
 
