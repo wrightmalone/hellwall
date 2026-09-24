@@ -215,7 +215,8 @@ p99 9.1 ms, sim 4.8 ms/tick.
 `hellwall-sim run` plays the bot (fortress plan) on the designated map (seed
 11) and seed 3 and requires wins, and the passive bot on five maps and
 requires losses. `hellwall-sim paths` plays all three research plans. Both
-are in verify.sh. On six maps, with Hellgates and the full roster:
+are in verify.sh. On six maps, with Hellgates and the full roster (arrows: after the
+start-fairness rule below):
 
 | Seed | Fortress | Pyre | Legion |
 |---|---|---|---|
@@ -223,13 +224,20 @@ are in verify.sh. On six maps, with Hellgates and the full roster:
 | 11 | won | won | won |
 | 5 | won | won | won (Keep 850) |
 | 7 | lost day 62 | lost day 20 | lost day 63 |
-| 19 | lost day 41 | lost day 41 | lost day 17 |
-| 42 | lost day 29 | lost day 30 | lost day 30 |
+| 19 | lost day 41 → 47 | lost day 41 → 62 | lost day 17 → **won** |
+| 42 | lost day 29 → 28 | lost day 30 → 26 | lost day 30 → 26 |
 
-Every path wins exactly the same three maps. The paths are even with each
-other; the map is what decides. Before Hellgates, seed 7 was won by all
-three paths, so gates shift which maps are fair rather than breaking
-balance outright. Making every generated map fair is phase 5's job.
+Every path won exactly the same three maps. The paths are even with each
+other; the map is what decided. `hellwall-sim maps` shows why: the two maps
+that collapsed early (19, 42) had no rock at all within 25 tiles of the Keep,
+so no stone, so no towers, research or Shrines.
+
+The map generator now guarantees a patch of rock and of forest 16 to 20
+tiles out, on the landward side, when the start lacks them. After that
+change: seed 19 is won by the legion path and the others reach days 47 and
+62; seed 42 (barren all round) lasts to day 26-28 instead of 11-12 but is
+still lost. Seed 7 is lost at the Convergence by every path. Making every
+generated map fair is phase 5's job; this is its first rule.
 
 The bot is a lower bound, not a target: it packs towers into blocks, builds
 over its own farmland, doesn't plan chokepoints, and only the legion plan

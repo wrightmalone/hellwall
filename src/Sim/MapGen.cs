@@ -41,7 +41,58 @@ public static class MapGen
             }
         }
 
+        EnsureNearby(terrain, seed, Tile.Rock, minimum: 60, blobRadius: 4, angleSalt: 0x51ED27u);
+        EnsureNearby(terrain, seed, Tile.Forest, minimum: 120, blobRadius: 6, angleSalt: 0xA3B195u);
         return terrain;
+    }
+
+    /// <summary>
+    /// Start fairness: every colony needs stone and wood within reach. If the
+    /// ground within 22 tiles of the centre holds fewer than `minimum` tiles of
+    /// the kind, stamp a round patch of it 16 to 20 tiles out, at an angle
+    /// drawn from the seed. Maps with no rock anywhere near the Keep were
+    /// unwinnable by every doctrine the bot knows (`hellwall-sim maps`).
+    /// </summary>
+    static void EnsureNearby(Terrain terrain, uint seed, Tile kind, int minimum, int blobRadius, uint angleSalt)
+    {
+        int c = terrain.Width / 2;
+        const int reach = 22;
+        int have = 0;
+        for (int y = c - reach; y <= c + reach; y++)
+            for (int x = c - reach; x <= c + reach; x++)
+                if ((x - c) * (x - c) + (y - c) * (y - c) <= reach * reach && terrain.Get(x, y) == kind) have++;
+        if (have >= minimum) return;
+
+        // Of sixteen directions (starting from one drawn from the seed), take
+        // the one whose way out from the Keep crosses the most land: a patch
+        // across water is no use, since holy ground can't reach it.
+        double start = Lattice(seed ^ angleSalt, 1, 2) * 2 * Math.PI;
+        double distance = 16 + Lattice(seed ^ angleSalt, 3, 4) * 4;
+        double bestAngle = start;
+        int bestLand = -1;
+        for (int k = 0; k < 16; k++)
+        {
+            double a = start + k * Math.PI / 8;
+            int land = 0;
+            for (double d = Balance.KeepClearRadius; d <= distance + blobRadius; d += 0.5)
+            {
+                int x = c + (int)Math.Round(Math.Cos(a) * d), y = c + (int)Math.Round(Math.Sin(a) * d);
+                if (terrain.InBounds(x, y) && terrain.Get(x, y) != Tile.Water) land++;
+            }
+            if (land > bestLand) { bestLand = land; bestAngle = a; }
+        }
+        int bx = c + (int)Math.Round(Math.Cos(bestAngle) * distance);
+        int by = c + (int)Math.Round(Math.Sin(bestAngle) * distance);
+        int clear = Balance.KeepClearRadius;
+        for (int y = by - blobRadius; y <= by + blobRadius; y++)
+            for (int x = bx - blobRadius; x <= bx + blobRadius; x++)
+            {
+                if (!terrain.InBounds(x, y)) continue;
+                if ((x - bx) * (x - bx) + (y - by) * (y - by) > blobRadius * blobRadius) continue;
+                if ((x - c) * (x - c) + (y - c) * (y - c) <= clear * clear) continue; // the Keep's clearing stays grass
+                if (terrain.Get(x, y) != Tile.Grass) continue; // only grass turns: never another patch, never a lake
+                terrain.Set(x, y, kind);
+            }
     }
 
     static double Fbm(uint seed, int x, int y) =>

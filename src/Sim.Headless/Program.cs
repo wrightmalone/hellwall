@@ -12,6 +12,7 @@ if (args.Length > 0 && args[0] == "bench") return Bench.Run(ParseArgs(args[1..])
 if (args.Length > 0 && args[0] == "town") return TownProbe.Run(ParseArgs(args[1..]));
 if (args.Length > 0 && args[0] == "run") return RunProbe.Run(ParseArgs(args[1..]));
 if (args.Length > 0 && args[0] == "paths") return RunProbe.Paths(ParseArgs(args[1..]));
+if (args.Length > 0 && args[0] == "maps") return MapReport.Run(ParseArgs(args[1..]));
 
 var args_ = ParseArgs(args);
 if (args_.ContainsKey("help"))
