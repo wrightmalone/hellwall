@@ -13,6 +13,37 @@ public sealed class Pack
     public int Count;
     public DemonKind Kind;
     public bool Awake;
+    /// <summary>A straggler group: a handful, anywhere on the map, keeping only a small ring clear.</summary>
+    public bool Stray;
+
+    /// <summary>The radius of the loose crowd the pack stands in.</summary>
+    public float Spread(float density) => MathF.Sqrt(Count / (MathF.PI * density)) + 0.5f;
+
+    /// <summary>
+    /// Where sleeper i stands, as a tile position: a fixed point in the pack's
+    /// disc from a hash of (pack, i), so the client draws them exactly where
+    /// the sim wakes them, without either drawing from the World's Rng.
+    /// Also a facing, 0..7.
+    /// </summary>
+    public (float X, float Y, int Facing) Spot(int i, float density)
+    {
+        uint h = Hash((uint)Id, (uint)i);
+        float angle = (h & 0xFFFF) / 65536f * MathF.Tau;
+        float r = Spread(density) * MathF.Sqrt((h >> 16 & 0xFFF) / 4096f);
+        return (X + 0.5f + MathF.Cos(angle) * r, Y + 0.5f + MathF.Sin(angle) * r, (int)(h >> 28) & 7);
+    }
+
+    static uint Hash(uint a, uint b)
+    {
+        unchecked
+        {
+            uint h = a * 0x9E3779B1u ^ (b + 0x7F4A7C15u) * 0x85EBCA77u;
+            h ^= h >> 15; h *= 0x2C1B3C6Du;
+            h ^= h >> 12; h *= 0x297A2D39u;
+            h ^= h >> 15;
+            return h;
+        }
+    }
 }
 
 /// <summary>

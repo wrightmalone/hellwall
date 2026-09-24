@@ -58,6 +58,7 @@ public partial class Main : Node2D
     WorldView _view = null!;
     Hud _hud = null!;
     Minimap _minimap = null!;
+    FogView? _fogView;
     double _accumulator;
     bool _paused;
     string? _screenshotPath;
@@ -148,6 +149,8 @@ public partial class Main : Node2D
 
         _withCoach = !scripted && !options.ContainsKey("autoplay") && !options.ContainsKey("selftest") && Coach.Enabled;
         BuildHud();
+        // A mission opens with its narrator restating the briefing.
+        if (_world.Scenario is { } opening && !scripted) _hud.Voice.Say(Campaign.Default.Speaker(""), opening.Briefing);
 
         if (_benchSeconds > 0) StartBenchAssault();
         if (_demoSeconds > 0) StartDemo();
@@ -296,6 +299,9 @@ public partial class Main : Node2D
         _terrainView?.QueueFree();
         _sorted?.QueueFree();
         _view?.QueueFree();
+        _fogView?.QueueFree();
+        _fogView = new FogView { World = _world, ZIndex = 2 }; // over the world and the horde, under the overlay (3)
+        AddChild(_fogView);
         _sorted = new Node2D { YSortEnabled = true };
         _terrainView = new TerrainView { World = _world, Sorted = _sorted, ZIndex = -2 };
         AddChild(_terrainView);
@@ -371,7 +377,7 @@ public partial class Main : Node2D
         _state.MouseWorld = GetGlobalMousePosition();
         _state.HoveredTile = Iso.TileAt(_state.MouseWorld);
 
-        _horde.Sync(_world.Horde, _state.Alpha, delta);
+        _horde.Sync(_world, _state.Alpha, delta);
         _view.Refresh();
         PanCamera(delta);
         UpdateMouseMode();
@@ -419,6 +425,9 @@ public partial class Main : Node2D
                     if (_world.Scenario is { } done) CampaignProgress.Record(Campaign.Default.Id, done.Id, o.Outcome == Outcome.Won, _world.Day);
                     break;
                 case CorruptionTook c: _state.Say($"The horde is corrupted: {c.Name}"); break;
+                case ScenarioMessage m when m.Text.Length > 0:
+                    _hud.Voice.Say(Campaign.Default.Speaker(m.Speaker), m.Text);
+                    break;
                 case TreeFelled f:
                     _terrainView!.PaintCell(f.X, f.Y);
                     _minimapStale = true;

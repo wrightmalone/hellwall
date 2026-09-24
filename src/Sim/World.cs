@@ -79,6 +79,7 @@ public sealed partial class World
     public Horde Horde { get; } = new();
     public FlowField Flow { get; }
     public NoiseGrid Noise { get; }
+    public Vision Vision { get; }
 
     /// <summary>Ordered by id, ascending.</summary>
     public IReadOnlyList<Pack> Packs => _packs;
@@ -194,6 +195,8 @@ public sealed partial class World
         Colony = new Colony(Terrain.Width * Terrain.Height, Rules.StartingResources);
         Flow = new FlowField(Terrain.Width, Terrain.Height);
         Noise = new NoiseGrid(Terrain.Width, Terrain.Height);
+        Vision = new Vision(Terrain.Width, Terrain.Height, Rules.Fog.Enabled && (options.Survival || options.Scenario != null));
+        Vision.Reveal(Terrain.Width / 2f, Terrain.Height / 2f, Rules.Fog.StartReveal);
         Spatial = new SpatialHash(Terrain.Width, Terrain.Height);
         if (options.Survival) Survival = new Survival(Rules.Survival, options.Endless);
         Scenario = options.Scenario;
@@ -223,6 +226,7 @@ public sealed partial class World
                 for (int i = 0; i < start.Count; i++) world.TrySpawnUnit(start.Kind, keep);
         }
         world.ScatterPacks(options.DormantPacks > 0 ? options.DormantPacks : options.Survival ? world.Rules.Wilds.Packs : 0);
+        if (options.Survival && options.DormantPacks == 0) world.ScatterStrays(world.Rules.Wilds.Strays);
         return world;
     }
 
@@ -256,6 +260,7 @@ public sealed partial class World
         Combat.DemonsAttackBuildings(this);
         UnitSystem.Step(this, dt);
         WoodsSystem.Step(this, dt);
+        Vision.Step(this);
         Abilities.Heal(this, dt);
         Combat.TowersFire(this, dt);
         StepPossessed(dt);
@@ -369,6 +374,7 @@ public sealed partial class World
         var def = Def(kind);
         if (def.RequiresTech is { } needs && !Tech.Has(needs)) return $"needs {Rules.Tech(needs).Name}";
         if (x < 0 || y < 0 || x + def.W > Terrain.Width || y + def.H > Terrain.Height) return "out of bounds";
+        if (!Vision.IsExplored(x, y) || !Vision.IsExplored(x + def.W - 1, y + def.H - 1)) return "unexplored ground";
         for (int ty = y; ty < y + def.H; ty++)
         {
             for (int tx = x; tx < x + def.W; tx++)
@@ -907,6 +913,24 @@ public sealed partial class World
     /// Scatter demons over a disc around a tile centre, sized so the crowd
     /// starts at about SpawnDensity per tile. Returns how many found ground.
     /// </summary>
+    /// <summary>A pack wakes where it slept: each demon at its spot (or a nearby walkable one, if a building has gone up there).</summary>
+    int SpawnPack(Pack pack)
+    {
+        float density = Rules.Wilds.SleepDensity, hp = Def(pack.Kind).Hp;
+        int spawned = 0;
+        for (int i = 0; i < pack.Count; i++)
+            for (int k = 0; k < 4; k++)
+            {
+                var (x, y, _) = pack.Spot(i + k * pack.Count, density);
+                if (x < 0 || y < 0 || !IsWalkable((int)x, (int)y)) continue;
+                Horde.Add(pack.Kind, x, y, hp);
+                spawned++;
+                break;
+            }
+        if (spawned > 0) _spatialStale = true;
+        return spawned;
+    }
+
     int SpawnCluster(DemonKind kind, int cx, int cy, int count)
     {
         float radius = MathF.Sqrt(count / (MathF.PI * Balance.SpawnDensity)) + 1;
@@ -1002,6 +1026,27 @@ public sealed partial class World
     /// closer together than Spacing, each on ground that can reach the
     /// colony, and sized by distance from the Keep: small near home, large far out.
     /// </summary>
+    /// <summary>Stragglers: a few demons at a time, all over the map past MinDistance, a little apart from everything else asleep.</summary>
+    void ScatterStrays(int count)
+    {
+        var wilds = Rules.Wilds;
+        int centre = Terrain.Width / 2;
+        int minD2 = wilds.MinDistance * wilds.MinDistance;
+        for (int n = 0, attempts = 0; n < count && attempts < count * 50; attempts++)
+        {
+            int x = Rng.NextInt(Terrain.Width);
+            int y = Rng.NextInt(Terrain.Height);
+            int dx = x - centre, dy = y - centre;
+            if (dx * dx + dy * dy < minD2) continue;
+            if (!IsWalkable(x, y) || Flow.DistAt(x, y) == FlowField.Unreachable) continue;
+            if (_packs.Any(p => (p.X - x) * (p.X - x) + (p.Y - y) * (p.Y - y) < 25)) continue;
+            if (GuardsHomeIron(x, y)) continue;
+            var kind = Rng.Chance(wilds.HoundChance) ? DemonKind.Hound : DemonKind.Imp;
+            _packs.Add(new Pack { Id = _nextId++, X = x, Y = y, Count = 1 + Rng.NextInt(wilds.StrayMax), Kind = kind, Stray = true });
+            n++;
+        }
+    }
+
     void ScatterPacks(int count)
     {
         var wilds = Rules.Wilds;
@@ -1048,11 +1093,11 @@ public sealed partial class World
 
     void WakePacks()
     {
-        float wake2 = Rules.Wilds.WakeRadius * Rules.Wilds.WakeRadius;
         bool checkUnits = Tick % 10 == 0 && _units.Count > 0; // soldiers walk slowly; twice a second is plenty
         foreach (var pack in _packs)
         {
             if (pack.Awake) continue;
+            float wake = Rules.Wilds.WakeRadius + pack.Spread(Rules.Wilds.SleepDensity), wake2 = wake * wake;
             bool woken = Noise.LevelAtTile(pack.X, pack.Y) >= Balance.WakeThreshold;
             if (!woken && checkUnits)
                 foreach (var u in _units)
@@ -1062,7 +1107,7 @@ public sealed partial class World
                 }
             if (!woken) continue;
             pack.Awake = true;
-            int spawned = SpawnCluster(pack.Kind, pack.X, pack.Y, pack.Count);
+            int spawned = SpawnPack(pack);
             _events.Add(new PackWoke(Tick, pack.Id, pack.X, pack.Y, spawned));
         }
     }
@@ -1070,10 +1115,11 @@ public sealed partial class World
     /// <summary>The nearest sleeping pack within ClearRadius of a footprint, if any: its ground can't be built on yet.</summary>
     public Pack? PackNear(int x, int y, int w, int h)
     {
-        float r = Rules.Wilds.ClearRadius;
+        float density = Rules.Wilds.SleepDensity;
         foreach (var p in _packs)
         {
             if (p.Awake) continue;
+            float r = p.Stray ? p.Spread(density) + 2 : MathF.Max(Rules.Wilds.ClearRadius, p.Spread(density) + 2);
             float ex = MathF.Max(MathF.Max(x - (p.X + 0.5f), 0), p.X + 0.5f - (x + w));
             float ey = MathF.Max(MathF.Max(y - (p.Y + 0.5f), 0), p.Y + 0.5f - (y + h));
             if (ex * ex + ey * ey <= r * r) return p;

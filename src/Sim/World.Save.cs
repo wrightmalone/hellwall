@@ -130,6 +130,7 @@ public sealed partial class World
                 w.Write(p.Count);
                 w.Write((byte)p.Kind);
                 w.Write(p.Awake);
+                w.Write(p.Stray);
             }
 
             foreach (var level in Noise.Level) w.Write(level);
@@ -166,6 +167,7 @@ public sealed partial class World
             foreach (bool done in GoalsDone) w.Write(done);
             foreach (bool fired in TriggersFired) w.Write(fired);
             SaveWoods(w);
+            foreach (bool seen in Vision.Explored) w.Write(seen);
         }
         return stream.ToArray();
     }
@@ -317,7 +319,7 @@ public sealed partial class World
 
         int packs = r.ReadInt32();
         for (int n = 0; n < packs; n++)
-            world._packs.Add(new Pack { Id = r.ReadInt32(), X = r.ReadInt32(), Y = r.ReadInt32(), Count = r.ReadInt32(), Kind = (DemonKind)r.ReadByte(), Awake = r.ReadBoolean() });
+            world._packs.Add(new Pack { Id = r.ReadInt32(), X = r.ReadInt32(), Y = r.ReadInt32(), Count = r.ReadInt32(), Kind = (DemonKind)r.ReadByte(), Awake = r.ReadBoolean(), Stray = r.ReadBoolean() });
 
         var noise = world.Noise.Level;
         for (int i = 0; i < noise.Length; i++) noise[i] = r.ReadSingle();
@@ -358,6 +360,9 @@ public sealed partial class World
         for (int i = 0; i < world.GoalsDone.Length; i++) world.GoalsDone[i] = r.ReadBoolean();
         for (int i = 0; i < world.TriggersFired.Length; i++) world.TriggersFired[i] = r.ReadBoolean();
         world.LoadWoods(r);
+        var explored = new bool[world.Vision.Explored.Length];
+        for (int i = 0; i < explored.Length; i++) explored[i] = r.ReadBoolean();
+        world.Vision.Load(explored);
 
         // Derived state: rebuilt, not stored.
         world._flowDirty = true;

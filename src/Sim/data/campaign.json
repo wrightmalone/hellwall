@@ -1,6 +1,28 @@
 {
   "id": "march",
   "name": "The Hellwall March",
+  "speakers": [
+    {
+      "id": "steward",
+      "name": "Steward Maren",
+      "portrait": "Keep"
+    },
+    {
+      "id": "scout",
+      "name": "Scout Ilse",
+      "portrait": "Marksman"
+    },
+    {
+      "id": "abbess",
+      "name": "Abbess Oda",
+      "portrait": "Templar"
+    },
+    {
+      "id": "captain",
+      "name": "Captain Brand",
+      "portrait": "Militia"
+    }
+  ],
   "scenarios": [
     {
       "id": "first-night",
@@ -32,11 +54,13 @@
       "triggers": [
         {
           "day": 2,
-          "say": "Dusk on the new colony. Fifteen days until the dark closes in."
+          "say": "Dusk on the new colony. Fifteen days until the dark closes in.",
+          "speaker": "steward"
         },
         {
           "day": 5,
-          "say": "Scouts report movement at the edge of the plain. The first wave lands at the end of tomorrow."
+          "say": "Scouts report movement at the edge of the plain. The first wave lands at the end of tomorrow.",
+          "speaker": "scout"
         },
         {
           "day": 10,
@@ -44,7 +68,8 @@
           "give": {
             "wood": 150,
             "stone": 80
-          }
+          },
+          "speaker": "steward"
         }
       ]
     },
@@ -85,7 +110,8 @@
           "say": "The town has grown large enough to be noticed. Hounds are coming from the east.",
           "spawnKind": "Hound",
           "spawnCount": 40,
-          "spawnSide": "East"
+          "spawnSide": "East",
+          "speaker": "scout"
         }
       ]
     },
@@ -114,11 +140,13 @@
       "triggers": [
         {
           "day": 8,
-          "say": "The gates feed every wave. Each one you close makes the waves smaller, and closing both wins the day."
+          "say": "The gates feed every wave. Each one you close makes the waves smaller, and closing both wins the day.",
+          "speaker": "captain"
         },
         {
           "day": 24,
-          "say": "Six days until the Convergence. The gates must fall before it does."
+          "say": "Six days until the Convergence. The gates must fall before it does.",
+          "speaker": "captain"
         }
       ]
     },
@@ -148,7 +176,8 @@
           "say": "Winged things are crossing the water from the south.",
           "spawnKind": "Gargoyle",
           "spawnCount": 30,
-          "spawnSide": "South"
+          "spawnSide": "South",
+          "speaker": "scout"
         }
       ]
     },
@@ -182,7 +211,8 @@
           "give": {
             "gold": 800,
             "iron": 200
-          }
+          },
+          "speaker": "steward"
         }
       ]
     },
@@ -211,7 +241,8 @@
           "say": "Howling in the trees to the west.",
           "spawnKind": "Howler",
           "spawnCount": 20,
-          "spawnSide": "West"
+          "spawnSide": "West",
+          "speaker": "scout"
         }
       ]
     },
@@ -237,11 +268,13 @@
       "triggers": [
         {
           "day": 30,
-          "say": "Halfway. The waves only grow from here."
+          "say": "Halfway. The waves only grow from here.",
+          "speaker": "steward"
         },
         {
           "day": 55,
-          "say": "Five days to the Convergence. Everything you have."
+          "say": "Five days to the Convergence. Everything you have.",
+          "speaker": "steward"
         }
       ]
     },
@@ -270,7 +303,8 @@
       "triggers": [
         {
           "afterGoal": 0,
-          "say": "The last gate falls. Now hold the wall."
+          "say": "The last gate falls. Now hold the wall.",
+          "speaker": "captain"
         }
       ]
     }

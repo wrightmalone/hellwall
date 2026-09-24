@@ -140,7 +140,13 @@ public static class RunProbe
         args_woods = args.ContainsKey("woods");
         if (args.TryGetValue("tree-hp", out var hp)) args_treeHp = float.Parse(hp, CultureInfo.InvariantCulture);
         if (args.TryGetValue("tree-cost", out var cost)) args_treeCost = int.Parse(cost, CultureInfo.InvariantCulture);
+        if (args.TryGetValue("strays", out var strays)) args_strays = int.Parse(strays, CultureInfo.InvariantCulture);
+        args_noFog = args.ContainsKey("no-fog");
     }
+
+    /// <summary>--strays=N and --no-fog: A/B the wilds and fog of war.</summary>
+    static int args_strays = -1;
+    static bool args_noFog;
 
     /// <summary>--tree-hp and --tree-cost: tune the woods from the command line.</summary>
     static float args_treeHp = -1;
@@ -157,6 +163,8 @@ public static class RunProbe
         if (args_woods) rules = rules.WithWoods(w => w with { Blocks = true });
         if (args_treeHp > 0) rules = rules.WithWoods(w => w with { TreeHp = args_treeHp });
         if (args_treeCost > 0) rules = rules.WithWoods(w => w with { TreeCost = args_treeCost });
+        if (args_strays >= 0) rules = rules.WithWilds(w => w with { Strays = args_strays });
+        if (args_noFog) rules = rules.WithFog(f => f with { Enabled = false });
         var world = scenario != null
             ? World.Create(scenario.Options(rules ?? Rules.Default))
             : World.Create(new WorldOptions(seed, 256, 0, rules ?? Rules.Default, Survival: true, Difficulty: args_difficulty, Endless: endless, Map: args_map));

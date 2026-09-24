@@ -14,7 +14,7 @@ public class SurvivalTests
     /// <summary>A quick survival run without Hellgates or the wilds (they have their own tests).</summary>
     static World Run(Rules rules, bool survival = true) =>
         World.Create(new WorldOptions(7, Balance.DefaultMapSize, 0,
-            rules.WithStartingResources(Plenty).WithHellgates(g => g with { Count = 0 }).WithWilds(w => w with { Packs = 0 }), survival));
+            rules.WithStartingResources(Plenty).WithHellgates(g => g with { Count = 0 }).WithWilds(w => w with { Packs = 0, Strays = 0 }), survival));
 
     [Fact]
     public void TheScheduleGrowsAndEndsInAConvergenceFromEverySide()

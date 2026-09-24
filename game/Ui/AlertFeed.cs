@@ -121,8 +121,9 @@ public partial class AlertFeed : VBoxContainer
             case CorruptionAnnounced c:
                 Push("corrupt", $"Corruption coming: {c.Name}. {c.Description}", Violet, null, 14);
                 break;
-            case ScenarioMessage m when m.Text.Length > 0:
-                Push("script-" + m.Index, m.Text, Gold, m.Spawned > 0 ? EdgeOf(m.Side) : null, 16);
+            case ScenarioMessage m when m.Spawned > 0:
+                // The line itself is spoken in the talking head; the feed keeps a card to jump to where they're coming from.
+                Push("script-" + m.Index, $"{m.Spawned} demons from the {m.Side.ToString().ToLowerInvariant()}", Gold, EdgeOf(m.Side), 16);
                 break;
             case UnitDied { Rose: true } u:
                 Push("rose", "A soldier has risen as a Thrall", Red, new Vector2(u.X, u.Y));

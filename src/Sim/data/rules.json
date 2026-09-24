@@ -38,7 +38,12 @@
 
   "wilds": {
     "packs": 160, "minDistance": 20, "spacing": 8, "nearCount": 12, "farCount": 90,
-    "houndChance": 0.15, "clearRadius": 10, "wakeRadius": 7
+    "houndChance": 0.15, "clearRadius": 10, "wakeRadius": 7,
+    "sleepDensity": 0.45, "strays": 250, "strayMax": 4
+  },
+
+  "fog": {
+    "enabled": true, "startReveal": 22, "unitSight": 9, "buildingSight": 5, "towerExtra": 3, "woodsmanSight": 4
   },
 
   "woods": {

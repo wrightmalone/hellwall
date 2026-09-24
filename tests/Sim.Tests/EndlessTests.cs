@@ -5,7 +5,7 @@ public class EndlessTests
     /// <summary>One-second days, a wave a day, a corruption every other day: a whole endless run in seconds. Harmless, so the Keep stands.</summary>
     static Rules Quick(Rules? rules = null) => (rules ?? Rules.Default).Harmless()
         .WithHellgates(h => h with { Count = 0 })
-        .WithWilds(w => w with { Packs = 0 })
+        .WithWilds(w => w with { Packs = 0, Strays = 0 })
         .WithSurvival(s => s with
         {
             DaySeconds = 1, Days = 5, FirstWaveDay = 1, WaveEveryDays = 1, TelegraphSeconds = 0.5f, FirstWaveSize = 10,

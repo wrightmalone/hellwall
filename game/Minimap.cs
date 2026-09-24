@@ -57,12 +57,24 @@ public partial class Minimap : Control
             {
                 var c = Palette.Tiles[(int)t.Get(x, y)];
                 if (World.Colony.Consecrated[t.Index(x, y)]) c = c.Lerp(new Color(1, 0.9f, 0.5f), 0.25f);
+                if (!World.Vision.IsExplored(x, y)) c = new Color(0.03f, 0.03f, 0.05f);
                 image.SetPixel(x, y, c);
             }
         _terrain = ImageTexture.CreateFromImage(image);
     }
 
-    public override void _Process(double delta) => QueueRedraw();
+    int _revision;
+
+    public override void _Process(double delta)
+    {
+        // New ground explored: repaint (the terrain layer is cheap at this size, but not every frame).
+        if (World.Vision.Revision != _revision && (_revision == 0 || Engine.GetProcessFrames() % 15 == 0))
+        {
+            _revision = World.Vision.Revision;
+            Repaint();
+        }
+        QueueRedraw();
+    }
 
     public override void _GuiInput(InputEvent @event)
     {
@@ -97,15 +109,15 @@ public partial class Minimap : Control
             DrawColoredPolygon([M(b.X, b.Y), M(b.X + b.W, b.Y), M(b.X + b.W, b.Y + b.H), M(b.X, b.Y + b.H)], colour);
         }
         foreach (var p in world.Packs)
-            if (!p.Awake) DrawCircle(M(p.X + 0.5f, p.Y + 0.5f), 1.6f, new Color(0.9f, 0.4f, 0.2f, 0.8f));
+            if (!p.Awake && world.Vision.IsExplored(p.X, p.Y)) DrawCircle(M(p.X + 0.5f, p.Y + 0.5f), p.Stray ? 0.8f : 1.6f, new Color(0.9f, 0.4f, 0.2f, 0.8f));
 
         // The horde, subsampled: a dot per demon up to a few thousand, which is plenty to read.
         var h = world.Horde;
         int step = Math.Max(1, h.Count / 3000);
         for (int i = 0; i < h.Count; i += step)
-            DrawRect(new Rect2(M(h.X[i], h.Y[i]), Vector2.One), new Color(1, 0.15f, 0.1f));
+            if (world.Vision.IsVisible(h.X[i], h.Y[i])) DrawRect(new Rect2(M(h.X[i], h.Y[i]), Vector2.One), new Color(1, 0.15f, 0.1f));
         foreach (var g in world.Gates)
-            if (g.Alive) DrawColoredPolygon([M(g.X, g.Y), M(g.X + 3, g.Y), M(g.X + 3, g.Y + 3), M(g.X, g.Y + 3)], new Color(1, 0.1f, 0.5f));
+            if (g.Alive && world.Vision.IsExplored(g.X + 1, g.Y + 1)) DrawColoredPolygon([M(g.X, g.Y), M(g.X + 3, g.Y), M(g.X + 3, g.Y + 3), M(g.X, g.Y + 3)], new Color(1, 0.1f, 0.5f));
         foreach (var u in world.Units)
             DrawRect(new Rect2(M(u.X, u.Y) - Vector2.One, new Vector2(2, 2)), new Color(0.5f, 0.9f, 1));
 

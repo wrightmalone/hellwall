@@ -176,17 +176,18 @@ public partial class WorldView : Node2D
                 Iso.Ellipse(this, feet, 0.34f, new Color(0.35f, 0.7f, 1f, 0.95f), 2);
             }
 
-            foreach (var p in world.Packs)
-            {
-                if (p.Awake) continue;
-                float r = Mathf.Sqrt(p.Count / (Mathf.Pi * Balance.SpawnDensity));
-                var tint = p.Kind == DemonKind.Hound ? new Color(1f, 0.55f, 0.15f) : new Color(0.85f, 0.12f, 0.10f);
-                var c = new Vector2(p.X + 0.5f, p.Y + 0.5f);
-                Iso.Ellipse(this, c, r, new Color(tint, 0.2f), filled: true);
-                Iso.Ellipse(this, c, r, new Color(tint, 0.85f), 2);
-                var at = Iso.P(c);
-                DrawString(font, at + new Vector2(-10, 6), p.Count.ToString(), fontSize: 16, modulate: Colors.White);
-            }
+            // Sleeping packs are drawn as the demons themselves (HordeRenderer). With a building
+            // armed, the ground each keeps clear is ringed, so it's plain why you can't build there.
+            if (View.State.Armed != null)
+                foreach (var p in world.Packs)
+                {
+                    if (p.Awake || !world.Vision.IsExplored(p.X, p.Y)) continue;
+                    float density = world.Rules.Wilds.SleepDensity;
+                    float r = p.Stray ? p.Spread(density) + 2 : Mathf.Max(world.Rules.Wilds.ClearRadius, p.Spread(density) + 2);
+                    var c = new Vector2(p.X + 0.5f, p.Y + 0.5f);
+                    Iso.Ellipse(this, c, r, new Color(0.85f, 0.12f, 0.10f, 0.08f), filled: true);
+                    Iso.Ellipse(this, c, r, new Color(0.85f, 0.12f, 0.10f, 0.5f), 1.5f);
+                }
         }
     }
 

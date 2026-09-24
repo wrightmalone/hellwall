@@ -45,6 +45,16 @@ public sealed record TriggerDef
     public int SpawnCount { get; init; }
     public Side SpawnSide { get; init; } = Side.North;
     public Cost? Give { get; init; }
+    /// <summary>Who says it: a speaker's id from the campaign (empty: the campaign's first speaker).</summary>
+    public string Speaker { get; init; } = "";
+}
+
+/// <summary>A voice of the campaign: a name and a portrait (a unit or building kind's picture, until there's art for faces).</summary>
+public sealed record SpeakerDef
+{
+    public string Id { get; init; } = "";
+    public string Name { get; init; } = "";
+    public string Portrait { get; init; } = "Keep";
 }
 
 /// <summary>
@@ -123,8 +133,12 @@ public sealed class Campaign
     public string Id { get; init; } = "";
     public string Name { get; init; } = "";
     public ScenarioDef[] Scenarios { get; init; } = [];
+    public SpeakerDef[] Speakers { get; init; } = [];
 
     public ScenarioDef? Find(string id) => Scenarios.FirstOrDefault(s => s.Id == id);
+
+    /// <summary>A speaker by id; the first speaker (the narrator) for an empty or unknown id.</summary>
+    public SpeakerDef Speaker(string id) => Speakers.FirstOrDefault(s => s.Id == id) ?? Speakers.FirstOrDefault() ?? new SpeakerDef { Name = "" };
 
     /// <summary>A mission is open once everything it requires has been won.</summary>
     public bool IsOpen(ScenarioDef s, ICollection<string> won) => s.Requires.All(won.Contains);
@@ -150,6 +164,8 @@ public sealed class Campaign
             if (!ids.Add(s.Id)) throw new FormatException($"campaign: two missions called '{s.Id}'");
             foreach (var r in s.Requires)
                 if (c.Scenarios.All(o => o.Id != r)) throw new FormatException($"campaign: '{s.Id}' requires unknown '{r}'");
+            foreach (var t in s.Triggers)
+                if (t.Speaker.Length > 0 && c.Speakers.All(p => p.Id != t.Speaker)) throw new FormatException($"campaign: '{s.Id}' has a line for unknown speaker '{t.Speaker}'");
         }
         return c;
     }
@@ -206,7 +222,7 @@ internal static class ObjectiveSystem
             fired[i] = true;
             int spawned = t.SpawnCount > 0 ? world.SpawnAtEdge(t.SpawnSide, t.SpawnKind, t.SpawnCount) : 0;
             if (t.Give != null) world.Colony.Refund(t.Give, 1);
-            world.Emit(new ScenarioMessage(world.Tick, i, t.Say, spawned, t.SpawnSide));
+            world.Emit(new ScenarioMessage(world.Tick, i, t.Say, spawned, t.SpawnSide, t.Speaker));
         }
     }
 

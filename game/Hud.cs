@@ -36,6 +36,8 @@ public partial class Hud : CanvasLayer
     public Action Retry = null!;
 
     public AlertFeed Alerts = null!;
+    /// <summary>The campaign's speakers.</summary>
+    public TalkingHead Voice = null!;
     ResourceBar _bar = null!;
     ThreatCard _threat = null!;
     CommandCard _card = null!;
@@ -65,6 +67,8 @@ public partial class Hud : CanvasLayer
         AddChild(_threat);
         Alerts = new AlertFeed { World = World, JumpTo = JumpTo };
         AddChild(Alerts);
+        Voice = new TalkingHead();
+        AddChild(Voice);
         AddChild(Minimap);
         _card = new CommandCard { World = World, State = State, Send = Send, Order = Order };
         AddChild(_card);

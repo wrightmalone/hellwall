@@ -69,6 +69,23 @@ public sealed class Cost
 /// Woodcutter's crew go out as woodsmen and fell it tree by tree, so the
 /// forest that shelters a colony shrinks as it's harvested.
 /// </summary>
+/// <summary>
+/// Fog of war: the map is dark until something of the colony's has seen it.
+/// Only what's in sight now shows the horde; sleeping demons, once seen, stay
+/// drawn where they stand. Building needs explored ground.
+/// </summary>
+public sealed record FogRules
+{
+    public bool Enabled { get; init; } = true;
+    /// <summary>Tiles around the Keep seen from the start.</summary>
+    public int StartReveal { get; init; } = 22;
+    public float UnitSight { get; init; } = 9;
+    /// <summary>A building sees this far past its footprint's half-width; a tower sees its range plus TowerExtra.</summary>
+    public float BuildingSight { get; init; } = 5;
+    public float TowerExtra { get; init; } = 3;
+    public float WoodsmanSight { get; init; } = 4;
+}
+
 public sealed record WoodsRules
 {
     public bool Blocks { get; init; }
@@ -98,8 +115,13 @@ public sealed record WildsRules
     public double HoundChance { get; init; } = 0.15;
     /// <summary>No building within this many tiles of a sleeping pack.</summary>
     public float ClearRadius { get; init; } = 10;
-    /// <summary>A soldier this close wakes a sleeping pack.</summary>
+    /// <summary>A soldier this close to a sleeping pack's edge wakes it.</summary>
     public float WakeRadius { get; init; } = 7;
+    /// <summary>How many sleeping demons stand per tile of a pack's disc: low, so a pack is a loose crowd, not a ball.</summary>
+    public float SleepDensity { get; init; } = 0.45f;
+    /// <summary>Stragglers: little groups of 1..StrayMax scattered over the whole map beyond MinDistance.</summary>
+    public int Strays { get; init; } = 0;
+    public int StrayMax { get; init; } = 4;
 }
 
 public enum Difficulty : byte
@@ -288,6 +310,7 @@ public sealed class Rules
     public WildsRules Wilds { get; private init; } = new();
 
     public WoodsRules Woods { get; private init; } = new();
+    public FogRules Fog { get; private init; } = new();
 
     public TechDef[] Techs { get; private init; } = [];
 
@@ -317,7 +340,7 @@ public sealed class Rules
         {
             StartingResources = scaled.StartingResources, ColonistGoldPerSecond = scaled.ColonistGoldPerSecond, ColonistFoodPerSecond = scaled.ColonistFoodPerSecond,
             RefundFraction = scaled.RefundFraction, PossessionSpawnSeconds = scaled.PossessionSpawnSeconds, StartingUnits = scaled.StartingUnits,
-            Survival = scaled.Survival, Hellgates = scaled.Hellgates, Wilds = scaled.Wilds, Woods = scaled.Woods, Techs = scaled.Techs, Difficulties = Difficulties, Corruptions = Corruptions,
+            Survival = scaled.Survival, Hellgates = scaled.Hellgates, Wilds = scaled.Wilds, Woods = scaled.Woods, Fog = scaled.Fog, Techs = scaled.Techs, Difficulties = Difficulties, Corruptions = Corruptions,
             Buildings = scaled.Buildings, Units = scaled.Units, Demons = scaled.Demons,
             Difficulty = level,
             Hash = scaled.Hash ^ ((ulong)level + 1) * 0x100000001B3UL,
@@ -354,6 +377,7 @@ public sealed class Rules
         public HellgateRules Hellgates { get; init; } = new();
         public WildsRules Wilds { get; init; } = new();
         public WoodsRules Woods { get; init; } = new();
+        public FogRules Fog { get; init; } = new();
         public TechDef[] Techs { get; init; } = [];
         public Dictionary<Difficulty, DifficultyDef> Difficulties { get; init; } = new();
         public CorruptionDef[] Corruptions { get; init; } = [];
@@ -385,6 +409,7 @@ public sealed class Rules
             Hellgates = file.Hellgates,
             Wilds = file.Wilds,
             Woods = file.Woods,
+            Fog = file.Fog,
             Techs = file.Techs,
             Difficulties = file.Difficulties,
             Corruptions = file.Corruptions,
@@ -422,7 +447,7 @@ public sealed class Rules
         {
             StartingResources = copy.StartingResources, ColonistGoldPerSecond = copy.ColonistGoldPerSecond, ColonistFoodPerSecond = copy.ColonistFoodPerSecond,
             RefundFraction = copy.RefundFraction, PossessionSpawnSeconds = copy.PossessionSpawnSeconds, StartingUnits = copy.StartingUnits,
-            Survival = copy.Survival, Hellgates = copy.Hellgates, Wilds = copy.Wilds, Woods = copy.Woods, Techs = copy.Techs, Difficulties = Difficulties, Corruptions = pool,
+            Survival = copy.Survival, Hellgates = copy.Hellgates, Wilds = copy.Wilds, Woods = copy.Woods, Fog = copy.Fog, Techs = copy.Techs, Difficulties = Difficulties, Corruptions = pool,
             Buildings = copy.Buildings, Units = copy.Units, Demons = copy.Demons, Difficulty = Difficulty,
             Hash = copy.Hash ^ Fnv(JsonSerializer.Serialize(pool, Options)),
         };
@@ -452,6 +477,12 @@ public sealed class Rules
 
     /// <summary>A copy with different wilds (sleeping packs).</summary>
     /// <summary>A copy with different woods (forest that blocks, and woodsmen).</summary>
+    public Rules WithFog(Func<FogRules, FogRules> change)
+    {
+        var fog = change(Fog);
+        return Copy(r => r.Fog = fog);
+    }
+
     public Rules WithWoods(Func<WoodsRules, WoodsRules> change)
     {
         var woods = change(Woods);
@@ -481,11 +512,12 @@ public sealed class Rules
         public HellgateRules Hellgates = new();
         public WildsRules Wilds = new();
         public WoodsRules Woods = new();
+        public FogRules Fog = new();
     }
 
     Rules Copy(Action<Builder> change)
     {
-        var b = new Builder { StartingResources = StartingResources, Buildings = Buildings, Units = Units, Demons = Demons, Survival = Survival, Hellgates = Hellgates, Wilds = Wilds, Woods = Woods };
+        var b = new Builder { StartingResources = StartingResources, Buildings = Buildings, Units = Units, Demons = Demons, Survival = Survival, Hellgates = Hellgates, Wilds = Wilds, Woods = Woods, Fog = Fog };
         change(b);
         return new Rules
         {
@@ -499,6 +531,7 @@ public sealed class Rules
             Hellgates = b.Hellgates,
             Wilds = b.Wilds,
             Woods = b.Woods,
+            Fog = b.Fog,
             Techs = Techs,
             Difficulties = Difficulties,
             Corruptions = Corruptions,
@@ -512,7 +545,7 @@ public sealed class Rules
     }
 
     static string Describe(Builder b) =>
-        JsonSerializer.Serialize(new { b.StartingResources, b.Buildings, b.Units, b.Demons, b.Survival, b.Hellgates, b.Wilds, b.Woods }, Options);
+        JsonSerializer.Serialize(new { b.StartingResources, b.Buildings, b.Units, b.Demons, b.Survival, b.Hellgates, b.Wilds, b.Woods, b.Fog }, Options);
 
     static T[] Dense<TKey, T>(Dictionary<TKey, T> map, string what) where TKey : struct, Enum
     {

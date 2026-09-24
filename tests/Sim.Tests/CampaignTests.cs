@@ -12,7 +12,7 @@ public class CampaignTests
     }
 
     /// <summary>A mission on the quick rules: one-second days, harmless demons, lots to spend.</summary>
-    static Rules Quick() => Rules.Default.Harmless().WithStartingResources(Plenty).WithWilds(w => w with { Packs = 0 })
+    static Rules Quick() => Rules.Default.Harmless().WithStartingResources(Plenty).WithWilds(w => w with { Packs = 0, Strays = 0 })
         .WithSurvival(s => s with { DaySeconds = 1, FirstWaveDay = 1, WaveEveryDays = 1, TelegraphSeconds = 0.5f, FirstWaveSize = 5 });
 
     [Fact]

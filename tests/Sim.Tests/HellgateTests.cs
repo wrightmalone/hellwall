@@ -59,7 +59,7 @@ public class HellgateTests
     public void SoldiersSentAtAGateCloseIt()
     {
         // No bands, no packs on the way, and a soft gate: this is about soldiers attacking it.
-        var rules = Rules.Default.WithHellgates(g => g with { Hp = 300, SpawnSeconds = 1e6f }).WithWilds(w => w with { Packs = 0 });
+        var rules = Rules.Default.WithHellgates(g => g with { Hp = 300, SpawnSeconds = 1e6f }).WithWilds(w => w with { Packs = 0, Strays = 0 });
         var world = Survival(rules);
         var gate = world.Gates[0];
         Built(world, BuildingKind.House, 132, 126);
