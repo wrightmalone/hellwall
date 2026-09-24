@@ -181,7 +181,7 @@ playtest wants research to cost space.
 
 ## Things I noticed that you should decide
 
-- **Scale:** addressed by 12-14. The Convergence is 10,000 plus whatever
+- **Scale:** addressed by 12-14 and 21. The Convergence is 9,000 plus whatever
   packs are still awake, well inside the 20k budget.
 - **Map fairness** is the next real problem, and it decides more than build
   choice does. Phase 5 should start with fairness rules and `hellwall-sim
