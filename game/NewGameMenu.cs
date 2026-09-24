@@ -53,6 +53,10 @@ public partial class NewGameMenu : CanvasLayer
         title.AddThemeColorOverride("font_color", new Color(0.95f, 0.55f, 0.25f));
         box.AddChild(title);
 
+        var version = new Label { Text = $"playtest build {ProjectSettings.GetSetting("application/config/version", "dev")}", HorizontalAlignment = HorizontalAlignment.Center };
+        version.AddThemeColorOverride("font_color", new Color(0.6f, 0.55f, 0.5f));
+        box.AddChild(version);
+
         _mode = Options(box, "Mode", ["Survival: 60 days, then the Convergence", "Endless: until the Keep falls"], Initial.Endless ? 1 : 0);
         _difficulty = Options(box, "Difficulty", Enum.GetNames<Difficulty>(), (int)Initial.Difficulty);
         _map = Options(box, "Map", Enum.GetNames<MapKind>(), (int)Initial.Map);

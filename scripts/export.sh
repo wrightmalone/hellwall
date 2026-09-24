@@ -25,7 +25,10 @@ F1 shows the controls. F5 saves, F9 loads.
 $1
 
 Please send back: how far you got, what killed you, and anything that
-confused you. Thank you for playing.
+confused you. If it crashes, send the newest file in its log folder:
+  macOS:   ~/Library/Application Support/Godot/app_userdata/Hellwall/logs/
+  Windows: %APPDATA%\\Godot\\app_userdata\\Hellwall\\logs\\
+Thank you for playing.
 NOTE
 }
 
