@@ -137,4 +137,17 @@ public class UnitTests
         Assert.Contains(templar, world.Units);
         Assert.True(templar.Hp < templar.Def.Hp, "the imps should have landed some blows");
     }
+
+    [Fact]
+    public void SoldiersTrainedInARowDoNotStack()
+    {
+        var world = Rich();
+        var barracks = Built(world, BuildingKind.Barracks, 59, 66);
+        for (int i = 0; i < 4; i++) world.Enqueue(new TrainUnit(barracks.Id, UnitKind.Militia));
+        RunSeconds(world, 4 * world.Rules[UnitKind.Militia].TrainSeconds + 2);
+        Assert.Equal(4, world.Units.Count);
+        foreach (var a in world.Units)
+            foreach (var b in world.Units)
+                if (a != b) Assert.True(MathF.Abs(a.X - b.X) + MathF.Abs(a.Y - b.Y) > 0.4f, $"units {a.Id} and {b.Id} are standing on each other");
+    }
 }

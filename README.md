@@ -4,15 +4,17 @@ A colony-survival RTS: a walled human settlement against demon hordes, where
 one breach can cascade into losing everything. The plan, pillars and roadmap
 are in [PLAN.md](./PLAN.md).
 
-**Status: phase 1 (horde spike) complete.** 20,000 demons at 20 Hz in
-5.4 ms/tick headless and 4.8 ms/tick in-engine, rendered at 120 fps.
+**Status: phase 2 (colony core) complete.** A walled town holds a wave that
+an undefended one doesn't, on five seeds; 20,000 demons still run at 20 Hz in
+~6 ms/tick with combat on.
 
 ## Layout
 
 ```
 src/Sim/            pure C# simulation: no Godot reference, fixed 20 Hz, seeded
+src/Sim/data/       rules.json: every building, unit and demon number
 src/Sim.Headless/   console harness: replay a script, CSV samples, final hash
-tests/Sim.Tests/    xUnit: RNG golden values, placement, horde, determinism, portability
+tests/Sim.Tests/    xUnit: RNG, placement, horde, colony, combat, units, determinism, portability
 game/               Godot 4.7 .NET project: renders sim state, input -> commands
 scripts/verify.sh   the full check
 ```
@@ -49,6 +51,14 @@ dotnet run -c Release --project src/Sim.Headless -- bench
 Add `--trace` for a timeline, `--histogram` for where the horde ended up, and
 `--snapshot=out/x.ppm` for a density image (`sips -s format png` converts it).
 
+The phase 2 gate, headless (also run by verify.sh):
+
+```bash
+dotnet run -c Release --project src/Sim.Headless -- town
+```
+
+Add `--trace` to see the defended town's towers, crews and Keep every 5 s.
+
 The in-engine gate (opens a window):
 
 ```bash
@@ -67,7 +77,37 @@ Run the game:
 /Applications/Godot_mono.app/Contents/MacOS/Godot --path game
 ```
 
-Or open `game/project.godot` in the Godot editor and press F5.
+Or open `game/project.godot` in the Godot editor and press F5. To watch the
+probe's town hold a wave at 4x speed:
+
+```bash
+/Applications/Godot_mono.app/Contents/MacOS/Godot --path game -- --demo
+```
+
+## The colony
+
+Every content number lives in [src/Sim/data/rules.json](src/Sim/data/rules.json).
+
+- **Buildings** cost gold, wood and stone, and take time to build.
+- **Colonists** live in Houses (and the Keep), pay a tithe, eat, and crew
+  buildings first come first served. A building short of its crew is idle.
+- **Gatherers** (Woodcutter, Quarry, Hunter) collect from matching tiles
+  around them; overlapping gatherers split the tiles.
+- **Holy ground is the power grid.** The Keep, Shrines and Wardstones
+  consecrate a radius; everything must be built on connected ground, and
+  losing a Wardstone darkens what lies beyond it. Crewed Shrines supply
+  sanctity; a shortfall slows everything that draws it.
+- **Demons** head for every building except walls and gates, which they path
+  through at 30x cost: they walk round a short wall and break a long one.
+- **Towers** (Watchtower, Bombard) and **soldiers** (Militia, Marksman,
+  Templar) shoot the nearest demon. Shots are loud. Demons within four tiles
+  of a soldier go for it.
+- **Losing the Keep loses the game.**
+
+Measured by `town`: on seeds 3, 7, 11, 19 and 42, a ring of walls with four
+Watchtowers, two Bombards and a Barracks' garrison holds a 200-demon wave
+from two sides, and the Keep with two Houses falls to the same wave in about
+85 s. The breaking point is 250 to 400 depending on the map.
 
 ## The horde
 
@@ -93,15 +133,20 @@ Measured by `bench` (seed 7, 256 map, 20k demons, 150 s):
 In-engine (`render-bench.sh`, M1 Pro, 120 Hz display): 119.6 fps average, frame
 p99 9.1 ms, sim 4.8 ms/tick.
 
-## Controls (phase 1)
+## Controls
 
 | Input | Action |
 |---|---|
-| `1` / `2` | arm House / Wall (drag to lay wall lines) |
-| left click | place (green ghost = valid) |
-| right click | demolish (not the Keep) |
-| `N` | noise at the cursor: wakes nearby packs |
-| `H` / `J` | debug: 2k / 20k demon assault from the map edges |
-| space | pause / resume; placement still works while paused |
-| WASD, arrows | pan |
-| wheel | zoom |
+| `1`–`9`, `0`, `-` | arm a building (or click the build bar); click to place |
+| drag with Wall or Gate armed | lay a straight line |
+| right-click or Esc | disarm, then deselect |
+| click | select a soldier or building |
+| drag | box-select soldiers (shift adds) |
+| right-click with soldiers | attack-move; shift+right-click for a plain move |
+| `H` / `Shift+S` | hold / stop |
+| `Ctrl+1`–`9` / `Alt+1`–`9` | set / recall a control group |
+| `Q` `E` `R` with a Barracks selected | train Militia / Marksman / Templar |
+| `X` or Delete | demolish the selected building (half refund once built) |
+| space | pause; building and orders still work while paused |
+| WASD, arrows / wheel | pan / zoom |
+| `N` / `K` / `J` | debug: noise at the cursor / a 200-demon wave / 20k assault |

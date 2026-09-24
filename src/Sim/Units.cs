@@ -175,7 +175,14 @@ internal static class UnitSystem
                 if (o == u) continue;
                 float dx = u.X - o.X, dy = u.Y - o.Y;
                 float d2 = dx * dx + dy * dy;
-                if (d2 >= 0.36f || d2 < 1e-8f) continue;
+                if (d2 >= 0.36f) continue;
+                if (d2 < 1e-8f)
+                {
+                    // Exactly stacked: split deterministically by id, or they'd never come apart.
+                    dx = u.Id < o.Id ? 0.01f : -0.01f;
+                    dy = 0;
+                    d2 = 1e-4f;
+                }
                 float d = MathF.Sqrt(d2);
                 vx += dx / d * (0.6f - d) * 4f;
                 vy += dy / d * (0.6f - d) * 4f;

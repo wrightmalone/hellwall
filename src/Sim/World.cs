@@ -261,7 +261,9 @@ public sealed class World
     /// <summary>Put a trained unit on the nearest open tile beside its Barracks. False if there's no room yet.</summary>
     internal bool TrySpawnUnit(UnitKind kind, Building barracks)
     {
-        var tile = FindTileNear((int)barracks.CentreX, barracks.Y + barracks.H, 6, IsHumanWalkable);
+        // A free tile beside the Barracks, not one another soldier is already standing on.
+        var tile = FindTileNear((int)barracks.CentreX, barracks.Y + barracks.H, 6,
+            (x, y) => IsHumanWalkable(x, y) && !_units.Any(u => (int)u.X == x && (int)u.Y == y));
         if (tile == null) return false;
         var def = Rules[kind];
         var u = new Unit

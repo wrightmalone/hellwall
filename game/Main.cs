@@ -6,62 +6,45 @@ using Side = Hellwall.Sim.Side;
 namespace Hellwall.Game;
 
 /// <summary>
-/// The client: draws the sim's terrain, buildings, packs and horde, steps the
-/// sim at a fixed 20 Hz from a frame-time accumulator, and turns input into
-/// Commands. It never mutates sim state directly.
+/// The client: steps the sim at a fixed 20 Hz from a frame-time accumulator,
+/// routes input into Commands and ClientState, and wires the views together.
+/// It never mutates sim state directly.
 ///
 /// Command-line (after `--`):
 ///   --seed=N             world seed
-///   --screenshot=path    save a frame after warm-up (or at the end of --bench), then quit
+///   --screenshot=path    save a frame after warm-up (or at the end of --bench/--demo), then quit
 ///   --bench[=seconds]    spawn the 20k edge assault, run for N seconds (default 20),
 ///                        print frame and sim timings, then quit
+///   --demo[=seconds]     build a walled town, send a wave at it, screenshot mid-fight
 /// </summary>
 public partial class Main : Node2D
 {
     const int MapSize = 256;
     const int DormantPacks = 40;
-    const int TilePx = 8;
+    const int T = Palette.TilePx;
     const double TickSeconds = 1.0 / Balance.TickHz;
 
-    static readonly Color[] TileColors =
-    [
-        new(0.36f, 0.52f, 0.28f), // Grass
-        new(0.16f, 0.32f, 0.18f), // Forest
-        new(0.46f, 0.44f, 0.42f), // Rock
-        new(0.18f, 0.30f, 0.50f), // Water
-    ];
-
-    static readonly Dictionary<BuildingKind, Color> BuildingColors = new()
-    {
-        [BuildingKind.Keep] = new(0.85f, 0.72f, 0.35f),
-        [BuildingKind.House] = new(0.70f, 0.52f, 0.38f),
-        [BuildingKind.Wall] = new(0.62f, 0.62f, 0.66f),
-    };
-
     World _world = null!;
+    readonly ClientState _state = new();
     Camera2D _camera = null!;
     HordeRenderer _horde = null!;
-    Label _hud = null!;
+    WorldView _view = null!;
+    Hud _hud = null!;
     double _accumulator;
     bool _paused;
-    BuildingKind _armed = BuildingKind.Wall;
-    string _lastRejection = "";
     string? _screenshotPath;
     int _frames;
-
-    // Rings drawn where noise was made, so waking is legible: (x, y, radius, age in seconds).
-    readonly List<(float X, float Y, float Radius, double Age)> _noiseRings = new();
 
     // Timing, measured by the host: the sim has no clock.
     readonly Stopwatch _simClock = new();
     double _simMsWindow;
     int _ticksWindow;
     double _simMsShown;
-    string _hashShown = "";
 
-    // --bench
+    // --bench / --demo
     double _benchSeconds;
-    double _benchElapsed;
+    double _demoSeconds;
+    double _elapsed;
     readonly List<double> _frameMs = new();
     readonly List<double> _tickMs = new();
 
@@ -71,37 +54,33 @@ public partial class Main : Node2D
         uint seed = options.TryGetValue("seed", out var s) ? uint.Parse(s) : 7u;
         _screenshotPath = options.GetValueOrDefault("screenshot");
         if (options.TryGetValue("bench", out var b)) _benchSeconds = b == "true" ? 20 : double.Parse(b);
+        if (options.TryGetValue("demo", out var d)) _demoSeconds = d == "true" ? 130 : double.Parse(d);
 
-        _world = World.Create(new WorldOptions(seed, MapSize, _benchSeconds > 0 ? 0 : DormantPacks));
+        var rules = Rules.Default;
+        if (_benchSeconds > 0) rules = rules.WithBuilding(BuildingKind.Keep, k => k with { Hp = 1e9f });
+        if (_demoSeconds > 0) rules = rules.WithStartingResources(new Cost { Gold = 5000, Wood = 3000, Stone = 2000, Food = 1000 });
+        _world = World.Create(new WorldOptions(seed, MapSize, _benchSeconds > 0 || _demoSeconds > 0 ? 0 : DormantPacks, rules));
 
-        AddChild(new Sprite2D
-        {
-            Texture = BuildTerrainTexture(_world.Terrain),
-            Centered = false,
-            Scale = new Vector2(TilePx, TilePx),
-            ZIndex = -1, // under this node's own _Draw (buildings)
-        });
-
-        _horde = new HordeRenderer(TilePx);
+        AddChild(new Sprite2D { Texture = BuildTerrainTexture(_world.Terrain), Centered = false, Scale = new Vector2(T, T), ZIndex = -2 });
+        _view = new WorldView { World = _world, State = _state };
+        AddChild(_view);
+        _horde = new HordeRenderer(T, MapSize) { ZIndex = 1 };
         AddChild(_horde);
 
-        _camera = new Camera2D { Position = new Vector2(MapSize, MapSize) * TilePx / 2f, Zoom = new Vector2(0.45f, 0.45f) };
+        _camera = new Camera2D { Position = new Vector2(MapSize, MapSize) * T / 2f, Zoom = new Vector2(1.6f, 1.6f) };
         AddChild(_camera);
 
-        var hudLayer = new CanvasLayer();
-        _hud = new Label { Position = new Vector2(12, 8) };
-        _hud.AddThemeFontSizeOverride("font_size", 16);
-        _hud.AddThemeColorOverride("font_outline_color", Colors.Black);
-        _hud.AddThemeConstantOverride("outline_size", 4);
-        hudLayer.AddChild(_hud);
-        AddChild(hudLayer);
+        _hud = new Hud { World = _world, State = _state, Send = Send };
+        AddChild(_hud);
 
         if (_benchSeconds > 0) StartBenchAssault();
-        _hashShown = StateHash.Hex(_world);
+        if (_demoSeconds > 0) StartDemo();
 
         // scripts/verify.sh looks for this line: the engine banner alone doesn't prove the C# scene ran.
         GD.Print($"hellwall: world ready seed={_world.Seed} hash={StateHash.Hex(_world)}");
     }
+
+    void Send(Command command) => _world.Enqueue(command);
 
     public override void _Process(double delta)
     {
@@ -112,8 +91,7 @@ public partial class Main : Node2D
         else
         {
             _accumulator += delta;
-            // Cap catch-up so a stall doesn't spiral into a burst of ticks.
-            int budget = 5;
+            int budget = 5; // cap catch-up so a stall doesn't spiral into a burst of ticks
             while (_accumulator >= TickSeconds && budget-- > 0)
             {
                 _simClock.Restart();
@@ -127,113 +105,210 @@ public partial class Main : Node2D
             if (budget < 0) _accumulator = 0;
         }
 
+        HandleEvents();
+        Age(_state.Shots, delta, ClientState.ShotLife);
+        Age(_state.Log, delta, 8);
+
+        _state.Alpha = _paused ? 1f : (float)Math.Clamp(_accumulator / TickSeconds, 0, 1);
+        _state.MouseWorld = GetGlobalMousePosition();
+        _state.HoveredTile = ((int)Mathf.Floor(_state.MouseWorld.X / T), (int)Mathf.Floor(_state.MouseWorld.Y / T));
+
+        _horde.Sync(_world.Horde, _state.Alpha);
+        _view.Refresh();
+        PanCamera(delta);
+        UpdateDebugLine();
+
+        if (_benchSeconds > 0) StepBench(delta);
+        else if (_demoSeconds > 0) StepDemo(delta);
+        else if (_screenshotPath != null && ++_frames == 30) SaveScreenshotAndQuit();
+    }
+
+    void HandleEvents()
+    {
         foreach (var e in _world.DrainEvents())
         {
             switch (e)
             {
-                case CommandRejected r: _lastRejection = $"{r.Reason} (tick {r.Tick})"; break;
-                case NoiseMade n: _noiseRings.Add((n.X, n.Y, n.Radius, 0)); break;
+                case CommandRejected r: _state.Say($"Can't: {r.Reason}"); break;
+                case ShotFired shot: _state.Shots.Add((shot, 0)); break;
+                case ConsecrationChanged: _view.RepaintConsecration(); break;
+                case BuildingDestroyed b: _state.Say($"{b.Kind} destroyed"); break;
+                case UnitTrained u: _state.Say($"{u.Kind} ready"); break;
+                case UnitDied u: _state.Say($"{u.Kind} killed"); break;
+                case PackWoke p: _state.Say($"A pack of {p.Count} stirs"); break;
+                case OutcomeChanged o: _state.Say(o.Outcome == Outcome.Lost ? "The Keep has fallen." : "Victory."); break;
             }
         }
-        for (int i = _noiseRings.Count - 1; i >= 0; i--)
-        {
-            var ring = _noiseRings[i];
-            ring.Age += delta;
-            if (ring.Age > 1.2) _noiseRings.RemoveAt(i);
-            else _noiseRings[i] = ring;
-        }
-
-        float alpha = _paused ? 1f : (float)Math.Clamp(_accumulator / TickSeconds, 0, 1);
-        _horde.Sync(_world.Horde, alpha);
-
-        PanCamera(delta);
-        UpdateHud();
-        QueueRedraw();
-
-        if (_benchSeconds > 0) StepBench(delta);
-        else if (_screenshotPath != null && ++_frames == 30) SaveScreenshotAndQuit();
     }
 
-    public override void _Draw()
+    static void Age<TItem>(List<(TItem, double)> items, double delta, double life)
     {
-        foreach (var b in _world.Buildings)
+        for (int i = items.Count - 1; i >= 0; i--)
         {
-            var rect = new Rect2(b.X * TilePx, b.Y * TilePx, b.W * TilePx, b.H * TilePx);
-            DrawRect(rect, BuildingColors[b.Kind]);
-            DrawRect(rect, Colors.Black, filled: false, width: 1);
+            var (item, age) = items[i];
+            if (age + delta > life) items.RemoveAt(i);
+            else items[i] = (item, age + delta);
         }
-
-        // Dormant packs: a dark ring sized by head count, labelled with it.
-        var font = ThemeDB.FallbackFont;
-        foreach (var p in _world.Packs)
-        {
-            if (p.Awake) continue;
-            var centre = new Vector2(p.X + 0.5f, p.Y + 0.5f) * TilePx;
-            float r = Mathf.Sqrt(p.Count / (Mathf.Pi * Balance.SpawnDensity)) * TilePx;
-            var tint = p.Kind == DemonKind.Hound ? new Color(1f, 0.55f, 0.15f) : new Color(0.85f, 0.12f, 0.10f);
-            DrawCircle(centre, r, new Color(tint, 0.18f));
-            DrawArc(centre, r, 0, Mathf.Tau, 32, new Color(tint, 0.8f), 2);
-            DrawString(font, centre + new Vector2(-14, 6), p.Count.ToString(), fontSize: 16, modulate: Colors.White);
-        }
-
-        foreach (var (x, y, radius, age) in _noiseRings)
-        {
-            float t = (float)(age / 1.2);
-            DrawArc(new Vector2(x, y) * TilePx, radius * TilePx * (0.3f + 0.7f * t), 0, Mathf.Tau, 64, new Color(1, 1, 1, 0.7f * (1 - t)), 3);
-        }
-
-        // Placement ghost: green where it would succeed, red otherwise.
-        var (tx, ty) = HoveredTile();
-        var def = _world.Rules[_armed];
-        int w = def.W, h = def.H;
-        bool ok = _world.CheckPlacement(_armed, tx, ty) == null;
-        DrawRect(new Rect2(tx * TilePx, ty * TilePx, w * TilePx, h * TilePx), ok ? new Color(0.3f, 1f, 0.3f, 0.45f) : new Color(1f, 0.25f, 0.25f, 0.45f));
     }
 
     public override void _UnhandledInput(InputEvent @event)
     {
         switch (@event)
         {
-            case InputEventMouseButton { Pressed: true, ButtonIndex: MouseButton.Left }:
-                var (tx, ty) = HoveredTile();
-                _world.Enqueue(new PlaceBuilding(_armed, tx, ty));
+            case InputEventMouseButton { ButtonIndex: MouseButton.Left } mb:
+                if (mb.Pressed)
+                {
+                    _state.DragStart = GetGlobalMousePosition();
+                    _state.DragStartTile = _state.HoveredTile;
+                    if (_state.Armed is { } k && k is not (BuildingKind.Wall or BuildingKind.Gate))
+                    {
+                        Send(new PlaceBuilding(k, _state.HoveredTile.X, _state.HoveredTile.Y));
+                        _state.DragStart = null;
+                    }
+                }
+                else
+                {
+                    if (_state.Armed is { } k) PlaceLine(k);
+                    else FinishSelection(mb.ShiftPressed);
+                    _state.DragStart = null;
+                }
                 break;
-            case InputEventMouseMotion { ButtonMask: MouseButtonMask.Left } when _armed == BuildingKind.Wall:
-                // Drag to lay a line of walls.
-                var (dx, dy) = HoveredTile();
-                if (_world.CheckPlacement(BuildingKind.Wall, dx, dy) == null) _world.Enqueue(new PlaceBuilding(BuildingKind.Wall, dx, dy));
+
+            case InputEventMouseButton { Pressed: true, ButtonIndex: MouseButton.Right } mb:
+                if (_state.Armed != null) _state.Armed = null;
+                else if (_state.SelectedUnits.Count > 0)
+                    Send(new OrderUnits(_state.SelectedUnits.ToArray(), mb.ShiftPressed ? OrderKind.Move : OrderKind.AttackMove, _state.HoveredTile.X, _state.HoveredTile.Y));
+                else _state.SelectedBuilding = null;
                 break;
-            case InputEventMouseButton { Pressed: true, ButtonIndex: MouseButton.Right }:
-                var (rx, ry) = HoveredTile();
-                int id = _world.BuildingIdAt(rx, ry);
-                if (id != 0) _world.Enqueue(new Demolish(id));
-                break;
+
             case InputEventMouseButton { Pressed: true, ButtonIndex: MouseButton.WheelUp }:
                 ZoomBy(1.15f);
                 break;
             case InputEventMouseButton { Pressed: true, ButtonIndex: MouseButton.WheelDown }:
                 ZoomBy(1 / 1.15f);
                 break;
+
             case InputEventKey { Pressed: true, Echo: false } key:
-                switch (key.Keycode)
-                {
-                    case Key.Key1: _armed = BuildingKind.House; break;
-                    case Key.Key2: _armed = BuildingKind.Wall; break;
-                    case Key.Space: _paused = !_paused; break;
-                    case Key.N:
-                        var (nx, ny) = HoveredTile();
-                        _world.Enqueue(new MakeNoise(nx, ny, 40, 3));
-                        break;
-                    case Key.H:
-                        foreach (var c in Scenarios.EdgeAssault(_world, 2000, points: 4)) _world.Enqueue(c);
-                        break;
-                    case Key.J:
-                        foreach (var c in Scenarios.EdgeAssault(_world, 20000, points: 8)) _world.Enqueue(c);
-                        break;
-                }
+                HandleKey(key);
                 break;
         }
     }
+
+    void HandleKey(InputEventKey key)
+    {
+        int group = key.Keycode is >= Key.Key1 and <= Key.Key9 ? (int)(key.Keycode - Key.Key1) + 1 : 0;
+        if (group > 0 && key.CtrlPressed)
+        {
+            _state.Groups[group] = _state.SelectedUnits.ToArray();
+            _state.Say($"Group {group}: {_state.SelectedUnits.Count} units");
+            return;
+        }
+        if (group > 0 && key.AltPressed)
+        {
+            _state.SelectedUnits.Clear();
+            foreach (var id in _state.Groups.GetValueOrDefault(group, [])) _state.SelectedUnits.Add(id);
+            _state.SelectedBuilding = null;
+            return;
+        }
+
+        int slot = key.Keycode switch
+        {
+            >= Key.Key1 and <= Key.Key9 => (int)(key.Keycode - Key.Key1),
+            Key.Key0 => 9,
+            Key.Minus => 10,
+            _ => -1,
+        };
+        if (slot >= 0 && slot < Palette.BuildBar.Length)
+        {
+            var kind = Palette.BuildBar[slot];
+            _state.Armed = _state.Armed == kind ? null : kind;
+            return;
+        }
+
+        var selected = _state.SelectedBuilding is { } sid ? _world.BuildingById(sid) : null;
+        switch (key.Keycode)
+        {
+            case Key.Escape:
+                _state.Armed = null;
+                _state.SelectedUnits.Clear();
+                _state.SelectedBuilding = null;
+                break;
+            case Key.Space: _paused = !_paused; break;
+            case Key.X or Key.Delete when selected != null:
+                Send(new Demolish(selected.Id));
+                break;
+            case Key.Q or Key.E or Key.R when selected is { Def.Trains.Length: > 0 }:
+                int i = key.Keycode == Key.Q ? 0 : key.Keycode == Key.E ? 1 : 2;
+                if (i < selected.Def.Trains.Length) Send(new TrainUnit(selected.Id, selected.Def.Trains[i]));
+                break;
+            case Key.H when _state.SelectedUnits.Count > 0:
+                Send(new OrderUnits(_state.SelectedUnits.ToArray(), OrderKind.Hold, 0, 0));
+                break;
+            case Key.S when _state.SelectedUnits.Count > 0 && key.ShiftPressed:
+                Send(new OrderUnits(_state.SelectedUnits.ToArray(), OrderKind.Idle, 0, 0));
+                break;
+            case Key.N:
+                Send(new MakeNoise(_state.HoveredTile.X, _state.HoveredTile.Y, 40, 3));
+                break;
+            case Key.K:
+                foreach (var c in Scenarios.Wave(_world, Side.West, 100)) Send(c);
+                foreach (var c in Scenarios.Wave(_world, Side.East, 100)) Send(c);
+                _state.Say("Debug: a wave of 200 from west and east");
+                break;
+            case Key.J:
+                foreach (var c in Scenarios.EdgeAssault(_world, 20000, points: 8)) Send(c);
+                break;
+        }
+    }
+
+    void PlaceLine(BuildingKind kind)
+    {
+        foreach (var (x, y) in _state.GhostTiles()) Send(new PlaceBuilding(kind, x, y));
+    }
+
+    /// <summary>A click selects what's under the cursor; a drag box-selects soldiers.</summary>
+    void FinishSelection(bool additive)
+    {
+        if (_state.DragStart is not { } start) return;
+        var end = GetGlobalMousePosition();
+        if (!additive) _state.SelectedUnits.Clear();
+
+        if (start.DistanceTo(end) < 6)
+        {
+            var p = end / T;
+            var unit = _world.Units.Where(u => new Vector2(u.X, u.Y).DistanceTo(p) < 0.6f).OrderBy(u => new Vector2(u.X, u.Y).DistanceTo(p)).FirstOrDefault();
+            if (unit != null)
+            {
+                _state.SelectedUnits.Add(unit.Id);
+                _state.SelectedBuilding = null;
+                return;
+            }
+            int id = _world.BuildingIdAt(_state.HoveredTile.X, _state.HoveredTile.Y);
+            _state.SelectedBuilding = id == 0 ? null : id;
+            return;
+        }
+
+        var box = new Rect2(start / T, (end - start) / T).Abs();
+        foreach (var u in _world.Units)
+            if (box.HasPoint(new Vector2(u.X, u.Y))) _state.SelectedUnits.Add(u.Id);
+        if (_state.SelectedUnits.Count > 0) _state.SelectedBuilding = null;
+    }
+
+    void UpdateDebugLine()
+    {
+        if (_ticksWindow >= Balance.TickHz / 2)
+        {
+            _simMsShown = _simMsWindow / _ticksWindow;
+            _simMsWindow = 0;
+            _ticksWindow = 0;
+        }
+        int asleep = _world.Packs.Where(p => !p.Awake).Sum(p => p.Count);
+        _hud.DebugText =
+            $"t={_world.Tick / (double)Balance.TickHz:0}s{(_paused ? "  PAUSED" : "")}   demons {_world.Horde.Count} (+{asleep} asleep)   killed {_world.Stats.DemonsKilled}   " +
+            $"fps {Engine.GetFramesPerSecond():0}  sim {_simMsShown:0.00} ms   ·   debug: [N] noise  [K] wave  [J] 20k   Space pause · WASD pan · wheel zoom · Ctrl/Alt+1-9 groups";
+    }
+
+    // --- scripted runs ---
 
     void StartBenchAssault()
     {
@@ -241,13 +316,14 @@ public partial class Main : Node2D
         _world.FlushCommands();
         foreach (var c in Scenarios.EdgeAssault(_world, 20000, points: 8)) _world.Enqueue(c);
         _world.FlushCommands();
+        _camera.Zoom = new Vector2(0.45f, 0.45f);
     }
 
     void StepBench(double delta)
     {
-        _benchElapsed += delta;
-        if (_benchElapsed > 1) _frameMs.Add(delta * 1000); // skip the first second of warm-up
-        if (_benchElapsed < _benchSeconds) return;
+        _elapsed += delta;
+        if (_elapsed > 1) _frameMs.Add(delta * 1000); // skip the first second of warm-up
+        if (_elapsed < _benchSeconds) return;
 
         static double Pct(List<double> v, double p)
         {
@@ -261,26 +337,76 @@ public partial class Main : Node2D
         else GetTree().Quit();
     }
 
+    /// <summary>
+    /// The town from the headless town probe, played in real time for a
+    /// screenshot: walls, towers, Bombards, a Barracks training soldiers, and a
+    /// wave of 200 at 60 seconds. Runs at 4x so the fight arrives quickly.
+    /// </summary>
+    void StartDemo()
+    {
+        const int c = MapSize / 2;
+        for (int y = c - 8; y <= c + 8; y++)
+            for (int x = c - 8; x <= c + 8; x++)
+            {
+                if (Math.Max(Math.Abs(x - c), Math.Abs(y - c)) != 8) continue;
+                bool gate = y == c - 8 && Math.Abs(x - c) <= 1;
+                Send(new PlaceBuilding(gate ? BuildingKind.Gate : BuildingKind.Wall, x, y));
+            }
+        foreach (var (x, y) in new[] { (c - 6, c - 6), (c + 5, c - 6), (c - 6, c + 5), (c + 5, c + 5) }) Send(new PlaceBuilding(BuildingKind.Watchtower, x, y));
+        Send(new PlaceBuilding(BuildingKind.Bombard, c - 1, c - 5));
+        Send(new PlaceBuilding(BuildingKind.Bombard, c - 1, c + 4));
+        Send(new PlaceBuilding(BuildingKind.House, c - 5, c - 1));
+        Send(new PlaceBuilding(BuildingKind.House, c + 4, c - 1));
+        Send(new PlaceBuilding(BuildingKind.Barracks, c - 5, c + 2));
+        _world.FlushCommands();
+        Engine.TimeScale = 4;
+    }
+
+    bool _demoQueued, _demoWave;
+
+    void StepDemo(double delta)
+    {
+        _elapsed += delta; // already scaled by TimeScale
+        if (!_demoQueued && _world.Buildings.FirstOrDefault(b => b.Kind == BuildingKind.Barracks && b.Complete) is { } barracks)
+        {
+            for (int i = 0; i < 6; i++) Send(new TrainUnit(barracks.Id, UnitKind.Militia));
+            for (int i = 0; i < 2; i++) Send(new TrainUnit(barracks.Id, UnitKind.Templar));
+            _demoQueued = true;
+        }
+        if (!_demoWave && _world.Tick >= 60 * Balance.TickHz)
+        {
+            foreach (var cmd in Scenarios.Wave(_world, Side.West, 100)) Send(cmd);
+            foreach (var cmd in Scenarios.Wave(_world, Side.East, 100)) Send(cmd);
+            _state.SelectedUnits.Clear();
+            foreach (var u in _world.Units) _state.SelectedUnits.Add(u.Id);
+            _demoWave = true;
+        }
+        if (_elapsed >= _demoSeconds)
+        {
+            Engine.TimeScale = 1;
+            GD.Print($"hellwall-demo: t={_world.Tick / Balance.TickHz}s outcome={_world.Outcome} demons={_world.Horde.Count} killed={_world.Stats.DemonsKilled} units={_world.Units.Count} buildings={_world.Buildings.Count}");
+            if (_screenshotPath != null) SaveScreenshotAndQuit();
+            else GetTree().Quit();
+        }
+    }
+
     void SaveScreenshotAndQuit()
     {
         GetViewport().GetTexture().GetImage().SavePng(_screenshotPath);
         GetTree().Quit();
     }
 
-    (int X, int Y) HoveredTile()
-    {
-        var p = GetGlobalMousePosition() / TilePx;
-        return ((int)Mathf.Floor(p.X), (int)Mathf.Floor(p.Y));
-    }
-
     void PanCamera(double delta)
     {
+        if (Input.IsKeyPressed(Key.Ctrl) || Input.IsKeyPressed(Key.Alt)) return;
         var dir = Vector2.Zero;
         if (Input.IsKeyPressed(Key.W) || Input.IsKeyPressed(Key.Up)) dir.Y -= 1;
-        if (Input.IsKeyPressed(Key.S) || Input.IsKeyPressed(Key.Down)) dir.Y += 1;
+        if ((Input.IsKeyPressed(Key.S) && !Input.IsKeyPressed(Key.Shift)) || Input.IsKeyPressed(Key.Down)) dir.Y += 1;
         if (Input.IsKeyPressed(Key.A) || Input.IsKeyPressed(Key.Left)) dir.X -= 1;
         if (Input.IsKeyPressed(Key.D) || Input.IsKeyPressed(Key.Right)) dir.X += 1;
-        _camera.Position += dir * (float)(900 * delta) / _camera.Zoom.X;
+        // Real time, not game time, so panning feels the same when paused or sped up.
+        float real = (float)(delta / Math.Max(0.01, Engine.TimeScale));
+        _camera.Position += dir * 900 * real / _camera.Zoom.X;
     }
 
     void ZoomBy(float factor)
@@ -289,36 +415,12 @@ public partial class Main : Node2D
         _camera.Zoom = new Vector2(z, z);
     }
 
-    void UpdateHud()
-    {
-        // Refresh the slow-changing numbers twice a second: hashing 20k demons every frame is wasteful.
-        if (_ticksWindow >= Balance.TickHz / 2)
-        {
-            _simMsShown = _simMsWindow / _ticksWindow;
-            _simMsWindow = 0;
-            _ticksWindow = 0;
-            _hashShown = StateHash.Hex(_world);
-        }
-
-        int asleep = 0, sleeping = 0;
-        foreach (var p in _world.Packs)
-            if (!p.Awake) { asleep++; sleeping += p.Count; }
-
-        double seconds = _world.Tick / (double)Balance.TickHz;
-        _hud.Text =
-            $"Hellwall — phase 1    {(_paused ? "PAUSED" : "running")}    t={seconds:F1}s    fps {Engine.GetFramesPerSecond():F0}    sim {_simMsShown:F2} ms/tick\n" +
-            $"demons {_world.Horde.Count}    dormant packs {asleep} ({sleeping} asleep)    buildings {_world.Buildings.Count}    hash {_hashShown}\n" +
-            $"armed: {_armed}   [1] House  [2] Wall (drag for lines)   LMB place · RMB demolish · [N] noise at cursor · [H] 2k assault · [J] 20k assault\n" +
-            $"Space pause · WASD pan · wheel zoom" +
-            (_lastRejection.Length > 0 ? $"\nrejected: {_lastRejection}" : "");
-    }
-
     static ImageTexture BuildTerrainTexture(Terrain terrain)
     {
         var image = Image.CreateEmpty(terrain.Width, terrain.Height, false, Image.Format.Rgb8);
         for (int y = 0; y < terrain.Height; y++)
             for (int x = 0; x < terrain.Width; x++)
-                image.SetPixel(x, y, TileColors[(int)terrain.Get(x, y)]);
+                image.SetPixel(x, y, Palette.Tiles[(int)terrain.Get(x, y)]);
         return ImageTexture.CreateFromImage(image);
     }
 

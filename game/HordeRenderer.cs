@@ -24,7 +24,7 @@ public partial class HordeRenderer : Node2D
         public int Capacity;
     }
 
-    public HordeRenderer(float tilePx)
+    public HordeRenderer(float tilePx, int mapTiles)
     {
         _tilePx = tilePx;
         var kinds = Enum.GetValues<DemonKind>();
@@ -40,6 +40,12 @@ public partial class HordeRenderer : Node2D
             {
                 TransformFormat = MultiMesh.TransformFormatEnum.Transform2D,
                 Mesh = new QuadMesh { Size = new Vector2(size * tilePx, size * tilePx) },
+                // A fixed box around the whole map. Otherwise Godot culls the
+                // MultiMesh by bounds it computed from an earlier buffer (an
+                // empty one, or a horde far away), and a horde that has since
+                // walked on screen isn't drawn. It also spares recomputing the
+                // bounds of 20k instances every frame.
+                CustomAabb = new Aabb(new Vector3(-tilePx, -tilePx, -1), new Vector3((mapTiles + 2) * tilePx, (mapTiles + 2) * tilePx, 2)),
             };
             _layers[(int)kind] = new Layer { Mesh = mesh };
             AddChild(new MultiMeshInstance2D { Multimesh = mesh, Modulate = color });
