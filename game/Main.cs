@@ -24,6 +24,7 @@ namespace Hellwall.Game;
 ///   --skip=seconds       fast-forward the sim before the first frame
 ///   --autoplay           let the headless harness's bot play (watch it, or take over any time with Esc)
 ///   --inspect=Kind       select the first building of that kind (for screenshots)
+///   --selftest=controls  select the soldiers, press A, click: check they got an attack-move there, print, quit
 /// </summary>
 public partial class Main : Node2D
 {
@@ -116,7 +117,7 @@ public partial class Main : Node2D
         _minimap = new Minimap { World = _world, Camera = _camera, MoveCamera = p => _camera.Position = p };
         _hud = new Hud { World = _world, State = _state, Send = Send, Minimap = _minimap, NewRun = NewRun };
         AddChild(_hud);
-        if (!scripted && !options.ContainsKey("autoplay") && Coach.Enabled)
+        if (!scripted && !options.ContainsKey("autoplay") && !options.ContainsKey("selftest") && Coach.Enabled)
         {
             _coach = new Coach { World = _world };
             _hud.AddChild(_coach);
@@ -144,11 +145,62 @@ public partial class Main : Node2D
             _state.SelectedBuilding = _world.Buildings.FirstOrDefault(b => b.Kind == kindToInspect)?.Id;
 
         // scripts/verify.sh looks for this line: the engine banner alone doesn't prove the C# scene ran.
+        if (options.GetValueOrDefault("selftest") == "controls") CallDeferred(nameof(SelfTestControls));
         GD.Print($"hellwall: world ready seed={_world.Seed} map={_world.Map} difficulty={_world.Rules.Difficulty} endless={_world.Survival?.Endless ?? false} hash={StateHash.Hex(_world)}");
         _started = true;
     }
 
     void Send(Command command) => _world.Enqueue(command);
+
+    bool _swallowRelease;
+
+    /// <summary>
+    /// The attack-move controls, end to end through Godot's input: A with the
+    /// soldiers selected arms it, a left-click on the ground orders it.
+    /// scripts/verify.sh runs this headless and looks for the PASS line.
+    /// </summary>
+    async void SelfTestControls()
+    {
+        // The starting garrison turns out on the first ticks.
+        for (int i = 0; i < 300 && _world.Units.Count == 0; i++) await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
+        foreach (var u in _world.Units) _state.SelectedUnits.Add(u.Id);
+        // Click in the middle of the screen, on open ground. A headless window is 64 px square,
+        // all HUD, so the HUD is hidden for the test: this is about the ground click, not the panels.
+        _hud.Visible = false;
+        var centre = GetViewport().GetVisibleRect().Size / 2;
+        Input.WarpMouse(centre);
+        await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
+        Input.ParseInputEvent(new InputEventKey { Keycode = Key.A, Pressed = true });
+        Input.FlushBufferedEvents();
+        await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
+        bool armed = _state.AttackMoveArmed;
+        var target = _state.HoveredTile;
+        // Straight into the viewport: a headless build has no window for Input to route mouse events through.
+        GetViewport().PushInput(new InputEventMouseButton { ButtonIndex = MouseButton.Left, Pressed = true, Position = centre, GlobalPosition = centre });
+        GetViewport().PushInput(new InputEventMouseButton { ButtonIndex = MouseButton.Left, Pressed = false, Position = centre, GlobalPosition = centre });
+        for (int i = 0; i < 4; i++) await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
+        _world.FlushCommands();
+        bool ordered = _world.Units.Count > 0 && _world.Units.All(u => u.Order == OrderKind.AttackMove && u.DestX == target.X && u.DestY == target.Y);
+        bool kept = _state.SelectedUnits.Count == _world.Units.Count && !_state.AttackMoveArmed;
+        GD.Print(armed && ordered && kept ? "hellwall-selftest: PASS controls" : $"hellwall-selftest: FAIL controls (units {_world.Units.Count}, armed {armed}, ordered {ordered}, selection kept and disarmed {kept})");
+        GetTree().Quit();
+    }
+
+    public static bool EdgeScroll => Settings.Get("edge_scroll", true);
+    public static bool ConfineMouse => Settings.Get("confine_mouse", true);
+
+    void DisarmAttackMove()
+    {
+        _state.AttackMoveArmed = false;
+        Input.SetDefaultCursorShape(Input.CursorShape.Arrow);
+    }
+
+    /// <summary>Keep the cursor inside the window while playing (so the edges scroll), and free it on menus and the end screen.</summary>
+    void UpdateMouseMode()
+    {
+        var want = _started && ConfineMouse && _world.Outcome == Outcome.Running ? Input.MouseModeEnum.Confined : Input.MouseModeEnum.Visible;
+        if (Input.MouseMode != want) Input.MouseMode = want;
+    }
 
     /// <summary>The world-space views, (re)built for the current world: at the start, and after a quickload.</summary>
     void BuildViews()
@@ -167,6 +219,8 @@ public partial class Main : Node2D
     void NewRun()
     {
         _menuNext = true;
+        Input.MouseMode = Input.MouseModeEnum.Visible;
+        DisarmAttackMove();
         GetTree().ReloadCurrentScene();
     }
 
@@ -213,6 +267,8 @@ public partial class Main : Node2D
         _horde.Sync(_world.Horde, _state.Alpha, delta);
         _view.Refresh();
         PanCamera(delta);
+        UpdateMouseMode();
+        if (_state.AttackMoveArmed && _state.SelectedUnits.Count == 0) DisarmAttackMove();
         UpdateDebugLine();
 
         if (_benchSeconds > 0) StepBench(delta);
@@ -270,6 +326,19 @@ public partial class Main : Node2D
         switch (@event)
         {
             case InputEventMouseButton { ButtonIndex: MouseButton.Left } mb:
+                if (mb.Pressed && _state.AttackMoveArmed)
+                {
+                    if (_state.SelectedUnits.Count > 0)
+                        Send(new OrderUnits(_state.SelectedUnits.ToArray(), OrderKind.AttackMove, _state.HoveredTile.X, _state.HoveredTile.Y));
+                    if (!mb.ShiftPressed) DisarmAttackMove(); // shift-click to give several in a row
+                    _swallowRelease = true;
+                    break;
+                }
+                if (!mb.Pressed && _swallowRelease)
+                {
+                    _swallowRelease = false;
+                    break;
+                }
                 if (mb.Pressed)
                 {
                     _state.DragStart = GetGlobalMousePosition();
@@ -289,7 +358,8 @@ public partial class Main : Node2D
                 break;
 
             case InputEventMouseButton { Pressed: true, ButtonIndex: MouseButton.Right } mb:
-                if (_state.Armed != null) _state.Armed = null;
+                if (_state.AttackMoveArmed) DisarmAttackMove();
+                else if (_state.Armed != null) _state.Armed = null;
                 else if (_state.SelectedUnits.Count > 0)
                     Send(new OrderUnits(_state.SelectedUnits.ToArray(), mb.ShiftPressed ? OrderKind.Move : OrderKind.AttackMove, _state.HoveredTile.X, _state.HoveredTile.Y));
                 else _state.SelectedBuilding = null;
@@ -335,6 +405,14 @@ public partial class Main : Node2D
         var selected = _state.SelectedBuilding is { } sid ? _world.BuildingById(sid) : null;
         switch (key.Keycode)
         {
+            case Key.Escape when _state.AttackMoveArmed:
+                DisarmAttackMove();
+                break;
+            case Key.A when _state.SelectedUnits.Count > 0 && !key.CtrlPressed && !key.AltPressed:
+                _state.AttackMoveArmed = true;
+                _state.Armed = null;
+                Input.SetDefaultCursorShape(Input.CursorShape.Cross);
+                break;
             case Key.Escape:
                 if (_bot != null)
                 {
@@ -559,8 +637,24 @@ public partial class Main : Node2D
         var dir = Vector2.Zero;
         if (Input.IsKeyPressed(Key.W) || Input.IsKeyPressed(Key.Up)) dir.Y -= 1;
         if ((Input.IsKeyPressed(Key.S) && !Input.IsKeyPressed(Key.Shift)) || Input.IsKeyPressed(Key.Down)) dir.Y += 1;
-        if (Input.IsKeyPressed(Key.A) || Input.IsKeyPressed(Key.Left)) dir.X -= 1;
+        // A is attack-move while soldiers are selected; it only pans when none are.
+        if ((Input.IsKeyPressed(Key.A) && _state.SelectedUnits.Count == 0) || Input.IsKeyPressed(Key.Left)) dir.X -= 1;
         if (Input.IsKeyPressed(Key.D) || Input.IsKeyPressed(Key.Right)) dir.X += 1;
+        // At the edge of the window, when edge scrolling is on and the window has the mouse.
+        if (EdgeScroll && DisplayServer.WindowIsFocused())
+        {
+            var mouse = GetViewport().GetMousePosition();
+            var size = GetViewport().GetVisibleRect().Size;
+            const float edge = 8;
+            if (mouse.X >= 0 && mouse.Y >= 0 && mouse.X <= size.X && mouse.Y <= size.Y)
+            {
+                if (mouse.X < edge) dir.X -= 1;
+                if (mouse.X > size.X - edge) dir.X += 1;
+                if (mouse.Y < edge) dir.Y -= 1;
+                if (mouse.Y > size.Y - edge) dir.Y += 1;
+            }
+        }
+        if (dir.LengthSquared() > 1) dir = dir.Normalized();
         // Real time, not game time, so panning feels the same when paused or sped up.
         float real = (float)(delta / Math.Max(0.01, Engine.TimeScale));
         _camera.Position += dir * 900 * real / _camera.Zoom.X;

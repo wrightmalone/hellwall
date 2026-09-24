@@ -13,6 +13,8 @@ public sealed class ClientState
     public const double ShotLife = 0.12;
 
     public BuildingKind? Armed;
+    /// <summary>A was pressed with soldiers selected: the next left-click on the ground attack-moves them there.</summary>
+    public bool AttackMoveArmed;
     public int? SelectedBuilding;
     public readonly HashSet<int> SelectedUnits = new();
     public readonly Dictionary<int, int[]> Groups = new();

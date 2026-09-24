@@ -376,6 +376,18 @@ horrific, which reads well at 30 px but is a tone question for the commissioned 
 - **Bush dropped:** its red flowers read as blood.
 - **Performance:** 20,000 demons still draw at about 94 fps.
 
+### 41. Attack-move on A, and edge scrolling (you asked)
+- **Attack-move:** with soldiers selected, A arms attack-move and the cursor becomes a
+  crosshair. A left-click on the ground orders it; shift-click keeps it armed, and
+  right-click or Esc cancels. Right-click still attack-moves directly too.
+- **A no longer pans:** since A arms attack-move, it pans only when no soldiers are selected.
+  The arrow keys and the screen edges always pan.
+- **Edge scrolling:** the mouse is kept inside the window during a run, and freed on the menu
+  and the end screen. The camera pans when the cursor is within 8 px of an edge. Both are
+  menu checkboxes, on by default.
+- **Self-test:** `--selftest=controls` runs A-then-click through Godot's own input and checks
+  the order. verify.sh runs it.
+
 ## Things I noticed that you should decide
 
 - **Scale:** addressed by 12-14 and 21. The Convergence is 9,000 plus whatever

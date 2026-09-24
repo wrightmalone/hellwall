@@ -81,6 +81,13 @@ public partial class NewGameMenu : CanvasLayer
         volume.ValueChanged += v => Settings.Set("volume", (float)v);
         volumeRow.AddChild(volume);
 
+        var edge = new CheckBox { Text = "Scroll at the screen edges", ButtonPressed = Main.EdgeScroll };
+        edge.Toggled += on => Settings.Set("edge_scroll", on);
+        box.AddChild(edge);
+        var confine = new CheckBox { Text = "Keep the mouse inside the window", ButtonPressed = Main.ConfineMouse };
+        confine.Toggled += on => Settings.Set("confine_mouse", on);
+        box.AddChild(confine);
+
         var hints = new CheckBox { Text = "Hints for a first run", ButtonPressed = Coach.Enabled };
         hints.Toggled += on => Settings.Set("hints", on);
         box.AddChild(hints);

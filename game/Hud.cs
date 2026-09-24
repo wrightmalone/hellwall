@@ -42,11 +42,11 @@ public partial class Hud : CanvasLayer
     const string HelpText =
         "BUILD   1-0 - =  M C L P  G B U  or the bar; click to place; drag walls for a line; right-click or Esc to disarm\n" +
         "SELECT  click a building or soldier; drag to box-select soldiers (shift adds)\n" +
-        "ORDER   right-click attack-move · shift+right-click move · H hold · Shift+S stop\n" +
+        "ORDER   A then click, or right-click: attack-move · shift+right-click move · H hold · Shift+S stop\n" +
         "GROUPS  Ctrl+1-9 set · Alt+1-9 recall\n" +
         "BARRACKS  Q E R T Y F train · SCRIPTORIUM  research buttons in the inspector\n" +
         "X / Delete  demolish (purges a possessed building)\n" +
-        "Space pause · Tab speed 1x/2x/4x · F5 save · F9 load · WASD pan · wheel zoom · minimap click to jump\n" +
+        "Space pause · Tab speed 1x/2x/4x · F5 save · F9 load · WASD or screen edges pan (A attack-moves while soldiers are selected) · wheel zoom · minimap click to jump\n" +
         "Debug: N noise at cursor · K wave · J 20k assault\n" +
         "F1 to close";
 
@@ -307,7 +307,7 @@ public partial class Hud : CanvasLayer
             State.SelectedUnits.RemoveWhere(id => World.UnitById(id) == null);
             text = string.Join("   ", units.GroupBy(u => u.Kind).Select(g => $"{g.Count()} {g.Key}")) +
                    $"\n{units.Sum(u => u.Hp):0}/{units.Sum(u => u.Def.Hp):0} hp" +
-                   "\nRMB attack-move · Shift+RMB move · H hold · Shift+S stop";
+                   "\nA+click or RMB attack-move · Shift+RMB move · H hold · Shift+S stop";
         }
 
         _inspector.Visible = text.Length > 0;

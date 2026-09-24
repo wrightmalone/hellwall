@@ -243,7 +243,13 @@ public partial class WorldView : Node2D
             if (state.SelectedBuilding is { } sb2 && world.BuildingById(sb2) is { Def.SlowRadius: > 0 } bell)
                 Iso.Ellipse(this, new Vector2(bell.CentreX, bell.CentreY), bell.Def.SlowRadius, new Color(0.6f, 0.8f, 1, 0.4f), 1);
 
-            if (state.DragStart is { } ds && state.Armed == null)
+            if (state.AttackMoveArmed)
+            {
+                Iso.Ellipse(this, new Vector2(state.HoveredTile.X + 0.5f, state.HoveredTile.Y + 0.5f), 0.45f, new Color(1, 0.35f, 0.3f, 0.9f), 2);
+                Text(font, state.MouseWorld + new Vector2(14, -6), "Attack-move", 14, new Color(1, 0.55f, 0.5f));
+            }
+
+            if (state.DragStart is { } ds && state.Armed == null && !state.AttackMoveArmed)
             {
                 var r = new Rect2(ds, state.MouseWorld - ds).Abs();
                 DrawRect(r, new Color(0.35f, 1, 0.35f, 0.08f));
