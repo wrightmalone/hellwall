@@ -22,7 +22,10 @@ window/size/viewport_height=900
 [dotnet]
 
 project/assembly_name="Hellwall"
+project/solution_directory="../"
 
 [rendering]
+
+textures/vram_compression/import_etc2_astc=true
 
 textures/canvas_textures/default_texture_filter=0
