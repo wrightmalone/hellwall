@@ -32,6 +32,22 @@ public partial class Hud : CanvasLayer
 
     public string DebugText = "";
 
+    public Minimap Minimap = null!;
+    Label _help = null!;
+
+    const string HelpText =
+        "BUILD   1-0 - =  G B U  or the bar; click to place; drag walls for a line; right-click or Esc to disarm\n" +
+        "SELECT  click a building or soldier; drag to box-select soldiers (shift adds)\n" +
+        "ORDER   right-click attack-move · shift+right-click move · H hold · Shift+S stop\n" +
+        "GROUPS  Ctrl+1-9 set · Alt+1-9 recall\n" +
+        "BARRACKS  Q E R train · SCRIPTORIUM  research buttons in the inspector\n" +
+        "X / Delete  demolish (purges a possessed building)\n" +
+        "Space pause · Tab speed 1x/2x/4x · F5 save · F9 load · WASD pan · wheel zoom · minimap click to jump\n" +
+        "Debug: N noise at cursor · K wave · J 20k assault\n" +
+        "F1 to close";
+
+    public void ToggleHelp() => _help.Visible = !_help.Visible;
+
     public override void _Ready()
     {
         _top = Outlined(new Label { Position = new Vector2(10, 6) }, 17);
@@ -72,6 +88,11 @@ public partial class Hud : CanvasLayer
             _buildBar.AddChild(button);
             _buildButtons.Add((button, kind));
         }
+
+        AddChild(Minimap);
+
+        _help = Outlined(new Label { Visible = false, Text = HelpText }, 16);
+        AddChild(_help);
 
         _inspector = new PanelContainer { Visible = false, CustomMinimumSize = new Vector2(300, 0) };
         var box = new VBoxContainer();
@@ -132,6 +153,8 @@ public partial class Hud : CanvasLayer
 
         UpdateInspector(screen);
         UpdateClock(screen);
+        Minimap.Position = new Vector2(10, screen.Y - 44 - 206);
+        _help.Position = new Vector2(screen.X / 2 - 420, screen.Y / 2 - 120);
 
         if (World.Outcome != Outcome.Running)
         {

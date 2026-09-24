@@ -205,6 +205,8 @@ p99 9.1 ms, sim 4.8 ms/tick.
 | `Q` `E` `R` with a Barracks selected | train Militia / Marksman / Templar (Crossbowmen by button) |
 | `9`, `=`, `G`, `B`, `U` | Stone Wall, Lance Tower, Gate, Barracks, Scriptorium |
 | `X` or Delete | demolish the selected building (half refund once built) |
+| F1 | controls overlay |
+| minimap (bottom left) | click or drag to move the camera |
 | space / Tab | pause (building and orders still work) / cycle 1x, 2x, 4x |
 | F5 / F9 | quicksave / quickload |
 | WASD, arrows / wheel | pan / zoom |

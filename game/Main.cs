@@ -38,6 +38,7 @@ public partial class Main : Node2D
     HordeRenderer _horde = null!;
     WorldView _view = null!;
     Hud _hud = null!;
+    Minimap _minimap = null!;
     double _accumulator;
     bool _paused;
     string? _screenshotPath;
@@ -80,7 +81,8 @@ public partial class Main : Node2D
         _camera = new Camera2D { Position = new Vector2(MapSize, MapSize) * T / 2f, Zoom = new Vector2(1.6f, 1.6f) };
         AddChild(_camera);
 
-        _hud = new Hud { World = _world, State = _state, Send = Send };
+        _minimap = new Minimap { World = _world, Camera = _camera, MoveCamera = p => _camera.Position = p };
+        _hud = new Hud { World = _world, State = _state, Send = Send, Minimap = _minimap };
         AddChild(_hud);
 
         if (_benchSeconds > 0) StartBenchAssault();
@@ -163,7 +165,10 @@ public partial class Main : Node2D
             {
                 case CommandRejected r: _state.Say($"Can't: {r.Reason}"); break;
                 case ShotFired shot: _state.Shots.Add((shot, 0)); break;
-                case ConsecrationChanged: _view.RepaintConsecration(); break;
+                case ConsecrationChanged:
+                    _view.RepaintConsecration();
+                    _minimap.Repaint();
+                    break;
                 case BuildingDestroyed b: _state.Say($"{b.Kind} destroyed"); break;
                 case UnitTrained u: _state.Say($"{u.Kind} ready"); break;
                 case UnitDied u: _state.Say($"{u.Kind} killed"); break;
@@ -275,6 +280,7 @@ public partial class Main : Node2D
                 Engine.TimeScale = Speeds[_speed];
                 _state.Say($"Speed {Speeds[_speed]}x");
                 break;
+            case Key.F1: _hud.ToggleHelp(); break;
             case Key.F5: QuickSave(); break;
             case Key.F9: QuickLoad(); break;
             case Key.X or Key.Delete when selected != null:
@@ -324,6 +330,8 @@ public partial class Main : Node2D
             _world = loaded;
             _view.World = loaded;
             _hud.World = loaded;
+            _minimap.World = loaded;
+            _minimap.Repaint();
             _terrain.Texture = BuildTerrainTexture(loaded.Terrain);
             _view.RepaintConsecration();
             _state.SelectedUnits.Clear();
@@ -383,7 +391,7 @@ public partial class Main : Node2D
         int asleep = _world.Packs.Where(p => !p.Awake).Sum(p => p.Count);
         _hud.DebugText =
             $"{(_paused ? "PAUSED   " : "")}{Speeds[_speed]}x   demons {_world.Horde.Count} (+{asleep} asleep)   killed {_world.Stats.DemonsKilled}   " +
-            $"fps {Engine.GetFramesPerSecond():0}  sim {_simMsShown:0.00} ms   ·   Space pause · Tab speed · F5 save · F9 load · debug: [N] noise [K] wave [J] 20k";
+            $"fps {Engine.GetFramesPerSecond():0}  sim {_simMsShown:0.00} ms   ·   F1 controls · Space pause · Tab speed · F5 save · F9 load";
     }
 
     // --- scripted runs ---
