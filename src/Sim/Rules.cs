@@ -17,6 +17,7 @@ public enum UnitKind : byte
     Militia,
     Marksman,
     Templar,
+    Crossbowman,
 }
 
 /// <summary>An amount of each resource. Used for costs and for the colony's stockpile.</summary>
@@ -97,6 +98,12 @@ public sealed record BuildingDef
     /// </summary>
     public bool Possessable { get; init; } = true;
 
+    /// <summary>Can't be built until this tech is researched.</summary>
+    public string? RequiresTech { get; init; }
+
+    /// <summary>Researches techs (the Scriptorium).</summary>
+    public bool Researches { get; init; }
+
     public int W => Size[0];
     public int H => Size[1];
 }
@@ -109,6 +116,9 @@ public sealed record UnitDef
     public Cost Cost { get; init; } = Cost.None;
     public double UpkeepGold { get; init; }
     public WeaponDef Weapon { get; init; } = new();
+
+    /// <summary>Can't be trained until this tech is researched.</summary>
+    public string? RequiresTech { get; init; }
 }
 
 public sealed record DemonDef
@@ -154,6 +164,10 @@ public sealed class Rules
 
     public SurvivalRules Survival { get; private init; } = new();
 
+    public TechDef[] Techs { get; private init; } = [];
+
+    public TechDef Tech(string id) => Techs.FirstOrDefault(t => t.Id == id) ?? throw new KeyNotFoundException($"no tech '{id}'");
+
     public BuildingDef[] Buildings { get; private init; } = [];
     public UnitDef[] Units { get; private init; } = [];
     public DemonDef[] Demons { get; private init; } = [];
@@ -178,6 +192,7 @@ public sealed class Rules
         public double RefundFraction { get; init; }
         public float PossessionSpawnSeconds { get; init; }
         public SurvivalRules Survival { get; init; } = new();
+        public TechDef[] Techs { get; init; } = [];
         public Dictionary<BuildingKind, BuildingDef> Buildings { get; init; } = new();
         public Dictionary<UnitKind, UnitDef> Units { get; init; } = new();
         public Dictionary<DemonKind, DemonDef> Demons { get; init; } = new();
@@ -202,6 +217,7 @@ public sealed class Rules
             RefundFraction = file.RefundFraction,
             PossessionSpawnSeconds = file.PossessionSpawnSeconds,
             Survival = file.Survival,
+            Techs = file.Techs,
             Buildings = Dense(file.Buildings, "building"),
             Units = Dense(file.Units, "unit"),
             Demons = Dense(file.Demons, "demon"),
@@ -262,6 +278,7 @@ public sealed class Rules
             RefundFraction = RefundFraction,
             PossessionSpawnSeconds = PossessionSpawnSeconds,
             Survival = b.Survival,
+            Techs = Techs,
             Buildings = b.Buildings,
             Units = Units,
             Demons = b.Demons,

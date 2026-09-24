@@ -38,6 +38,14 @@ public sealed partial class World
     /// <summary>The day clock and wave schedule, or null when the run isn't a survival run.</summary>
     public Survival? Survival { get; }
 
+    public TechState Tech { get; } = new();
+
+    /// <summary>A building's definition as it stands now: base rules plus everything researched.</summary>
+    public BuildingDef Def(BuildingKind kind) => Tech.Buildings[(int)kind];
+
+    /// <summary>A unit's definition as it stands now: base rules plus everything researched.</summary>
+    public UnitDef Def(UnitKind kind) => Tech.Units[(int)kind];
+
     /// <summary>1-based; counts on even without a survival schedule.</summary>
     public int Day => Tick / (int)(Rules.Survival.DaySeconds * Balance.TickHz) + 1;
 
@@ -96,12 +104,13 @@ public sealed partial class World
         Noise = new NoiseGrid(Terrain.Width, Terrain.Height);
         Spatial = new SpatialHash(Terrain.Width, Terrain.Height);
         if (options.Survival) Survival = new Survival(Rules.Survival);
+        Tech.Recompute(Rules);
     }
 
     public static World Create(WorldOptions options)
     {
         var world = new World(options);
-        var def = world.Rules[BuildingKind.Keep];
+        var def = world.Def(BuildingKind.Keep);
         int centre = options.MapSize / 2;
         var keep = world.AddBuilding(BuildingKind.Keep, centre - def.W / 2, centre - def.H / 2);
         keep.Complete = true;
@@ -132,6 +141,7 @@ public sealed partial class World
         _spatialStale = false;
         UnitSystem.MarkChase(this);
         HordeSystem.Move(this);
+        BurnOnHolyGround(dt);
         UnitSystem.TakeHits(this);
         Combat.DemonsAttackBuildings(this);
         UnitSystem.Step(this, dt);
@@ -235,7 +245,8 @@ public sealed partial class World
     public string? CheckPlacement(BuildingKind kind, int x, int y)
     {
         if (kind == BuildingKind.Keep) return "only one Keep";
-        var def = Rules[kind];
+        var def = Def(kind);
+        if (def.RequiresTech is { } needs && !Tech.Has(needs)) return $"needs {Rules.Tech(needs).Name}";
         if (x < 0 || y < 0 || x + def.W > Terrain.Width || y + def.H > Terrain.Height) return "out of bounds";
         for (int ty = y; ty < y + def.H; ty++)
         {
@@ -253,7 +264,7 @@ public sealed partial class World
     /// <summary>What a gatherer placed here would collect per second at full sanctity, for the placement preview.</summary>
     public double EstimateGathering(BuildingKind kind, int x, int y)
     {
-        var def = Rules[kind];
+        var def = Def(kind);
         if (def.Produces == null) return 0;
         var claimed = new bool[Terrain.Width * Terrain.Height];
         foreach (var b in _buildings)
@@ -311,6 +322,17 @@ public sealed partial class World
         b.Hp -= damage;
     }
 
+    /// <summary>With Holy Fire researched, consecrated ground burns every demon standing (or hovering) on it.</summary>
+    void BurnOnHolyGround(float dt)
+    {
+        float dps = Tech.HolyGroundDps;
+        if (dps <= 0) return;
+        var holy = Colony.Consecrated;
+        int width = Terrain.Width;
+        for (int i = 0; i < Horde.Count; i++)
+            if (holy[(int)Horde.Y[i] * width + (int)Horde.X[i]]) Horde.Hp[i] -= dps * dt;
+    }
+
     /// <summary>Possessed buildings release their occupants as Thralls, one at a time, and fall when empty.</summary>
     void StepPossessed(float dt)
     {
@@ -332,7 +354,7 @@ public sealed partial class World
 
     void SpawnOne(DemonKind kind, float x, float y)
     {
-        Horde.Add(kind, x, y, Rules[kind].Hp);
+        Horde.Add(kind, x, y, Rules[kind].Hp); // demons aren't researched
         _spatialStale = true;
     }
 
@@ -343,7 +365,7 @@ public sealed partial class World
         var tile = FindTileNear((int)barracks.CentreX, barracks.Y + barracks.H, 6,
             (x, y) => IsHumanWalkable(x, y) && !_units.Any(u => (int)u.X == x && (int)u.Y == y));
         if (tile == null) return false;
-        var def = Rules[kind];
+        var def = Def(kind);
         var u = new Unit
         {
             Id = _nextId++,
@@ -424,6 +446,7 @@ public sealed partial class World
             SpawnDemons s => TrySpawn(s),
             MakeNoise m => TryNoise(m.X + 0.5f, m.Y + 0.5f, m.Radius, m.Intensity),
             TrainUnit t => TryTrain(t),
+            Research r => TryResearch(r),
             OrderUnits o => TryOrder(o),
             _ => "unknown command",
         };
@@ -435,7 +458,7 @@ public sealed partial class World
         string? reason = CheckPlacement(kind, x, y);
         if (reason != null) return reason;
 
-        var def = Rules[kind];
+        var def = Def(kind);
         Colony.Pay(def.Cost);
         var building = AddBuilding(kind, x, y);
         if (def.BuildSeconds <= 0)
@@ -449,7 +472,7 @@ public sealed partial class World
 
     Building AddBuilding(BuildingKind kind, int x, int y)
     {
-        var def = Rules[kind];
+        var def = Def(kind);
         var building = new Building { Id = _nextId++, Kind = kind, Def = def, X = x, Y = y, W = def.W, H = def.H, Hp = def.Hp };
         _buildings.Add(building);
         _buildingById[building.Id] = building;
@@ -483,8 +506,14 @@ public sealed partial class World
 
     void RefundQueue(Building building)
     {
-        foreach (var kind in building.Queue) Colony.Refund(Rules[kind].Cost, 1);
+        foreach (var kind in building.Queue) Colony.Refund(Def(kind).Cost, 1);
         building.Queue.Clear();
+        if (building.Researching is { } id)
+        {
+            Colony.Refund(Rules.Tech(id).Cost, 1);
+            building.Researching = null;
+            building.ResearchProgress = 0;
+        }
     }
 
     void OnLayoutChanged()
@@ -516,12 +545,72 @@ public sealed partial class World
         if (!_buildingById.TryGetValue(t.BarracksId, out var b)) return "no such building";
         if (Array.IndexOf(b.Def.Trains, t.Kind) < 0) return $"{b.Kind} can't train {t.Kind}";
         if (!b.Complete) return "still under construction";
-        var cost = Rules[t.Kind].Cost;
+        if (Def(t.Kind).RequiresTech is { } needs && !Tech.Has(needs)) return $"needs {Rules.Tech(needs).Name}";
+        var cost = Def(t.Kind).Cost;
         string? shortfall = Colony.Shortfall(cost);
         if (shortfall != null) return shortfall;
         Colony.Pay(cost);
         b.Queue.Add(t.Kind);
         return null;
+    }
+
+    /// <summary>Why a tech can't be started now, or null if it can (at some Scriptorium, cost aside).</summary>
+    public string? CheckResearch(string id)
+    {
+        var tech = Rules.Techs.FirstOrDefault(t => t.Id == id);
+        if (tech == null) return "no such tech";
+        if (Tech.Has(id)) return "already researched";
+        if (_buildings.Any(b => b.Researching == id)) return "already being researched";
+        if (tech.ExclusiveWith is { } other && (Tech.Has(other) || _buildings.Any(b => b.Researching == other)))
+            return $"locked out by {Rules.Tech(other).Name}";
+        foreach (var need in tech.Requires)
+            if (!Tech.Has(need)) return $"needs {Rules.Tech(need).Name}";
+        return null;
+    }
+
+    string? TryResearch(Research r)
+    {
+        if (!_buildingById.TryGetValue(r.BuildingId, out var b)) return "no such building";
+        if (!b.Def.Researches) return $"{b.Kind} can't research";
+        if (!b.Complete) return "still under construction";
+        if (b.Researching != null) return "already researching";
+        string? why = CheckResearch(r.TechId);
+        if (why != null) return why;
+        var cost = Rules.Tech(r.TechId).Cost;
+        string? shortfall = Colony.Shortfall(cost);
+        if (shortfall != null) return shortfall;
+        Colony.Pay(cost);
+        b.Researching = r.TechId;
+        b.ResearchProgress = 0;
+        return null;
+    }
+
+    /// <summary>
+    /// A tech finishes: recompute every effective definition and hand the new
+    /// ones to what's already built and trained, keeping each one's hit
+    /// points in proportion.
+    /// </summary>
+    internal void CompleteResearch(Building at)
+    {
+        string id = at.Researching!;
+        at.Researching = null;
+        at.ResearchProgress = 0;
+        Tech.Researched.Add(id);
+        Tech.Recompute(Rules);
+        foreach (var b in _buildings)
+        {
+            var def = Def(b.Kind);
+            if (def.Hp != b.Def.Hp) b.Hp *= def.Hp / b.Def.Hp;
+            b.Def = def;
+        }
+        foreach (var u in _units)
+        {
+            var def = Def(u.Kind);
+            if (def.Hp != u.Def.Hp) u.Hp *= def.Hp / u.Def.Hp;
+            u.Def = def;
+        }
+        MarkNetworkDirty(); // radii and gather rates may have changed
+        _events.Add(new TechResearched(Tick, id));
     }
 
     string? TryOrder(OrderUnits o)

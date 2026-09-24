@@ -52,5 +52,7 @@ public sealed record WaveAnnounced(int Tick, int Number, int LandsAtTick, Side[]
 
 public sealed record WaveLanded(int Tick, int Number, int Spawned, bool Final) : SimEvent(Tick);
 
+public sealed record TechResearched(int Tick, string TechId) : SimEvent(Tick);
+
 /// <summary>A Bloater burst here.</summary>
 public sealed record DemonBurst(int Tick, float X, float Y, float Radius) : SimEvent(Tick);

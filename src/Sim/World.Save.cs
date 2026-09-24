@@ -17,7 +17,7 @@ namespace Hellwall.Sim;
 public sealed partial class World
 {
     const uint Magic = 0x56535748; // "HWSV"
-    const int FormatVersion = 1;
+    const int FormatVersion = 2;
 
     public byte[] Save()
     {
@@ -38,6 +38,9 @@ public sealed partial class World
             w.Write(_nextId);
             w.Write(NetworkDirty);
             foreach (var t in Terrain.Tiles) w.Write((byte)t);
+
+            w.Write(Tech.Researched.Count);
+            foreach (var id in Tech.Researched) w.Write(id);
 
             w.Write(Stats.DemonsKilled);
             w.Write(Stats.BuildingsLost);
@@ -73,6 +76,8 @@ public sealed partial class World
                 w.Write(b.Possessed);
                 w.Write(b.Occupants);
                 w.Write(b.PossessTimer);
+                w.Write(b.Researching ?? "");
+                w.Write(b.ResearchProgress);
             }
 
             w.Write(_units.Count);
@@ -158,6 +163,10 @@ public sealed partial class World
         var tiles = world.Terrain.Tiles;
         for (int i = 0; i < tiles.Length; i++) tiles[i] = (Tile)r.ReadByte();
 
+        int researched = r.ReadInt32();
+        for (int i = 0; i < researched; i++) world.Tech.Researched.Add(r.ReadString());
+        world.Tech.Recompute(rules);
+
         world.Stats.DemonsKilled = r.ReadInt32();
         world.Stats.BuildingsLost = r.ReadInt32();
         world.Stats.UnitsLost = r.ReadInt32();
@@ -178,7 +187,7 @@ public sealed partial class World
         {
             int id = r.ReadInt32();
             var kind = (BuildingKind)r.ReadByte();
-            var def = rules[kind];
+            var def = world.Def(kind);
             var b = new Building
             {
                 Id = id, Kind = kind, Def = def, X = r.ReadInt32(), Y = r.ReadInt32(), W = def.W, H = def.H,
@@ -190,6 +199,9 @@ public sealed partial class World
             b.Possessed = r.ReadBoolean();
             b.Occupants = r.ReadInt32();
             b.PossessTimer = r.ReadSingle();
+            string researching = r.ReadString();
+            b.Researching = researching.Length == 0 ? null : researching;
+            b.ResearchProgress = r.ReadSingle();
             world._buildings.Add(b);
             world._buildingById[b.Id] = b;
             world.Stamp(b, b.Id);
@@ -203,7 +215,7 @@ public sealed partial class World
             var kind = (UnitKind)r.ReadByte();
             var u = new Unit
             {
-                Id = id, Kind = kind, Def = rules[kind], X = r.ReadSingle(), Y = r.ReadSingle(), PrevX = r.ReadSingle(), PrevY = r.ReadSingle(),
+                Id = id, Kind = kind, Def = world.Def(kind), X = r.ReadSingle(), Y = r.ReadSingle(), PrevX = r.ReadSingle(), PrevY = r.ReadSingle(),
                 Hp = r.ReadSingle(), Cooldown = r.ReadSingle(), Order = (OrderKind)r.ReadByte(), DestX = r.ReadInt32(), DestY = r.ReadInt32(),
             };
             if (r.ReadBoolean()) needsField.Add(u);

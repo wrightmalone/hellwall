@@ -41,9 +41,16 @@ public static class StateHash
             h = MixByte(h, b.Possessed ? (byte)1 : (byte)0);
             h = Mix(h, (uint)b.Occupants);
             h = Mix(h, Bits(b.PossessTimer));
+            h = Mix(h, (uint)(b.Researching?.Length ?? 0));
+            foreach (char ch in b.Researching ?? "") h = MixByte(h, (byte)ch);
+            h = Mix(h, Bits(b.ResearchProgress));
             h = Mix(h, (uint)b.Queue.Count);
             foreach (var q in b.Queue) h = MixByte(h, (byte)q);
         }
+
+        h = Mix(h, (uint)world.Tech.Researched.Count);
+        foreach (var id in world.Tech.Researched)
+            foreach (char ch in id) h = MixByte(h, (byte)ch);
 
         var colony = world.Colony;
         foreach (var stock in colony.Stock) h = Mix64(h, BitConverter.DoubleToInt64Bits(stock));

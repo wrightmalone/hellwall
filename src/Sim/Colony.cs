@@ -117,7 +117,7 @@ internal static class ColonySystem
             net[(int)Resource.Gold] += b.Def.Gold;
             if (b.Def.Produces is { } res) net[(int)res] += b.Rate * colony.Power;
         }
-        if (!colony.Starving) net[(int)Resource.Gold] += colonists * rules.ColonistGoldPerSecond;
+        if (!colony.Starving) net[(int)Resource.Gold] += colonists * rules.ColonistGoldPerSecond * world.Tech.ColonistGoldMultiplier;
         net[(int)Resource.Food] -= colonists * rules.ColonistFoodPerSecond;
         foreach (var u in world.UnitList) net[(int)Resource.Gold] -= u.Def.UpkeepGold;
 
@@ -128,12 +128,20 @@ internal static class ColonySystem
         }
         colony.Starving = colony.Stock[(int)Resource.Food] <= 0 && net[(int)Resource.Food] < 0;
 
+        for (int i = 0; i < world.BuildingList.Count; i++)
+        {
+            var b = world.BuildingList[i];
+            if (!b.Active || b.Researching == null) continue;
+            b.ResearchProgress += dt * colony.Power;
+            if (b.ResearchProgress >= rules.Tech(b.Researching).Seconds) world.CompleteResearch(b);
+        }
+
         foreach (var b in world.BuildingList)
         {
             if (!b.Active || b.Queue.Count == 0) continue;
             b.TrainProgress += dt * colony.Power;
             var kind = b.Queue[0];
-            if (b.TrainProgress < rules[kind].TrainSeconds) continue;
+            if (b.TrainProgress < world.Def(kind).TrainSeconds) continue;
             if (world.TrySpawnUnit(kind, b))
             {
                 b.Queue.RemoveAt(0);

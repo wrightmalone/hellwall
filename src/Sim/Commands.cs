@@ -28,5 +28,8 @@ public sealed record MakeNoise(int X, int Y, float Radius, float Intensity) : Co
 /// <summary>Queue a unit at a Barracks. Paid for when queued; refunded if the Barracks is lost.</summary>
 public sealed record TrainUnit(int BarracksId, UnitKind Kind) : Command;
 
+/// <summary>Start researching a tech at a Scriptorium. Paid for up front; refunded if the building is lost.</summary>
+public sealed record Research(int BuildingId, string TechId) : Command;
+
 /// <summary>Order soldiers to a tile. They share one route map for the order.</summary>
 public sealed record OrderUnits(int[] UnitIds, OrderKind Order, int X, int Y) : Command;

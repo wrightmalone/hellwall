@@ -15,6 +15,9 @@ public enum BuildingKind : byte
     Bombard,
     Barracks,
     Farm,
+    StoneWall,
+    LanceTower,
+    Scriptorium,
 }
 
 public sealed class Building
@@ -51,6 +54,10 @@ public sealed class Building
     public readonly List<UnitKind> Queue = new();
     public float TrainProgress;
 
+    /// <summary>Scriptorium: the tech being researched here, if any, and seconds of work done on it.</summary>
+    public string? Researching;
+    public float ResearchProgress;
+
     /// <summary>
     /// Taken by the horde: its occupants are turning, one every
     /// possessionSpawnSeconds, and it falls when the last is out. It houses
@@ -68,7 +75,7 @@ public sealed class Building
     /// <summary>Doing its job: built, on holy ground, and crewed if it needs a crew.</summary>
     public bool Active => Complete && OnGround && !Possessed && (!NeedsCrew || Staffed);
 
-    public bool IsWallLike => Kind is BuildingKind.Wall or BuildingKind.Gate;
+    public bool IsWallLike => Kind is BuildingKind.Wall or BuildingKind.Gate or BuildingKind.StoneWall;
 
     /// <summary>What the horde paths to: anything built except walls and gates (which it paths through) and what it already holds.</summary>
     public bool IsDemonTarget => !IsWallLike && !Possessed;
