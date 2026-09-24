@@ -113,11 +113,14 @@ internal static class ColonySystem
         colony.Power = demand <= 0 ? 1 : Math.Min(1, supply / demand);
 
         Span<double> net = stackalloc double[Colony.Resources];
+        // Woodsmen deliver wood themselves; their lodges' measured rates are shown in the net but not added again.
+        double delivered = 0;
         foreach (var b in world.BuildingList)
         {
             if (!b.Active) continue;
             net[(int)Resource.Gold] += b.Def.Gold;
-            if (b.Def.Produces is { } res) net[(int)res] += b.Rate * colony.Power;
+            if (b.Def.Woodsmen && world.ForestBlocks) delivered += b.Rate;
+            else if (b.Def.Produces is { } res) net[(int)res] += b.Rate * colony.Power;
         }
         if (!colony.Starving) net[(int)Resource.Gold] += colonists * rules.ColonistGoldPerSecond * world.Tech.ColonistGoldMultiplier;
         net[(int)Resource.Food] -= colonists * rules.ColonistFoodPerSecond;
@@ -125,7 +128,7 @@ internal static class ColonySystem
 
         for (int r = 0; r < Colony.Resources; r++)
         {
-            colony.NetPerSecond[r] = net[r];
+            colony.NetPerSecond[r] = net[r] + (r == (int)Resource.Wood ? delivered : 0);
             colony.Stock[r] = Math.Max(0, colony.Stock[r] + net[r] * dt);
         }
         colony.Starving = colony.Stock[(int)Resource.Food] <= 0 && net[(int)Resource.Food] < 0;
@@ -222,6 +225,7 @@ internal static class ColonySystem
         foreach (var b in world.BuildingList)
         {
             if (b.Def.Produces is not { } res) continue;
+            if (b.Def.Woodsmen && world.ForestBlocks) continue; // its rate is what its woodsmen deliver
             b.Rate = 0;
             if (!b.Complete) continue;
             claimed[(int)res] ??= new bool[terrain.Width * terrain.Height];

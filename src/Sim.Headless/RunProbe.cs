@@ -137,12 +137,18 @@ public static class RunProbe
     {
         if (args.TryGetValue("difficulty", out var d)) args_difficulty = Enum.Parse<Difficulty>(d, ignoreCase: true);
         if (args.TryGetValue("map", out var m)) args_map = Enum.Parse<MapKind>(m, ignoreCase: true);
+        args_woods = args.ContainsKey("woods");
     }
+
+    /// <summary>--woods: forest blocks, woodsmen fell it (WoodsRules.Blocks), whatever rules.json says.</summary>
+    static bool args_woods;
 
     public static Result Play(uint seed, Bot.Style style, bool trace, double snapshotAt = -1, string plan = "fortress", Rules? rules = null, int endlessDays = 0, Action<World>? onEnd = null, ScenarioDef? scenario = null)
     {
         var clock = Stopwatch.StartNew();
         bool endless = endlessDays > 0;
+        rules ??= Rules.Default;
+        if (args_woods) rules = rules.WithWoods(w => w with { Blocks = true });
         var world = scenario != null
             ? World.Create(scenario.Options(rules ?? Rules.Default))
             : World.Create(new WorldOptions(seed, 256, 0, rules ?? Rules.Default, Survival: true, Difficulty: args_difficulty, Endless: endless, Map: args_map));
@@ -200,6 +206,7 @@ public static class RunProbe
             $"    day {w.Day,2}  gold {c[Resource.Gold],5:F0} ({c.NetPerSecond[0]:+0.0;-0.0}) wood {c[Resource.Wood],4:F0} ({c.NetPerSecond[1]:+0.0;-0.0}) stone {c[Resource.Stone],4:F0} ({c.NetPerSecond[2]:+0.0;-0.0}) food {c[Resource.Food],4:F0} ({c.NetPerSecond[3]:+0.00;-0.00}) iron {c[Resource.Iron],4:F0} ({c.NetPerSecond[4]:+0.00;-0.00})  " +
             $"colonists {c.WorkersUsed}/{c.Colonists} sanct {c.SanctityDemand:0}/{c.SanctitySupply:0}  " +
             $"house {Count(BuildingKind.House)} farm {Count(BuildingKind.Farm)} hunt {Count(BuildingKind.Hunter)} wood {Count(BuildingKind.Woodcutter)} quar {Count(BuildingKind.Quarry)} mine {Count(BuildingKind.Mine)} shrine {Count(BuildingKind.Shrine)} ward {Count(BuildingKind.Wardstone)} " +
-            $"wall {Count(BuildingKind.Wall)} tower {Count(BuildingKind.Watchtower)} bomb {Count(BuildingKind.Bombard)} units {w.Units.Count}  demons {w.Horde.Count} (asleep {w.Packs.Where(p => !p.Awake).Sum(p => p.Count)} in {w.Packs.Count(p => !p.Awake)} packs)  keep {w.Buildings.FirstOrDefault(b => b.Kind == BuildingKind.Keep)?.Hp ?? 0:0}"));
+            $"wall {Count(BuildingKind.Wall)} tower {Count(BuildingKind.Watchtower)} bomb {Count(BuildingKind.Bombard)} units {w.Units.Count}  demons {w.Horde.Count} (asleep {w.Packs.Where(p => !p.Awake).Sum(p => p.Count)} in {w.Packs.Count(p => !p.Awake)} packs)  keep {w.Buildings.FirstOrDefault(b => b.Kind == BuildingKind.Keep)?.Hp ?? 0:0}") +
+            (w.ForestBlocks ? $"  woodsmen {w.Woodsmen.Count} felled {w.TreesFelled}" : ""));
     }
 }

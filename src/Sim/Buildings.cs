@@ -65,6 +65,10 @@ public sealed class Building
     public int RallyX = -1;
     public int RallyY;
 
+    /// <summary>A lodge whose woodsmen fell trees: wood delivered in the current window, and how far into it.</summary>
+    public float WoodWindow;
+    public float WoodTimer;
+
     /// <summary>Scriptorium: the tech being researched here, if any, and seconds of work done on it.</summary>
     public string? Researching;
     public float ResearchProgress;

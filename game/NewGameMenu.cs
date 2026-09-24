@@ -4,7 +4,7 @@ using Hellwall.Sim;
 namespace Hellwall.Game;
 
 /// <summary>What a new run is: every choice the menu offers, and what the command line can set instead.</summary>
-public sealed record GameSetup(uint Seed, MapKind Map, Difficulty Difficulty, bool Endless, ScenarioDef? Mission = null);
+public sealed record GameSetup(uint Seed, MapKind Map, Difficulty Difficulty, bool Endless, ScenarioDef? Mission = null, bool Woods = false);
 
 /// <summary>
 /// The screen before a run: survival or endless, difficulty, kind of map and
@@ -18,6 +18,7 @@ public partial class NewGameMenu : CanvasLayer
     public GameSetup Initial = new(11, MapKind.Plains, Difficulty.Normal, false);
 
     OptionButton _mode = null!, _difficulty = null!, _map = null!;
+    CheckBox _woods = null!;
     LineEdit _seed = null!;
     Label _about = null!;
 
@@ -83,6 +84,10 @@ public partial class NewGameMenu : CanvasLayer
         _mode.ItemSelected += _ => Describe();
         Describe();
 
+        _woods = new CheckBox { Text = "Living woods (experimental): forest is a wall, woodsmen fell it", ButtonPressed = Initial.Woods };
+        _woods.TooltipText = "No one walks through the trees. Woodcutters send out woodsmen who fell them one by one, so the forest\nshrinks and opens new ways into your town. The horde can hack through trees, slowly.";
+        box.AddChild(_woods);
+
         var volumeRow = Row(box, "Volume");
         var volume = new HSlider { MinValue = 0, MaxValue = 1, Step = 0.05, Value = Sound.Volume, SizeFlagsHorizontal = Control.SizeFlags.ExpandFill };
         volume.ValueChanged += v => Settings.Set("volume", (float)v);
@@ -119,7 +124,7 @@ public partial class NewGameMenu : CanvasLayer
     void Begin()
     {
         uint seed = uint.TryParse(_seed.Text.Trim(), out var s) ? s : (uint)GD.Randi();
-        Start(new GameSetup(seed, (MapKind)_map.Selected, (Difficulty)_difficulty.Selected, _mode.Selected == 1));
+        Start(new GameSetup(seed, (MapKind)_map.Selected, (Difficulty)_difficulty.Selected, _mode.Selected == 1, Woods: _woods.ButtonPressed));
         QueueFree();
     }
 

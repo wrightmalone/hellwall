@@ -41,6 +41,10 @@
     "houndChance": 0.15, "clearRadius": 10, "wakeRadius": 7
   },
 
+  "woods": {
+    "blocks": false, "treeHp": 300, "treeCost": 20, "chopDps": 5.5, "woodPerHp": 0.1, "carry": 10, "speed": 2.2, "reach": 14
+  },
+
   "hellgates": {
     "count": 4, "minDistance": 70, "hp": 2500, "spawnSeconds": 60, "firstBandDay": 8, "bandSize": 4,
     "tierDays": [20, 40], "waveFloor": 0.4
@@ -71,7 +75,7 @@
                     "housing": 6 },
     "Woodcutter": { "size": [2, 2], "hp": 250,  "buildSeconds": 8,  "cost": { "gold": 40, "wood": 5 },
                     "workers": 3, "sanctityUse": 2,
-                    "produces": "Wood", "perTile": 0.035, "gatherRadius": 4, "gathers": ["Forest"] },
+                    "produces": "Wood", "perTile": 0.035, "gatherRadius": 4, "gathers": ["Forest"], "woodsmen": true },
     "Quarry":     { "size": [2, 2], "hp": 300,  "buildSeconds": 10, "cost": { "gold": 50, "wood": 10 },
                     "workers": 3, "sanctityUse": 2,
                     "produces": "Stone", "perTile": 0.025, "gatherRadius": 4, "gathers": ["Rock"] },

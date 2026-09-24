@@ -86,7 +86,7 @@ public partial class Main : Node2D
             o.ContainsKey("endless"),
             o.TryGetValue("mission", out var mid) ? Campaign.Default.Find(mid) ?? throw new ArgumentException($"no mission '{mid}'") : null);
         // Any flag that sets up a run (and every headless boot, which is verify.sh) skips the menu.
-        bool flagged = new[] { "seed", "map", "difficulty", "endless", "autoplay", "bench", "demo", "skip", "screenshot", "mission" }.Any(o.ContainsKey);
+        bool flagged = new[] { "seed", "map", "difficulty", "endless", "autoplay", "bench", "demo", "skip", "screenshot", "mission", "woods" }.Any(o.ContainsKey);
         if (_retry != null)
         {
             var again = _retry;
@@ -127,7 +127,8 @@ public partial class Main : Node2D
         if (_benchSeconds > 0) rules = rules.WithBuilding(BuildingKind.Keep, k => k with { Hp = 1e9f });
         if (_demoSeconds > 0) rules = rules.WithStartingResources(new Cost { Gold = 5000, Wood = 3000, Stone = 2000, Food = 1000, Iron = 1000 });
         bool scripted = _benchSeconds > 0 || _demoSeconds > 0;
-        _baseRules = rules;
+        _baseRules = rules; // saves record whether the woods were living, and Load puts that back
+        if (setup.Woods || options.ContainsKey("woods")) rules = rules.WithWoods(w => w with { Blocks = true });
         // A survival run takes its packs from rules.json (wilds).
         _world = setup.Mission is { } mission && !scripted
             ? World.Create(mission.Options(rules))
@@ -158,7 +159,10 @@ public partial class Main : Node2D
             {
                 if (_bot != null && _world.Tick % Balance.TickHz == 0) _bot.Act();
                 _world.Step();
-                if (_bot != null) _bot.See(_world.DrainEvents());
+                var events = _world.DrainEvents();
+                _bot?.See(events);
+                foreach (var e in events)
+                    if (e is TreeFelled f) _terrainView!.PaintCell(f.X, f.Y);
             }
             HandleEvents();
         }
@@ -357,8 +361,19 @@ public partial class Main : Node2D
         else if (_screenshotPath != null && ++_frames == 30) SaveScreenshotAndQuit();
     }
 
+    /// <summary>Trees came down since the minimap was last painted; it repaints at most twice a second.</summary>
+    bool _minimapStale;
+    double _minimapClock;
+
     void HandleEvents()
     {
+        _minimapClock += GetProcessDeltaTime();
+        if (_minimapStale && _minimapClock > 0.5)
+        {
+            _minimap.Repaint();
+            _minimapStale = false;
+            _minimapClock = 0;
+        }
         var events = _world.DrainEvents();
         _bot?.See(events);
         foreach (var e in events)
@@ -382,6 +397,10 @@ public partial class Main : Node2D
                     if (_world.Scenario is { } done) CampaignProgress.Record(Campaign.Default.Id, done.Id, o.Outcome == Outcome.Won, _world.Day);
                     break;
                 case CorruptionTook c: _state.Say($"The horde is corrupted: {c.Name}"); break;
+                case TreeFelled f:
+                    _terrainView!.PaintCell(f.X, f.Y);
+                    _minimapStale = true;
+                    break;
             }
         }
     }

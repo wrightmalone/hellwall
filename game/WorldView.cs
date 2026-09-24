@@ -78,36 +78,45 @@ public partial class WorldView : Node2D
         var seen = new HashSet<int>();
         int step = (int)(Time.GetTicksMsec() / 100); // walk frames at 10 a second
         foreach (var u in World.Units)
-        {
-            seen.Add(u.Id);
-            if (!_units.TryGetValue(u.Id, out var sprite))
-            {
-                sprite = new Sprite2D
-                {
-                    Texture = Art.Tex(Art.Unit(u.Kind)),
-                    Centered = false,
-                    RegionEnabled = true,
-                    Scale = new Vector2(Art.UnitScale, Art.UnitScale),
-                    Offset = -Art.Feet, // feet on the ground point
-                    TextureFilter = TextureFilterEnum.LinearWithMipmaps,
-                };
-                _units[u.Id] = sprite;
-                Sorted.AddChild(sprite);
-            }
-            float dx = u.X - u.PrevX, dy = u.Y - u.PrevY;
-            bool moving = dx * dx + dy * dy > 1e-6f;
-            if (moving) _facing[u.Id] = Art.Facing(dx, dy);
-            int facing = _facing.GetValueOrDefault(u.Id, 1);
-            int frame = moving ? (step + u.Id) % Art.Frames : 0;
-            sprite.RegionRect = new Rect2(frame * Art.Cell, facing * Art.Cell, Art.Cell, Art.Cell);
-            sprite.Position = Iso.P(Mathf.Lerp(u.PrevX, u.X, State.Alpha), Mathf.Lerp(u.PrevY, u.Y, State.Alpha));
-        }
+            Figure(seen, step, u.Id, Art.Unit(u.Kind), Art.UnitScale, u.X, u.Y, u.PrevX, u.PrevY, null);
+        // Woodsmen: a militiaman's figure, a size smaller; chopping, he faces the tree and swings (the walk cycle, slowed).
+        var w = World.Terrain.Width;
+        foreach (var m in World.Woodsmen)
+            Figure(seen, step, m.Id, Art.Unit(UnitKind.Militia), Art.UnitScale * 0.8f, m.X, m.Y, m.PrevX, m.PrevY,
+                m.State == WoodsmanState.Chopping && m.Tree >= 0 ? new Vector2(m.Tree % w + 0.5f - m.X, m.Tree / w + 0.5f - m.Y) : null);
         foreach (var id in _units.Keys.Where(id => !seen.Contains(id)).ToList())
         {
             _units[id].QueueFree();
             _units.Remove(id);
             _facing.Remove(id);
         }
+    }
+
+    void Figure(HashSet<int> seen, int step, int id, string sheet, float scale, float x, float y, float prevX, float prevY, Vector2? chopping)
+    {
+        seen.Add(id);
+        if (!_units.TryGetValue(id, out var sprite))
+        {
+            sprite = new Sprite2D
+            {
+                Texture = Art.Tex(sheet),
+                Centered = false,
+                RegionEnabled = true,
+                Scale = new Vector2(scale, scale),
+                Offset = -Art.Feet, // feet on the ground point
+                TextureFilter = TextureFilterEnum.LinearWithMipmaps,
+            };
+            _units[id] = sprite;
+            Sorted.AddChild(sprite);
+        }
+        float dx = x - prevX, dy = y - prevY;
+        bool moving = dx * dx + dy * dy > 1e-6f;
+        if (chopping is { } at) _facing[id] = Art.Facing(at.X, at.Y);
+        else if (moving) _facing[id] = Art.Facing(dx, dy);
+        int facing = _facing.GetValueOrDefault(id, 1);
+        int frame = chopping != null ? (step / 2 + id) % 2 * 2 : moving ? (step + id) % Art.Frames : 0;
+        sprite.RegionRect = new Rect2(frame * Art.Cell, facing * Art.Cell, Art.Cell, Art.Cell);
+        sprite.Position = Iso.P(Mathf.Lerp(prevX, x, State.Alpha), Mathf.Lerp(prevY, y, State.Alpha));
     }
 
     /// <summary>A building: Tower Defense pieces stacked bottom first, standing on its footprint's centre.</summary>

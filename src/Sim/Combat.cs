@@ -39,7 +39,7 @@ internal static class Combat
             if (dx == 0 && dy == 0) continue;
             int bx = tx + Math.Sign(dx), by = ty + Math.Sign(dy);
             int id = world.BuildingIdAt(bx, by);
-            if (id == 0) continue;
+            if (id == 0 && !world.IsTree(bx, by)) continue;
             // Only a body actually against the building can hit it: of a tile
             // crowded to the density cap, the front rank does the damage and
             // the rest wait their turn.
@@ -47,8 +47,19 @@ internal static class Combat
             float ey = MathF.Max(MathF.Max(by - h.Y[i], 0), h.Y[i] - (by + 1));
             if (ex * ex + ey * ey > Balance.DemonReach * Balance.DemonReach) continue;
             if (kind.Damage <= 0 && kind.ExplodeDamage <= 0) continue; // harmless (test and probe rules): makes no attacks at all, so possesses nothing
-            Strike(world, h, i, kind, id);
+            if (id == 0) HackTree(world, h, i, kind, bx, by);
+            else Strike(world, h, i, kind, id);
         }
+    }
+
+    /// <summary>Where the woods block, the horde cuts its way through: a blow to the tree ahead, which falls at zero.</summary>
+    static void HackTree(World world, Horde h, int i, DemonDef def, int x, int y)
+    {
+        int t = world.Terrain.Index(x, y);
+        world.TreeHp[t] -= def.ExplodeDamage > 0 ? def.ExplodeDamage : def.Damage;
+        if (def.ExplodeDamage > 0) h.Hp[i] = 0;
+        else h.Cooldown[i] = def.Cooldown;
+        if (world.TreeHp[t] <= 0) world.Fell(t);
     }
 
     /// <summary>One demon's attack on one building: a blow, or, for a Bloater, bursting against it.</summary>

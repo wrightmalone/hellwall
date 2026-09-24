@@ -90,9 +90,12 @@ public sealed class FlowField
                 int p = (y + 1) * pw + x + 1;
                 bool open = human ? world.IsHumanWalkable(x, y) : world.IsWalkable(x, y);
                 bool wall = !human && !open && world.IsWallAt(x, y);
+                // Where the woods block, a tree is a wall the horde can hack through, at its own cost.
+                bool tree = !human && !open && !wall && world.IsTree(x, y);
                 _open[p] = open;
-                _walk[p] = open || wall;
+                _walk[p] = open || wall || tree;
                 _cost[p] = (byte)(wall ? Balance.WallCostMultiplier
+                    : tree ? world.Rules.Woods.TreeCost
                     : !open ? 0
                     : terrain.Get(x, y) == Tile.Forest ? Balance.ForestCostMultiplier : 1);
             }

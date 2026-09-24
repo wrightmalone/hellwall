@@ -121,6 +121,55 @@ public sealed partial class World
     /// <summary>The horde changed (spawns, deaths) since the spatial hash was last built.</summary>
     bool _spatialStale;
 
+    /// <summary>Per tile, a tree's hit points (0 where there's no tree), and which woodsman has claimed it.</summary>
+    internal readonly float[] TreeHp;
+    internal readonly int[] TreeClaim;
+    readonly List<Woodsman> _woodsmen = new();
+    public IReadOnlyList<Woodsman> Woodsmen => _woodsmen;
+    internal List<Woodsman> WoodsmanList => _woodsmen;
+
+    /// <summary>Forest is a wall: no one walks through it, the horde hacks through it.</summary>
+    public bool ForestBlocks => Rules.Woods.Blocks;
+
+    bool Blocked(Tile tile) => !Terrain.IsWalkable(tile) || (tile == Tile.Forest && ForestBlocks);
+
+    /// <summary>A standing tree the horde can hack through (only when the woods block).</summary>
+    public bool IsTree(int x, int y) => ForestBlocks && Terrain.InBounds(x, y) && Terrain.Get(x, y) == Tile.Forest;
+
+    internal int NextId() => _nextId++;
+
+    /// <summary>A tree comes down: the tile becomes open ground, and routes and gathering are recomputed.</summary>
+    public int TreesFelled { get; internal set; }
+
+    /// <summary>Tests and tools: turn a rectangle (inclusive) into standing forest at full health, leaving buildings alone.</summary>
+    internal void PlantForest(int x0, int y0, int x1, int y1)
+    {
+        for (int y = y0; y <= y1; y++)
+            for (int x = x0; x <= x1; x++)
+            {
+                if (!Terrain.InBounds(x, y) || BuildingIdAt(x, y) != 0) continue;
+                Terrain.Set(x, y, Tile.Forest);
+                TreeHp[Terrain.Index(x, y)] = Rules.Woods.TreeHp;
+            }
+        OnLayoutChanged();
+        MarkNetworkDirty();
+    }
+
+    internal void Fell(int tile)
+    {
+        if (Terrain.Tiles[tile] != Tile.Forest) return;
+        TreesFelled++;
+        Terrain.Tiles[tile] = Tile.Grass;
+        TreeHp[tile] = 0;
+        TreeClaim[tile] = 0;
+        OnLayoutChanged();
+        MarkNetworkDirty();
+        _events.Add(new TreeFelled(Tick, tile % Terrain.Width, tile / Terrain.Width));
+    }
+
+    /// <summary>A tile beside a building a person can stand on: where its woodsmen come and go.</summary>
+    internal (int X, int Y)? DoorOf(Building b) => FindTileNear((int)b.CentreX, b.Y + b.H, 4, IsHumanWalkable);
+
     /// <summary>Per tile, the speed factor Belfries impose (1 where none reach). Derived, rebuilt every tick.</summary>
     internal readonly float[] Slow;
     internal readonly List<int> SlowedTiles = new();
@@ -138,6 +187,10 @@ public sealed partial class World
         _gateTile = new bool[Terrain.Width * Terrain.Height];
         Slow = new float[Terrain.Width * Terrain.Height];
         Array.Fill(Slow, 1f);
+        TreeHp = new float[Terrain.Width * Terrain.Height];
+        TreeClaim = new int[Terrain.Width * Terrain.Height];
+        for (int i = 0; i < TreeHp.Length; i++)
+            if (Terrain.Tiles[i] == Tile.Forest) TreeHp[i] = Rules.Woods.TreeHp;
         Colony = new Colony(Terrain.Width * Terrain.Height, Rules.StartingResources);
         Flow = new FlowField(Terrain.Width, Terrain.Height);
         Noise = new NoiseGrid(Terrain.Width, Terrain.Height);
@@ -202,6 +255,7 @@ public sealed partial class World
         UnitSystem.TakeHits(this);
         Combat.DemonsAttackBuildings(this);
         UnitSystem.Step(this, dt);
+        WoodsSystem.Step(this, dt);
         Abilities.Heal(this, dt);
         Combat.TowersFire(this, dt);
         StepPossessed(dt);
@@ -282,12 +336,12 @@ public sealed partial class World
 
     /// <summary>Demons can stand here: walkable terrain with no building on it.</summary>
     public bool IsWalkable(int x, int y) =>
-        Terrain.InBounds(x, y) && Terrain.IsWalkable(Terrain.Get(x, y)) && _occupancy[Terrain.Index(x, y)] == 0 && !_gateTile[Terrain.Index(x, y)];
+        Terrain.InBounds(x, y) && !Blocked(Terrain.Get(x, y)) && _occupancy[Terrain.Index(x, y)] == 0 && !_gateTile[Terrain.Index(x, y)];
 
     /// <summary>Soldiers can stand here: like demons, but they pass through gates.</summary>
     public bool IsHumanWalkable(int x, int y)
     {
-        if (!Terrain.InBounds(x, y) || !Terrain.IsWalkable(Terrain.Get(x, y)) || _gateTile[Terrain.Index(x, y)]) return false;
+        if (!Terrain.InBounds(x, y) || Blocked(Terrain.Get(x, y)) || _gateTile[Terrain.Index(x, y)]) return false;
         int id = _occupancy[Terrain.Index(x, y)];
         return id == 0 || _buildingById[id].Kind == BuildingKind.Gate;
     }

@@ -17,7 +17,7 @@ namespace Hellwall.Sim;
 public sealed partial class World
 {
     const uint Magic = 0x56535748; // "HWSV"
-    const int FormatVersion = 7;
+    const int FormatVersion = 8;
 
     public byte[] Save()
     {
@@ -35,6 +35,7 @@ public sealed partial class World
             w.Write((byte)Rules.Difficulty);
             w.Write((byte)Map);
             w.Write(Scenario?.Id ?? "");
+            w.Write(Rules.Woods.Blocks); // a run option (living woods), so the save carries it
 
             w.Write(Tick);
             w.Write((byte)Outcome);
@@ -79,6 +80,8 @@ public sealed partial class World
                 foreach (var q in b.Queue) w.Write((byte)q);
                 w.Write(b.RallyX);
                 w.Write(b.RallyY);
+                w.Write(b.WoodWindow);
+                w.Write(b.WoodTimer);
                 w.Write(b.Possessed);
                 w.Write(b.Occupants);
                 w.Write(b.PossessTimer);
@@ -162,8 +165,48 @@ public sealed partial class World
             }
             foreach (bool done in GoalsDone) w.Write(done);
             foreach (bool fired in TriggersFired) w.Write(fired);
+            SaveWoods(w);
         }
         return stream.ToArray();
+    }
+
+    /// <summary>Trees part felled (only those; the rest stand at full), how many have come down, and the woodsmen, who carry their paths.</summary>
+    void SaveWoods(BinaryWriter w)
+    {
+        w.Write(TreesFelled);
+        var hurt = new List<int>();
+        for (int i = 0; i < TreeHp.Length; i++)
+            if (Terrain.Tiles[i] == Tile.Forest && TreeHp[i] != Rules.Woods.TreeHp) hurt.Add(i);
+        w.Write(hurt.Count);
+        foreach (int i in hurt) { w.Write(i); w.Write(TreeHp[i]); }
+        w.Write(_woodsmen.Count);
+        foreach (var m in _woodsmen)
+        {
+            w.Write(m.Id); w.Write(m.HomeId);
+            w.Write(m.X); w.Write(m.Y); w.Write(m.PrevX); w.Write(m.PrevY);
+            w.Write((byte)m.State);
+            w.Write(m.Path.Length);
+            foreach (int t in m.Path) w.Write(t);
+            w.Write(m.Step); w.Write(m.Tree); w.Write(m.Carry); w.Write(m.Wait);
+        }
+    }
+
+    void LoadWoods(BinaryReader r)
+    {
+        TreesFelled = r.ReadInt32();
+        for (int i = 0; i < TreeHp.Length; i++) TreeHp[i] = Terrain.Tiles[i] == Tile.Forest ? Rules.Woods.TreeHp : 0;
+        for (int n = r.ReadInt32(); n > 0; n--) { int i = r.ReadInt32(); TreeHp[i] = r.ReadSingle(); }
+        Array.Clear(TreeClaim);
+        _woodsmen.Clear();
+        for (int n = r.ReadInt32(); n > 0; n--)
+        {
+            var m = new Woodsman { Id = r.ReadInt32(), HomeId = r.ReadInt32(), X = r.ReadSingle(), Y = r.ReadSingle(), PrevX = r.ReadSingle(), PrevY = r.ReadSingle(), State = (WoodsmanState)r.ReadByte() };
+            m.Path = new int[r.ReadInt32()];
+            for (int i = 0; i < m.Path.Length; i++) m.Path[i] = r.ReadInt32();
+            m.Step = r.ReadInt32(); m.Tree = r.ReadInt32(); m.Carry = r.ReadSingle(); m.Wait = r.ReadSingle();
+            if (m.Tree >= 0) TreeClaim[m.Tree] = m.Id;
+            _woodsmen.Add(m);
+        }
     }
 
     /// <summary>Rebuild a world from Save's bytes. The rules must be the ones it was saved under (at Normal or at the save's own difficulty, which the save records).</summary>
@@ -183,6 +226,7 @@ public sealed partial class World
         string scenarioId = r.ReadString();
         var scenario = scenarioId.Length == 0 ? null : Campaign.Default.Find(scenarioId) ?? throw new FormatException($"this save is from a mission this build doesn't have ('{scenarioId}')");
         if (scenario != null) rules = scenario.RulesFrom(rules);
+        if (r.ReadBoolean() && !rules.Woods.Blocks) rules = rules.WithWoods(w => w with { Blocks = true });
         if (rulesHash != rules.ForDifficulty(difficulty).Hash) throw new FormatException("this save was made under different rules");
 
         var world = new World(new WorldOptions(seed, size, 0, rules, survival, difficulty, endless, map, scenario));
@@ -229,6 +273,8 @@ public sealed partial class World
             for (int q = 0; q < queued; q++) b.Queue.Add((UnitKind)r.ReadByte());
             b.RallyX = r.ReadInt32();
             b.RallyY = r.ReadInt32();
+            b.WoodWindow = r.ReadSingle();
+            b.WoodTimer = r.ReadSingle();
             b.Possessed = r.ReadBoolean();
             b.Occupants = r.ReadInt32();
             b.PossessTimer = r.ReadSingle();
@@ -311,6 +357,7 @@ public sealed partial class World
 
         for (int i = 0; i < world.GoalsDone.Length; i++) world.GoalsDone[i] = r.ReadBoolean();
         for (int i = 0; i < world.TriggersFired.Length; i++) world.TriggersFired[i] = r.ReadBoolean();
+        world.LoadWoods(r);
 
         // Derived state: rebuilt, not stored.
         world._flowDirty = true;

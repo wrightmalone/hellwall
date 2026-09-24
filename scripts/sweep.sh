@@ -7,6 +7,7 @@
 #   scripts/sweep.sh 3 5 7            chosen seeds
 #   DIFFICULTY=hard scripts/sweep.sh  at another difficulty (default normal)
 #   MAP=lakes scripts/sweep.sh        on another kind of map (default plains)
+#   WOODS=1 scripts/sweep.sh          with blocking woods and woodsmen (woods.blocks)
 #   GATE=1 scripts/sweep.sh           and fail unless the balance gate holds (see below)
 set -euo pipefail
 cd "$(dirname "$0")/.."
@@ -16,7 +17,7 @@ BIN=src/Sim.Headless/bin/Release/net10.0/hellwall-sim.dll
 dotnet build src/Sim.Headless -c Release --nologo -v q >/dev/null
 mkdir -p out/sweep
 rm -f out/sweep/*.txt
-printf '%s\n' "${SEEDS[@]}" | xargs -P 6 -I{} sh -c "dotnet $BIN paths --seeds={} --difficulty=${DIFFICULTY:-normal} --map=${MAP:-plains} > out/sweep/{}.txt 2>&1 || true"
+printf '%s\n' "${SEEDS[@]}" | xargs -P 6 -I{} sh -c "dotnet $BIN paths --seeds={} --difficulty=${DIFFICULTY:-normal} --map=${MAP:-plains} ${WOODS:+--woods} > out/sweep/{}.txt 2>&1 || true"
 cat out/sweep/*.txt | grep '^seed' | awk '
   { path=$4; won=($5=="Won"); day=$7; n[path]++; w[path]+=won; d[path]+=day; row[$2]=row[$2] sprintf("  %-8s %-5s d%-2s", path, $5, day) }
   END {

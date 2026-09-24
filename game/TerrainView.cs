@@ -47,27 +47,33 @@ public partial class TerrainView : Node2D
         var t = World.Terrain;
         for (int y = 0; y < t.Height; y++)
             for (int x = 0; x < t.Width; x++)
-            {
-                var kind = t.Get(x, y);
-                var cell = new Vector2I(x, y);
-                var blocks = Art.TerrainImages(kind);
-                var scenery = Art.Scenery(kind);
-                if (kind == Tile.Ore)
-                {
-                    // Crystal blocks are whole tiles: grass underneath, the crystals sorted with everything standing.
-                    _ground.SetCell(cell, _sources[Art.TerrainImages(Tile.Grass)[0]], Vector2I.Zero);
-                    _tall.SetCell(cell, _sources[blocks[Pick(x, y, blocks.Length)]], Vector2I.Zero);
-                    continue;
-                }
-                _ground.SetCell(cell, _sources[blocks[Pick(x, y, blocks.Length)]], Vector2I.Zero);
-                if (scenery.Length > 0) _tall.SetCell(cell, _sources[scenery[Pick(x, y, scenery.Length)]], Vector2I.Zero);
-                else if (kind == Tile.Grass && Pick(x * 7 + 3, y * 5 + 1, 14) == 0) _tuft.SetCell(cell, _sources[Art.Tufts[Pick(y, x, Art.Tufts.Length)]], Vector2I.Zero);
-            }
+                PaintCell(x, y);
         Align(_ground);
         Align(_holy);
         Align(_tuft);
         Align(_tall);
         RepaintHoly();
+    }
+
+    /// <summary>Lay one tile's ground and whatever stands on it. Call again when the tile changes (a tree felled).</summary>
+    public void PaintCell(int x, int y)
+    {
+        var kind = World.Terrain.Get(x, y);
+        var cell = new Vector2I(x, y);
+        var blocks = Art.TerrainImages(kind);
+        var scenery = Art.Scenery(kind);
+        _tall.EraseCell(cell);
+        _tuft.EraseCell(cell);
+        if (kind == Tile.Ore)
+        {
+            // Crystal blocks are whole tiles: grass underneath, the crystals sorted with everything standing.
+            _ground.SetCell(cell, _sources[Art.TerrainImages(Tile.Grass)[0]], Vector2I.Zero);
+            _tall.SetCell(cell, _sources[blocks[Pick(x, y, blocks.Length)]], Vector2I.Zero);
+            return;
+        }
+        _ground.SetCell(cell, _sources[blocks[Pick(x, y, blocks.Length)]], Vector2I.Zero);
+        if (scenery.Length > 0) _tall.SetCell(cell, _sources[scenery[Pick(x, y, scenery.Length)]], Vector2I.Zero);
+        else if (kind == Tile.Grass && Pick(x * 7 + 3, y * 5 + 1, 14) == 0) _tuft.SetCell(cell, _sources[Art.Tufts[Pick(y, x, Art.Tufts.Length)]], Vector2I.Zero);
     }
 
     public void RepaintHoly()

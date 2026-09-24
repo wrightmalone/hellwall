@@ -123,6 +123,18 @@ public static class StateHash
         }
         foreach (bool done in world.GoalsDone) h = MixByte(h, done ? (byte)1 : (byte)0);
         foreach (bool fired in world.TriggersFired) h = MixByte(h, fired ? (byte)1 : (byte)0);
+        h = Mix(h, (uint)world.TreesFelled);
+        for (int i = 0; i < world.TreeHp.Length; i++)
+            if (world.Terrain.Tiles[i] == Tile.Forest && world.TreeHp[i] != world.Rules.Woods.TreeHp) { h = Mix(h, (uint)i); h = Mix(h, Bits(world.TreeHp[i])); }
+        foreach (var m in world.Woodsmen)
+        {
+            h = Mix(h, (uint)m.Id); h = Mix(h, (uint)m.HomeId);
+            h = Mix(h, Bits(m.X)); h = Mix(h, Bits(m.Y));
+            h = MixByte(h, (byte)m.State);
+            h = Mix(h, (uint)m.Step); h = Mix(h, (uint)m.Tree); h = Mix(h, Bits(m.Carry)); h = Mix(h, Bits(m.Wait));
+            foreach (int t in m.Path) h = Mix(h, (uint)t);
+        }
+        foreach (var b in world.Buildings) { h = Mix(h, Bits(b.WoodWindow)); h = Mix(h, Bits(b.WoodTimer)); }
         // Flow field and spatial hash are pure functions of the above, so they aren't hashed.
         return h;
     }
