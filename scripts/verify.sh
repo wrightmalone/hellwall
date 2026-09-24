@@ -2,14 +2,21 @@
 # Full check: build (warnings are errors), unit tests, cross-process
 # determinism, and a Godot boot. Run from anywhere.
 #
-#   scripts/verify.sh            everything
+#   scripts/verify.sh            everything (~5 min: the full-run gates play hours of game)
+#   scripts/verify.sh --fast     skip the full-run gates (survival run, build paths), ~1 min
 #   scripts/verify.sh --no-godot skip the Godot steps (CI, or no Godot installed)
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
 GODOT="${GODOT:-/Applications/Godot_mono.app/Contents/MacOS/Godot}"
 RUN_GODOT=1
-[[ "${1:-}" == "--no-godot" ]] && RUN_GODOT=0
+FULL_RUNS=1
+for arg in "$@"; do
+  case "$arg" in
+    --no-godot) RUN_GODOT=0 ;;
+    --fast) FULL_RUNS=0 ;;
+  esac
+done
 
 step() { printf '\n==> %s\n' "$*"; }
 
@@ -36,9 +43,15 @@ dotnet src/Sim.Headless/bin/Release/net10.0/hellwall-sim.dll bench
 step "town probe (defended holds, undefended falls)"
 dotnet src/Sim.Headless/bin/Release/net10.0/hellwall-sim.dll town
 
-# Phase 3 gate: a bot wins a full 60-day run on the designated map; a passive one loses on five.
-step "survival run (bot wins, passive loses)"
-dotnet src/Sim.Headless/bin/Release/net10.0/hellwall-sim.dll run
+if [[ $FULL_RUNS == 1 ]]; then
+  # Phase 3 gate: a bot wins a full 60-day run on the designated map; a passive one loses on five.
+  step "survival run (bot wins, passive loses)"
+  dotnet src/Sim.Headless/bin/Release/net10.0/hellwall-sim.dll run
+
+  # Phase 4 gate: three research paths all win, with the full demon roster.
+  step "build paths (fortress, pyre, legion all win)"
+  dotnet src/Sim.Headless/bin/Release/net10.0/hellwall-sim.dll paths --seeds=7,3
+fi
 
 if [[ $RUN_GODOT == 1 ]]; then
   step "godot: build C# and boot the main scene"

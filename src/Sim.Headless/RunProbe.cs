@@ -48,17 +48,37 @@ public static class RunProbe
         return ok ? 0 : 1;
     }
 
-    public sealed record Result(uint Seed, Bot.Style Style, Outcome Outcome, int Day, int Buildings, int Units, int Killed, int Lost, int Possessed, double WallSeconds)
+    /// <summary>
+    /// The phase 4 gate: at least three build paths win. Each plan in
+    /// Bot.Plans plays the designated map with the full demon roster; every one
+    /// has to win, and the spread of their margins shows whether one dominates.
+    /// </summary>
+    public static int Paths(Dictionary<string, string> args)
     {
-        public override string ToString() => string.Create(CultureInfo.InvariantCulture,
-            $"seed {Seed,-3} {Style,-8} {Outcome,-7} day {Day,2}  buildings {Buildings,3}  units {Units,2}  demons killed {Killed,6}  buildings lost {Lost,4}  possessed {Possessed,3}  ({WallSeconds:F0}s)");
+        var seeds = args.GetValueOrDefault("seeds", "7").Split(',').Select(v => uint.Parse(v, CultureInfo.InvariantCulture)).ToList();
+        bool trace = args.ContainsKey("trace");
+        bool ok = true;
+        foreach (var seed in seeds)
+            foreach (var plan in Bot.Plans.Keys)
+            {
+                var r = Play(seed, Bot.Style.Full, trace, plan: plan);
+                Console.WriteLine(r);
+                if (r.Outcome != Outcome.Won) { Console.WriteLine($"FAIL: seed {seed}: the {plan} path didn't win"); ok = false; }
+            }
+        return ok ? 0 : 1;
     }
 
-    public static Result Play(uint seed, Bot.Style style, bool trace, double snapshotAt = -1)
+    public sealed record Result(uint Seed, Bot.Style Style, Outcome Outcome, int Day, int Buildings, int Units, int Killed, int Lost, int Possessed, double WallSeconds, string Plan = "", string Techs = "", float KeepHp = 0)
+    {
+        public override string ToString() => string.Create(CultureInfo.InvariantCulture,
+            $"seed {Seed,-3} {Style,-8} {Plan,-9}{Outcome,-7} day {Day,2}  buildings {Buildings,3}  units {Units,2}  demons killed {Killed,6}  buildings lost {Lost,4}  possessed {Possessed,3}  keep {KeepHp,5:F0}  ({WallSeconds:F0}s)  [{Techs}]");
+    }
+
+    public static Result Play(uint seed, Bot.Style style, bool trace, double snapshotAt = -1, string plan = "fortress", Rules? rules = null)
     {
         var clock = Stopwatch.StartNew();
-        var world = World.Create(new WorldOptions(seed, 256, 40, Rules.Default, Survival: true));
-        var bot = new Bot(world, style) { Verbose = trace };
+        var world = World.Create(new WorldOptions(seed, 256, 40, rules ?? Rules.Default, Survival: true));
+        var bot = new Bot(world, style, plan) { Verbose = trace };
         int possessed = 0;
         int limit = (world.Rules.Survival.Days + 5) * (int)(world.Rules.Survival.DaySeconds * Balance.TickHz);
         while (world.Outcome == Outcome.Running && world.Tick < limit)
@@ -82,7 +102,8 @@ public static class RunProbe
         }
         if (trace) Trace(world);
         return new Result(seed, style, world.Outcome, world.Day, world.Buildings.Count, world.Units.Count, world.Stats.DemonsKilled,
-            world.Stats.BuildingsLost, possessed, clock.Elapsed.TotalSeconds);
+            world.Stats.BuildingsLost, possessed, clock.Elapsed.TotalSeconds, style == Bot.Style.Full ? plan : "",
+            string.Join(",", world.Tech.Researched), world.Buildings.FirstOrDefault(b => b.Kind == BuildingKind.Keep)?.Hp ?? 0);
     }
 
     static void Trace(World w)

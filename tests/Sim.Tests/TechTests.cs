@@ -82,7 +82,8 @@ public class TechTests
         wall.Hp = wall.Def.Hp / 2;
         Learn(world, lab, "bastions");
         Assert.Equal(wall.Def.Hp / 2, wall.Hp, 1);
-        Assert.Equal(world.Rules[BuildingKind.StoneWall].Hp * 2, wall.Def.Hp, 1);
+        double mul = world.Rules.Tech("bastions").Modifiers.Single(m => m.Group == "walls" && m.Stat == "hp").Mul;
+        Assert.Equal(world.Rules[BuildingKind.StoneWall].Hp * mul, wall.Def.Hp, 1);
     }
 
     [Fact]

@@ -12,9 +12,6 @@
     "wavesPerExtraSide": 5, "maxSides": 3,
     "convergenceSize": 2500,
     "mix": [
-      { "kind": "Hound",    "fromWave": 1,  "share": 0.20 }
-    ],
-    "_mixWithNewKinds": [
       { "kind": "Hound",    "fromWave": 1,  "share": 0.20 },
       { "kind": "Gargoyle", "fromWave": 5,  "share": 0.06 },
       { "kind": "Bloater",  "fromWave": 7,  "share": 0.04 },
@@ -102,12 +99,12 @@
 
     { "id": "bastions", "name": "Bastions", "tier": 3, "requires": ["masonry", "pitch"], "exclusiveWith": "holyfire",
       "cost": { "gold": 500, "stone": 250 }, "seconds": 80,
-      "description": "Walls twice as tough, towers half again. Excludes Holy Fire.",
-      "modifiers": [ { "group": "walls", "stat": "hp", "mul": 2 }, { "group": "towers", "stat": "hp", "mul": 1.5 } ] },
+      "description": "Walls two and a half times as tough, towers twice. Excludes Holy Fire.",
+      "modifiers": [ { "group": "walls", "stat": "hp", "mul": 2.5 }, { "group": "towers", "stat": "hp", "mul": 2 } ] },
     { "id": "holyfire", "name": "Holy Fire", "tier": 3, "requires": ["hallowing"], "exclusiveWith": "bastions",
       "cost": { "gold": 500, "stone": 150 }, "seconds": 80,
-      "description": "Consecrated ground burns every demon on it, 4 a second. Excludes Bastions.",
-      "modifiers": [ { "stat": "holyGroundDps", "add": 4 } ] },
+      "description": "Consecrated ground burns every demon on it, 3 a second. Excludes Bastions.",
+      "modifiers": [ { "stat": "holyGroundDps", "add": 3 } ] },
     { "id": "standingarmy", "name": "Standing Army", "tier": 3, "requires": ["drill"], "exclusiveWith": "artillery",
       "cost": { "gold": 450, "wood": 150 }, "seconds": 80,
       "description": "Soldiers train twice as fast and cost 40% less upkeep. Excludes Artillery.",

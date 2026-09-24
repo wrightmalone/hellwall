@@ -21,8 +21,17 @@ public sealed class Bot
         Passive,
     }
 
+    /// <summary>Named research orders: three build paths that part ways at the exclusive tier-3 pairs.</summary>
+    public static readonly Dictionary<string, string[]> Plans = new()
+    {
+        ["fortress"] = ["masonry", "fletching", "pitch", "bastions", "ballistics", "artillery", "husbandry"],
+        ["pyre"] = ["tithes", "hallowing", "holyfire", "fletching", "pitch", "artillery", "husbandry"],
+        ["legion"] = ["tithes", "husbandry", "drill", "standingarmy", "fletching", "masonry", "ballistics"],
+    };
+
     readonly World _world;
     readonly Style _style;
+    readonly string[] _plan;
     readonly int _c;
     readonly List<Side> _incoming = new();
 
@@ -30,10 +39,11 @@ public sealed class Bot
     public bool Verbose;
     int _lastWaveMoved = -1;
 
-    public Bot(World world, Style style)
+    public Bot(World world, Style style, string plan = "fortress")
     {
         _world = world;
         _style = style;
+        _plan = Plans[plan];
         _c = world.Terrain.Width / 2;
     }
 
@@ -104,7 +114,7 @@ public sealed class Bot
 
         int free = Colony.Colonists - Colony.WorkersUsed;
         // Towers once there's a direction to face: the first wave's announcement, then steadily.
-        int towers = Count(BuildingKind.Watchtower) + Count(BuildingKind.Bombard);
+        int towers = Count(BuildingKind.Watchtower) + Count(BuildingKind.Bombard) + Count(BuildingKind.LanceTower);
         bool warned = _world.Survival?.Waves.Any(w => w.Announced) ?? true;
         int wantTowers = !warned ? 0 : 3 + (int)(Seconds / 100);
         // Rich and fed: turn surplus gold into towers. Not while hungry, or the new crews starve the colony.
@@ -114,10 +124,14 @@ public sealed class Bot
         if (survival != null && (_world.Day >= survival.Rules.Days - 5 || survival.Waves[^1].Announced)) fed = true;
         if (warned && fed && Colony[Resource.Gold] > 800) wantTowers = int.MaxValue;
         var towerKind = Seconds > 900 && Count(BuildingKind.Bombard) * 3 < Count(BuildingKind.Watchtower) ? BuildingKind.Bombard : BuildingKind.Watchtower;
-        var towerDef = Rules[towerKind];
+        if (towerKind == BuildingKind.Watchtower && _world.Tech.Has("ballistics") && Count(BuildingKind.LanceTower) * 2 < Count(BuildingKind.Watchtower))
+            towerKind = BuildingKind.LanceTower;
+        var towerDef = _world.Def(towerKind);
         if (towers < wantTowers && free >= towerDef.Workers && CanSpend(towerDef.Cost)
             && Colony.SanctitySupply - Colony.SanctityDemand >= towerDef.SanctityUse)
             if (Place(towerKind, TowerScore)) return;
+
+        if (Research()) return;
 
         var barracksDef = Rules[BuildingKind.Barracks];
         if (Seconds > 360 && Count(BuildingKind.Barracks) == 0 && free >= barracksDef.Workers && CanSpend(barracksDef.Cost))
@@ -127,7 +141,10 @@ public sealed class Bot
         int wantUnits = 6 + (int)(Seconds / 120);
         if (fed && Colony[Resource.Gold] > 1000) wantUnits = 80; // rich and fed: turn gold into soldiers
         if (barracks != null && barracks.Queue.Count < 2 && _world.Units.Count + barracks.Queue.Count < wantUnits && Colony[Resource.Gold] > 120)
-            Do(new TrainUnit(barracks.Id, _world.Units.Count % 4 == 3 ? UnitKind.Templar : UnitKind.Militia));
+        {
+            var ranged = _world.Tech.Has("drill") ? UnitKind.Crossbowman : UnitKind.Militia;
+            Do(new TrainUnit(barracks.Id, _world.Units.Count % 4 == 3 ? UnitKind.Templar : ranged));
+        }
 
         // Meet each wave: once it's announced, stand the garrison just inside the ring on its side.
         var next = _world.Survival?.Next;
@@ -181,6 +198,21 @@ public sealed class Bot
         bool Open(int x, int y) => !holy[t.Index(x, y)] && _world.IsWalkable(x, y);
     }
 
+    /// <summary>A Scriptorium once the colony is established, then the plan's next available tech whenever it's idle.</summary>
+    bool Research()
+    {
+        int free = Colony.Colonists - Colony.WorkersUsed;
+        var labDef = _world.Def(BuildingKind.Scriptorium);
+        if (Seconds > 420 && Count(BuildingKind.Scriptorium) == 0 && free >= labDef.Workers && CanSpend(labDef.Cost))
+            return Place(BuildingKind.Scriptorium, NearKeep);
+        var lab = _world.Buildings.FirstOrDefault(b => b.Kind == BuildingKind.Scriptorium && b.Active && b.Researching == null);
+        if (lab == null) return false;
+        var next = _plan.FirstOrDefault(id => _world.CheckResearch(id) == null);
+        if (next == null || !CanSpend(Rules.Tech(next).Cost)) return false;
+        Do(new Research(lab.Id, next));
+        return true;
+    }
+
     /// <summary>A point inside the colony toward one side: where the garrison meets a wave.</summary>
     (int X, int Y) InsideRing(Side side)
     {
@@ -194,19 +226,27 @@ public sealed class Bot
         };
     }
 
-    /// <summary>Wall the edge of holy ground, a few tiles a second, the incoming side first.</summary>
+    /// <summary>Wall the edge of holy ground, a few tiles a second, the incoming side first. Stone once it's known.</summary>
     void BuildRing()
     {
-        double spare = Colony[Resource.Wood] - Rules[BuildingKind.House].Cost.Wood - 10;
-        int budget = (int)Math.Min(12, spare / Rules[BuildingKind.Wall].Cost.Wood);
+        var wall = _world.Tech.Has("masonry") ? BuildingKind.StoneWall : BuildingKind.Wall;
+        var cost = _world.Def(wall).Cost;
+        // Walls never eat what the next planned tech needs.
+        var nextTech = _plan.FirstOrDefault(id => !_world.Tech.Has(id) && _world.CheckResearch(id) is null or "already being researched");
+        double techStone = nextTech == null ? 0 : Rules.Tech(nextTech).Cost.Stone;
+        double techWood = nextTech == null ? 0 : Rules.Tech(nextTech).Cost.Wood;
+        double spare = wall == BuildingKind.StoneWall
+            ? (Colony[Resource.Stone] - Rules[BuildingKind.Shrine].Cost.Stone - techStone - 10) / cost.Stone
+            : (Colony[Resource.Wood] - Rules[BuildingKind.House].Cost.Wood - techWood - 10) / cost.Wood;
+        int budget = (int)Math.Min(12, spare);
         if (budget <= 0) return;
-        var tiles = Perimeter().Where(p => !p.Hole && _world.CheckPlacement(BuildingKind.Wall, p.X, p.Y) == null).Select(p => (p.X, p.Y));
+        var tiles = Perimeter().Where(p => !p.Hole && _world.CheckPlacement(wall, p.X, p.Y) == null).Select(p => (p.X, p.Y));
         if (_incoming.Count > 0)
         {
             var (tx, ty) = InsideRing(_incoming[0]);
             tiles = tiles.OrderBy(t => Math.Abs(t.X - tx) + Math.Abs(t.Y - ty));
         }
-        foreach (var (x, y) in tiles.Take(budget).ToList()) Do(new PlaceBuilding(BuildingKind.Wall, x, y));
+        foreach (var (x, y) in tiles.Take(budget).ToList()) Do(new PlaceBuilding(wall, x, y));
     }
 
     List<(int X, int Y, bool Hole)>? _perimeterCache;

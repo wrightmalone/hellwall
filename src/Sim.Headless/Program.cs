@@ -11,6 +11,7 @@ using Hellwall.Sim;
 if (args.Length > 0 && args[0] == "bench") return Bench.Run(ParseArgs(args[1..]));
 if (args.Length > 0 && args[0] == "town") return TownProbe.Run(ParseArgs(args[1..]));
 if (args.Length > 0 && args[0] == "run") return RunProbe.Run(ParseArgs(args[1..]));
+if (args.Length > 0 && args[0] == "paths") return RunProbe.Paths(ParseArgs(args[1..]));
 
 var args_ = ParseArgs(args);
 if (args_.ContainsKey("help"))
@@ -26,6 +27,9 @@ if (args_.ContainsKey("help"))
           the phase 3 gate: a bot wins a full survival run; a passive one loses
         hellwall-sim run --seeds=11,19 [--bot=full|passive]
           play the bot on other maps, ungated
+
+        hellwall-sim paths [--seeds=7 --trace]
+          the phase 4 gate: fortress, pyre and legion research plans all win
 
         hellwall-sim [options]
           --seed=<n>        world seed (default 7)
