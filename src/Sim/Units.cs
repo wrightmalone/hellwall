@@ -140,10 +140,91 @@ internal static class UnitSystem
     }
 
     /// <summary>Walk back to where it was told to stand (nothing, once it's there).</summary>
-    static (float, float) BackToAnchor(Unit u)
+    static (float, float) BackToAnchor(World world, Unit u)
     {
-        float dx = u.AnchorX - u.X, dy = u.AnchorY - u.Y, d = MathF.Sqrt(dx * dx + dy * dy);
-        return d < 0.3f ? (0, 0) : (dx / d * u.Def.Speed, dy / d * u.Def.Speed);
+        float dx = u.AnchorX - u.X, dy = u.AnchorY - u.Y;
+        return dx * dx + dy * dy < 0.09f ? (0, 0) : Steer(world, u, u.AnchorX, u.AnchorY, u.Def.Speed);
+    }
+
+    /// <summary>
+    /// A velocity toward (tx, ty) at `speed`: straight when the way is clear,
+    /// and otherwise toward the next tile of the shortest way round, found in
+    /// a small window about the soldier (LocalStep). The long walks follow the
+    /// flow fields; this is for the short ones (a chase, the last steps to a
+    /// spot, the walk back after a fight), which used to press into walls.
+    /// </summary>
+    static (float, float) Steer(World world, Unit u, float tx, float ty, float speed)
+    {
+        float dx = tx - u.X, dy = ty - u.Y, d = MathF.Sqrt(dx * dx + dy * dy);
+        if (d < 1e-4f) return (0, 0);
+        if (!LineClear(world, u.X, u.Y, tx, ty) && LocalStep(world, (int)u.X, (int)u.Y, (int)tx, (int)ty) is { } step)
+        {
+            float sx = step.X + 0.5f - u.X, sy = step.Y + 0.5f - u.Y, sd = MathF.Sqrt(sx * sx + sy * sy);
+            if (sd > 1e-4f) return (sx / sd * speed, sy / sd * speed);
+        }
+        return (dx / d * speed, dy / d * speed);
+    }
+
+    /// <summary>Can a soldier walk the straight line between two points? Sampled every quarter tile.</summary>
+    static bool LineClear(World world, float x0, float y0, float x1, float y1)
+    {
+        float dx = x1 - x0, dy = y1 - y0;
+        int steps = (int)(MathF.Sqrt(dx * dx + dy * dy) * 4) + 1;
+        for (int i = 1; i <= steps; i++)
+        {
+            float t = i / (float)steps;
+            if (!world.IsHumanWalkable((int)MathF.Floor(x0 + dx * t), (int)MathF.Floor(y0 + dy * t))) return false;
+        }
+        return true;
+    }
+
+    const int Window = 12; // tiles each way: a 25x25 search, enough for any way round a building or two
+    const int Side = Window * 2 + 1;
+    static readonly int[] Dist = new int[Side * Side];
+    static readonly int[] Queue = new int[Side * Side];
+    static readonly (int X, int Y)[] Steps = [(1, 0), (-1, 0), (0, 1), (0, -1), (1, 1), (1, -1), (-1, 1), (-1, -1)];
+
+    /// <summary>
+    /// The first tile of the shortest way from (fx, fy) to (tx, ty) over ground a soldier can walk,
+    /// within the window, or null if there's none there. Breadth-first out from the goal; diagonals
+    /// only where both sides are open, so no one cuts a building's corner. Reused buffers: nothing allocated.
+    /// </summary>
+    static (int X, int Y)? LocalStep(World world, int fx, int fy, int tx, int ty)
+    {
+        int ox = fx - Window, oy = fy - Window;
+        int gx = tx - ox, gy = ty - oy;
+        if (gx < 0 || gy < 0 || gx >= Side || gy >= Side) return null;
+        Array.Fill(Dist, -1);
+        int head = 0, tail = 0;
+        Dist[gy * Side + gx] = 0;
+        Queue[tail++] = gy * Side + gx;
+        int start = Window * Side + Window;
+        while (head < tail && Dist[start] < 0)
+        {
+            int c = Queue[head++], cx = c % Side, cy = c / Side;
+            foreach (var (sx, sy) in Steps)
+            {
+                int nx = cx + sx, ny = cy + sy;
+                if (nx < 0 || ny < 0 || nx >= Side || ny >= Side || Dist[ny * Side + nx] >= 0) continue;
+                if (!world.IsHumanWalkable(ox + nx, oy + ny) && ny * Side + nx != start) continue;
+                if (sx != 0 && sy != 0 && (!world.IsHumanWalkable(ox + cx + sx, oy + cy) || !world.IsHumanWalkable(ox + cx, oy + cy + sy))) continue;
+                Dist[ny * Side + nx] = Dist[c] + 1;
+                Queue[tail++] = ny * Side + nx;
+            }
+        }
+        if (Dist[start] < 0) return null;
+        // From the soldier's tile, step to the neighbour nearest the goal.
+        (int X, int Y)? best = null;
+        int bestDist = Dist[start];
+        foreach (var (sx, sy) in Steps)
+        {
+            int nx = Window + sx, ny = Window + sy, k = ny * Side + nx;
+            if (Dist[k] < 0 || Dist[k] >= bestDist) continue;
+            if (sx != 0 && sy != 0 && (!world.IsHumanWalkable(fx + sx, fy) || !world.IsHumanWalkable(fx, fy + sy))) continue;
+            bestDist = Dist[k];
+            best = (fx + sx, fy + sy);
+        }
+        return best;
     }
 
     /// <summary>Kills to a soldier's name; a new rank also brings its extra health, at once.</summary>
@@ -205,15 +286,12 @@ internal static class UnitSystem
                     }
                 }
                 else if (u.Order != OrderKind.Hold && d > 1e-4f && !(u.Order == OrderKind.Idle && Leashed(u, tx, ty)))
-                {
-                    vx = dx / d * u.Def.Speed;
-                    vy = dy / d * u.Def.Speed;
-                }
-                else if (u.Order == OrderKind.Idle) (vx, vy) = BackToAnchor(u);
+                    (vx, vy) = Steer(world, u, tx, ty, u.Def.Speed); // round buildings, not into them
+                else if (u.Order == OrderKind.Idle) (vx, vy) = BackToAnchor(world, u);
             }
             else if (u.Order == OrderKind.Idle && u.Anchored)
             {
-                (vx, vy) = BackToAnchor(u);
+                (vx, vy) = BackToAnchor(world, u);
             }
             else if (u.Order is OrderKind.Move or OrderKind.AttackMove or OrderKind.Patrol && u.Field != null)
             {
@@ -235,10 +313,9 @@ internal static class UnitSystem
                 }
                 else if (d2 < SlotApproach * SlotApproach)
                 {
-                    // Close: straight to its spot in the formation, slowing for the last step so it doesn't overshoot.
-                    float dd = MathF.Sqrt(d2), speed = MathF.Min(u.Def.Speed, dd * 4);
-                    vx = ddx / dd * speed;
-                    vy = ddy / dd * speed;
+                    // Close: to its spot in the formation (round anything in the way), slowing for the last step so it doesn't overshoot.
+                    float dd = MathF.Sqrt(d2);
+                    (vx, vy) = Steer(world, u, u.SlotX, u.SlotY, MathF.Min(u.Def.Speed, dd * 4));
                 }
                 else
                 {

@@ -328,6 +328,8 @@ public partial class WorldView : Node2D
     sealed partial class Overlay : Node2D
     {
         public WorldView View = null!;
+        (BuildingKind, int, int, int) _cutKey;
+        (int, int) _cut;
 
         public override void _Draw()
         {
@@ -456,6 +458,19 @@ public partial class WorldView : Node2D
                 string note = reason ?? (def.Produces is { } res ? $"+{world.EstimateGathering(kind, hx, hy, out free):0.00} {res.ToString().ToLowerInvariant()}/s" : "");
                 // Gatherers split their ground: say so when most of it is already worked, before a crew is wasted on it.
                 if (reason == null && free < 0.6) note += free <= 0.05 ? "  (all its ground is already worked)" : $"  (only {free:P0} of its ground is free)";
+                // Lanes: warn before a building shuts soldiers out of part of the town (a building, or a patch of holy ground).
+                if (reason == null)
+                {
+                    if (_cutKey != (kind, hx, hy, world.Tick / 20)) { _cutKey = (kind, hx, hy, world.Tick / 20); _cut = world.CutOff(kind, hx, hy); }
+                    var (cutBuildings, cutTiles) = _cut;
+                    if (kind is BuildingKind.Wall or BuildingKind.StoneWall) cutTiles = 0; // walls are meant to shut ground out; only a building cut off matters
+                    if (cutBuildings > 0 || cutTiles >= 4)
+                    {
+                        string what = cutBuildings > 0 ? $"{cutBuildings} building{(cutBuildings == 1 ? "" : "s")}" : $"{cutTiles} tiles of holy ground";
+                        note += (note.Length > 0 ? "  " : "") + $"(soldiers couldn't reach {what})";
+                        free = 0; // amber, like the shared-ground warning
+                    }
+                }
                 if (def.Weapon is { } weapon) Iso.Ellipse(this, new Vector2(hx + def.W / 2f, hy + def.H / 2f), weapon.Range, new Color(1, 1, 1, 0.35f), 1);
                 if (def.SlowRadius > 0) Iso.Ellipse(this, new Vector2(hx + def.W / 2f, hy + def.H / 2f), def.SlowRadius, new Color(0.6f, 0.8f, 1, 0.35f), 1);
                 if (note.Length > 0) Text(font, Iso.P(hx + def.W, hy) + new Vector2(8, 0), note, 13, reason != null ? new Color(1, 0.6f, 0.6f) : free < 0.6 ? new Color(1, 0.8f, 0.4f) : Colors.White);

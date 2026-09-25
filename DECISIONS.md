@@ -769,6 +769,26 @@ last lost by at least one).
   campaign curve and both self-tests pass.
 - Saves are format 13.
 
+## Soldiers in a crowded town (your "they have trouble moving round buildings")
+
+- **The cause wasn't the gaps: it was straight lines.** The long walks follow a path field and
+  were fine, but three short ones went straight at their goal: chasing a demon, the last
+  steps to a formation spot, and walking back after a fight. With a House in the way, a
+  soldier pressed into its wall. Now each of those goes straight only when the line is clear,
+  and otherwise takes the shortest way round, found by a small search (25x25 tiles) about the
+  soldier; no cutting a building's corner. Formation spots are only chosen on ground reachable
+  from the target, never in a pocket behind a building.
+- **Buildings stay solid** (your worry was right: walking through them would undo base
+  planning, and make walls arbitrary). A one-tile lane lets soldiers through one at a time,
+  which is what "only enough space for one" already means; now they use it properly.
+- **A lane warning** when placing: "(soldiers couldn't reach 2 buildings)" or "(... 12 tiles of
+  holy ground)", in amber, if the building would shut soldiers out of part of the town,
+  measured from the Keep. Walls warn only about buildings, since shutting ground out is their
+  job. Planning lanes stays the player's job; this just stops you boxing yourself in by accident.
+- Tests: a Templar goes round a House to kill a demon behind it (it failed before: he pressed
+  into the wall); six soldiers thread a one-tile lane between two rows of Houses; a wall that
+  would seal a House is flagged. Sweep 15/24.
+
 ## Buildings from KayKit Medieval Hexagon (you downloaded it and the Medieval Village MegaKit)
 
 - **Every building but walls and gates is now a baked KayKit model** (`tools/bake_buildings.gd`,

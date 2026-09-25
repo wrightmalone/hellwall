@@ -270,3 +270,46 @@ public class HuntTests
         Assert.True(world.Horde.Y[0] < y0 - 1.5f, $"the demon went from y {y0:0.0} to {world.Horde.Y[0]:0.0}; the Marksman is at y {my:0.0} ({world.Horde.Count} demons)");
     }
 }
+
+public class LaneTests
+{
+    /// <summary>Two rows of Houses with a one-tile lane between: a squad sent through it gets through and settles.</summary>
+    [Fact]
+    public void ASquadThreadsAOneTileLaneBetweenBuildings()
+    {
+        var world = TestWorlds.Rich(TestWorlds.Dummies());
+        int y0 = TestWorlds.C + 3;
+        for (int x = TestWorlds.C - 6; x <= TestWorlds.C + 6; x += 2)
+        {
+            TestWorlds.Place(world, BuildingKind.House, x, y0);       // rows y0..y0+1
+            TestWorlds.Place(world, BuildingKind.House, x, y0 + 3);   // rows y0+3..y0+4: the lane is row y0+2
+        }
+        TestWorlds.RunSeconds(world, 8);
+        var keep = world.Buildings.Single(b => b.Kind == BuildingKind.Keep);
+        for (int i = 0; i < 6; i++) world.TrySpawnUnit(UnitKind.Militia, keep);
+        TestWorlds.RunSeconds(world, 1);
+        // Into the lane's west end, through it, and out the east end.
+        TestWorlds.Run(world, new OrderUnits(world.Units.Select(u => u.Id).ToArray(), OrderKind.Move, TestWorlds.C - 9, y0 + 2));
+        TestWorlds.RunSeconds(world, 10);
+        TestWorlds.Run(world, new OrderUnits(world.Units.Select(u => u.Id).ToArray(), OrderKind.Move, TestWorlds.C + 10, y0 + 2));
+        TestWorlds.RunSeconds(world, 25);
+        Assert.All(world.Units, u => Assert.Equal(OrderKind.Idle, u.Order));
+        Assert.All(world.Units, u => Assert.True(u.X > TestWorlds.C + 7, $"a soldier stuck at ({u.X:0.0}, {u.Y:0.0})"));
+    }
+
+    [Fact]
+    public void ASoldierChasesRoundABuildingNotIntoIt()
+    {
+        // A demon behind a House: the soldier must go round, and get it in range.
+        var world = TestWorlds.Rich(TestWorlds.Dummies());
+        var house = TestWorlds.Built(world, BuildingKind.House, TestWorlds.C + 8, TestWorlds.C - 1);
+        var keep = world.Buildings.Single(b => b.Kind == BuildingKind.Keep);
+        world.TrySpawnUnit(UnitKind.Templar, keep); // melee: it has to reach the demon
+        var u = world.Units.Last();
+        TestWorlds.Run(world, new OrderUnits([u.Id], OrderKind.Move, TestWorlds.C + 7, TestWorlds.C));
+        TestWorlds.RunSeconds(world, 6);
+        TestWorlds.Run(world, new SpawnDemons(DemonKind.Imp, TestWorlds.C + 10, TestWorlds.C, 1));
+        TestWorlds.RunSeconds(world, 12);
+        Assert.True(world.Horde.Count == 0, $"the demon lives; the Templar is at ({u.X:0.0}, {u.Y:0.0})");
+    }
+}

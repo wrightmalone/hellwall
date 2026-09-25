@@ -422,6 +422,71 @@ public sealed partial class World
     }
 
     /// <summary>What a gatherer placed here would collect per second at full sanctity, for the placement preview.</summary>
+    /// <summary>
+    /// What a building placed here would cut your soldiers off from: the buildings they could
+    /// reach from the Keep before and couldn't after, and the tiles of holy ground likewise.
+    /// Walls are meant to shut things out, so ground beyond holy ground doesn't count. For the
+    /// placement preview; the sim never refuses a placement for it.
+    /// </summary>
+    public (int Buildings, int Tiles) CutOff(BuildingKind kind, int x, int y)
+    {
+        var def = Def(kind);
+        if (_buildings.FirstOrDefault(b => b.Kind == BuildingKind.Keep) is not { } keep) return (0, 0);
+        const int R = 50;
+        int ox = (int)keep.CentreX - R, oy = (int)keep.CentreY - R, side = R * 2 + 1;
+        bool Blocked(int tx, int ty, bool placed) => placed && tx >= x && tx < x + def.W && ty >= y && ty < y + def.H;
+        bool[] Reach(bool placed)
+        {
+            var seen = new bool[side * side];
+            var queue = new Queue<(int, int)>();
+            for (int ty = keep.Y - 1; ty <= keep.Y + keep.H; ty++)
+                for (int tx = keep.X - 1; tx <= keep.X + keep.W; tx++)
+                    if (IsHumanWalkable(tx, ty) && !Blocked(tx, ty, placed) && tx - ox >= 0 && ty - oy >= 0 && tx - ox < side && ty - oy < side && !seen[(ty - oy) * side + tx - ox])
+                    {
+                        seen[(ty - oy) * side + tx - ox] = true;
+                        queue.Enqueue((tx, ty));
+                    }
+            while (queue.Count > 0)
+            {
+                var (qx, qy) = queue.Dequeue();
+                foreach (var (sx, sy) in new[] { (1, 0), (-1, 0), (0, 1), (0, -1) })
+                {
+                    int nx = qx + sx, ny = qy + sy, lx = nx - ox, ly = ny - oy;
+                    if (lx < 0 || ly < 0 || lx >= side || ly >= side || seen[ly * side + lx]) continue;
+                    if (!IsHumanWalkable(nx, ny) || Blocked(nx, ny, placed)) continue;
+                    seen[ly * side + lx] = true;
+                    queue.Enqueue((nx, ny));
+                }
+            }
+            return seen;
+        }
+        var before = Reach(false);
+        var after = Reach(true);
+        bool Was(int tx, int ty, bool[] r) => tx - ox >= 0 && ty - oy >= 0 && tx - ox < side && ty - oy < side && r[(ty - oy) * side + tx - ox];
+        int tiles = 0;
+        for (int ly = 0; ly < side; ly++)
+            for (int lx = 0; lx < side; lx++)
+            {
+                int tx = ox + lx, ty = oy + ly;
+                if (!Terrain.InBounds(tx, ty) || !Colony.Consecrated[Terrain.Index(tx, ty)] || Blocked(tx, ty, true)) continue;
+                if (before[ly * side + lx] && !after[ly * side + lx]) tiles++;
+            }
+        int buildings = 0;
+        foreach (var b in _buildings)
+        {
+            if (b.IsWallLike || b.Kind == BuildingKind.Keep) continue;
+            bool reachable = false, still = false;
+            for (int ty = b.Y - 1; ty <= b.Y + b.H && !still; ty++)
+                for (int tx = b.X - 1; tx <= b.X + b.W && !still; tx++)
+                {
+                    if (Was(tx, ty, before)) reachable = true;
+                    if (Was(tx, ty, after)) still = true;
+                }
+            if (reachable && !still) buildings++;
+        }
+        return (buildings, tiles);
+    }
+
     public double EstimateGathering(BuildingKind kind, int x, int y) => EstimateGathering(kind, x, y, out _);
 
     /// <summary>What a gatherer placed here would yield, and the share of its ground not already worked by another (1: none shared).</summary>
@@ -908,11 +973,29 @@ public sealed partial class World
         const float spacing = 0.8f;
         var spots = new List<(float X, float Y, float D)>();
         int ring = (int)MathF.Ceiling(MathF.Sqrt(count)) + 2;
+        // Only ground a soldier can walk to from the target: never a spot in a pocket behind a building.
+        int reach = (int)MathF.Ceiling(ring * spacing) + 2, side = reach * 2 + 1, ox = (int)cx - reach, oy = (int)cy - reach;
+        var reached = new bool[side * side];
+        var queue = new Queue<(int, int)>();
+        if (IsHumanWalkable((int)cx, (int)cy)) { reached[reach * side + reach] = true; queue.Enqueue(((int)cx, (int)cy)); }
+        while (queue.Count > 0)
+        {
+            var (qx, qy) = queue.Dequeue();
+            foreach (var (sx, sy) in new[] { (1, 0), (-1, 0), (0, 1), (0, -1) })
+            {
+                int nx = qx + sx, ny = qy + sy, lx = nx - ox, ly = ny - oy;
+                if (lx < 0 || ly < 0 || lx >= side || ly >= side || reached[ly * side + lx] || !IsHumanWalkable(nx, ny)) continue;
+                reached[ly * side + lx] = true;
+                queue.Enqueue((nx, ny));
+            }
+        }
         for (int j = -ring; j <= ring; j++)
             for (int i = -ring; i <= ring; i++)
             {
                 float x = cx + i * spacing, y = cy + j * spacing;
                 if (x < 0 || y < 0 || !IsHumanWalkable((int)x, (int)y)) continue;
+                int rx = (int)x - ox, ry = (int)y - oy;
+                if (rx < 0 || ry < 0 || rx >= side || ry >= side || !reached[ry * side + rx]) continue;
                 spots.Add((x, y, i * i + j * j + (j * 0.001f + i * 0.0001f))); // tiny bias: equal rings resolve the same way every time
             }
         spots.Sort((a, b) => a.D.CompareTo(b.D));

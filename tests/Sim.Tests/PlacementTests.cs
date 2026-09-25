@@ -138,3 +138,24 @@ public class StoneGateTests
         Assert.True(gate.Def.Hp > world.Def(BuildingKind.Gate).Hp);
     }
 }
+
+public class CutOffTests
+{
+    [Fact]
+    public void ClosingTheOnlyWayInWarnsOfWhatItCutsOff()
+    {
+        // A House boxed in on three sides by walls; a building across the fourth would seal it.
+        var world = TestWorlds.Rich();
+        var house = TestWorlds.Place(world, BuildingKind.House, TestWorlds.C + 6, TestWorlds.C - 1);
+        for (int y = TestWorlds.C - 2; y <= TestWorlds.C + 1; y++) TestWorlds.Place(world, BuildingKind.Wall, TestWorlds.C + 8, y);
+        for (int x = TestWorlds.C + 5; x <= TestWorlds.C + 7; x++)
+        {
+            TestWorlds.Place(world, BuildingKind.Wall, x, TestWorlds.C - 2);
+            TestWorlds.Place(world, BuildingKind.Wall, x, TestWorlds.C + 1);
+        }
+        // Open to the west only (column C+5): a wall there seals the House.
+        Assert.Equal(0, world.CutOff(BuildingKind.Wall, TestWorlds.C + 3, TestWorlds.C - 1).Buildings);
+        TestWorlds.Place(world, BuildingKind.Wall, TestWorlds.C + 5, TestWorlds.C - 1);
+        Assert.Equal(1, world.CutOff(BuildingKind.Wall, TestWorlds.C + 5, TestWorlds.C).Buildings);
+    }
+}
