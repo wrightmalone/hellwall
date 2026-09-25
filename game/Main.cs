@@ -83,7 +83,8 @@ public partial class Main : Node2D
     public override void _Ready()
     {
         _options = ParseUserArgs();
-        Display.Apply();
+        if (_options.TryGetValue("ui-scale", out var ui)) Display.Override = float.Parse(ui, System.Globalization.CultureInfo.InvariantCulture);
+        Display.Apply(GetTree().Root);
         var o = _options;
         var setup = new GameSetup(
             o.TryGetValue("seed", out var s) ? uint.Parse(s) : 11u,
@@ -164,7 +165,7 @@ public partial class Main : Node2D
         _sound = new Sound();
         AddChild(_sound);
 
-        _camera = new Camera2D { Position = Iso.P(_world.Terrain.Width / 2f, _world.Terrain.Height / 2f), Zoom = new Vector2(1.1f, 1.1f) };
+        _camera = new Camera2D { Position = Iso.P(_world.Terrain.Width / 2f, _world.Terrain.Height / 2f), Zoom = Vector2.One * 1.1f / Display.UiScale };
         if (options.TryGetValue("look", out var look) && look.Split(',') is [var lx, var ly, ..] parts)
         {
             _camera.Position = Iso.P(float.Parse(lx), float.Parse(ly));

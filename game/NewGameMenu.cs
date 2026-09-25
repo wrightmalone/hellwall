@@ -156,6 +156,7 @@ public partial class NewGameMenu : CanvasLayer
         var volume = new HSlider { MinValue = 0, MaxValue = 1, Step = 0.05, Value = Sound.Volume, SizeFlagsHorizontal = Control.SizeFlags.ExpandFill };
         volume.ValueChanged += v => Settings.Set("volume", (float)v);
         side.AddChild(volume);
+        side.AddChild(Display.UiScaleRow());
         var fullscreen = new CheckButton { Text = "Fullscreen", ButtonPressed = Display.Fullscreen };
         fullscreen.Toggled += on => Display.SetFullscreen(on);
         side.AddChild(fullscreen);

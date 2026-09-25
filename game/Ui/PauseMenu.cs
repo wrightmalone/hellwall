@@ -75,6 +75,7 @@ public partial class PauseMenu : CanvasLayer
         row.AddChild(volume);
         row.AddChild(percent);
         box.AddChild(row);
+        box.AddChild(Display.UiScaleRow());
 
         box.AddChild(new HSeparator());
 
@@ -108,6 +109,34 @@ public partial class PauseMenu : CanvasLayer
 public static class Display
 {
     public static bool Fullscreen => Settings.Get("fullscreen", false);
+    /// <summary>Interface size: the whole canvas scales (the camera zooms out to match, so the world doesn't).</summary>
+    public static float UiScale => Override ?? Settings.Get("ui_scale", 1f);
+    /// <summary>--ui-scale for screenshots, without touching the player's settings.</summary>
+    public static float? Override;
+
+    static Window? _root;
+
+    public static void SetUiScale(float scale)
+    {
+        Settings.Set("ui_scale", scale);
+        Apply();
+    }
+
+    /// <summary>A slider row for the interface size, for both menus.</summary>
+    public static HBoxContainer UiScaleRow()
+    {
+        var row = new HBoxContainer();
+        row.AddChild(UiKit.Label("Interface size", 13));
+        var slider = new HSlider { MinValue = 0.75, MaxValue = 1.75, Step = 0.05, Value = UiScale, SizeFlagsHorizontal = Control.SizeFlags.ExpandFill, FocusMode = Control.FocusModeEnum.None };
+        var label = UiKit.Label($"{UiScale * 100:0}%", 12, UiKit.Muted);
+        label.CustomMinimumSize = new Vector2(40, 0);
+        // Applied on release, not while dragging: rescaling under the cursor makes the slider jump.
+        slider.DragEnded += _ => SetUiScale((float)slider.Value);
+        slider.ValueChanged += v => label.Text = $"{v * 100:0}%";
+        row.AddChild(slider);
+        row.AddChild(label);
+        return row;
+    }
 
     public static void SetFullscreen(bool on)
     {
@@ -115,8 +144,10 @@ public static class Display
         Apply();
     }
 
-    public static void Apply()
+    public static void Apply(Window? root = null)
     {
+        if (root != null) _root = root;
+        if (_root != null) _root.ContentScaleFactor = UiScale;
         if (DisplayServer.GetName() == "headless") return;
         var want = Fullscreen ? DisplayServer.WindowMode.Fullscreen : DisplayServer.WindowMode.Windowed;
         if (DisplayServer.WindowGetMode() != want) DisplayServer.WindowSetMode(want);
