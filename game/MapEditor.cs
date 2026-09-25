@@ -14,7 +14,7 @@ namespace Hellwall.Game;
 /// Tools: Paint (left-drag), Packs and Gates (click to place; placed gates
 /// replace the random ones), Erase (click a pack or gate). Right- or
 /// middle-drag, WASD or the screen edges pan; the wheel zooms; [ and ] size
-/// the brush; 1-6 pick the tile.
+/// the brush; 1-6 pick the tile; Ctrl+Z (Cmd+Z) undoes a stroke or placement.
 /// </summary>
 public partial class MapEditor : Node2D
 {
@@ -74,6 +74,7 @@ public partial class MapEditor : Node2D
 
     void Load(ScenarioDef def)
     {
+        _undo.Clear();
         _packs.Clear();
         _packs.AddRange(def.PlacedPacks);
         _gates.Clear();
@@ -179,12 +180,44 @@ public partial class MapEditor : Node2D
                 else if (key.Keycode == Key.Bracketright) SetBrushSize(Math.Min(BrushSizes.Length - 1, Array.IndexOf(BrushSizes, _brushSize) + 1));
                 else if (key.Keycode is >= Key.Key1 and <= Key.Key6) SetBrush((int)(key.Keycode - Key.Key1));
                 else if (key.Keycode == Key.Escape) Leave();
+                else if (key.Keycode == Key.Z && (key.CtrlPressed || key.MetaPressed)) Undo();
                 break;
         }
     }
 
+    /// <summary>Undo: the map as it was before each stroke or placement, newest last (at most 40).</summary>
+    readonly List<(Tile[] Tiles, PlacedPack[] Packs, PlacedGate[] Gates)> _undo = new();
+
+    void Remember()
+    {
+        _undo.Add(((Tile[])_world.Terrain.Tiles.Clone(), [.. _packs], [.. _gates]));
+        if (_undo.Count > 40) _undo.RemoveAt(0);
+    }
+
+    void Undo()
+    {
+        if (_undo.Count == 0) { _status.Text = "Nothing to undo"; return; }
+        var (tiles, packs, gates) = _undo[^1];
+        _undo.RemoveAt(_undo.Count - 1);
+        var now = _world.Terrain.Tiles;
+        int w = _world.Terrain.Width;
+        for (int i = 0; i < now.Length; i++)
+        {
+            if (now[i] == tiles[i]) continue;
+            now[i] = tiles[i];
+            _terrain!.PaintCell(i % w, i / w);
+        }
+        _packs.Clear();
+        _packs.AddRange(packs);
+        _gates.Clear();
+        _gates.AddRange(gates);
+        _dirtyMap = true;
+        _status.Text = $"Undone ({_undo.Count} more)";
+    }
+
     void Click(Vector2 at)
     {
+        if (_tool != Tool.Erase || _packs.Count + _gates.Count > 0) Remember();
         var t = Iso.Tile(at);
         int x = (int)t.X, y = (int)t.Y, n = _world.Terrain.Width, c = n / 2;
         if (!_world.Terrain.InBounds(x, y)) return;
@@ -235,7 +268,14 @@ public partial class MapEditor : Node2D
         var world = saved == null ? null : World.Create((saved with { Id = "map-selftest" }).Options(Rules.Default));
         bool plays = world != null && world.Terrain.Get(c + 40, c) == Tile.Water && world.Gates.Count == 1 && world.Packs.Any(p => p.X == c - 41);
         try { System.IO.File.Delete(System.IO.Path.Combine(MapFiles.Folder, "selftest-map.json")); } catch (System.IO.IOException) { }
-        GD.Print(water && pack && gate && plays ? "hellwall-selftest: PASS editor" : $"hellwall-selftest: FAIL editor (saved {saved != null}, water {water}, pack {pack}, gate {gate}, plays {plays})");
+        // Undo twice: the gate goes, then the pack; the lake stays.
+        Undo();
+        Undo();
+        bool undone = _gates.Count == 0 && _packs.Count == 0 && _world.Terrain.Get(c + 40, c) == Tile.Water;
+        Undo();
+        bool dry = _world.Terrain.Get(c + 40, c) != Tile.Water;
+        bool pass = water && pack && gate && plays && undone && dry;
+        GD.Print(pass ? "hellwall-selftest: PASS editor" : $"hellwall-selftest: FAIL editor (saved {saved != null}, water {water}, pack {pack}, gate {gate}, plays {plays}, undo {undone}, undo paint {dry})");
         GetTree().Quit();
     }
 
@@ -380,6 +420,9 @@ public partial class MapEditor : Node2D
         play.Pressed += () => { Save(); var map = Current(); QueueFree(); Play(map); };
         var back = UiKit.TextButton("Back", 14);
         back.Pressed += Leave;
+        var undo = UiKit.TextButton("Undo", 14);
+        undo.Pressed += Undo;
+        actions.AddChild(undo);
         actions.AddChild(save);
         actions.AddChild(play);
         actions.AddChild(back);
