@@ -71,6 +71,11 @@ public sealed class Building
     public float WoodWindow;
     public float WoodTimer;
 
+    /// <summary>Repair: health as of last tick, seconds since it last fell, and whether it mended this tick (for the client).</summary>
+    public float WatchedHp;
+    public float Calm;
+    public bool Repairing;
+
     /// <summary>Scriptorium: the tech being researched here, if any, and seconds of work done on it.</summary>
     public string? Researching;
     public float ResearchProgress;

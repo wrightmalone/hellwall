@@ -74,7 +74,7 @@ public class TechTests
     [Fact]
     public void HitPointModifiersKeepDamagedBuildingsInProportion()
     {
-        var (world, lab) = Lab();
+        var (world, lab) = Lab(Rules.Default.WithRepair(r => r with { Enabled = false })); // no mending while the research runs
         Learn(world, lab, "masonry");
         Learn(world, lab, "fletching");
         Learn(world, lab, "pitch");

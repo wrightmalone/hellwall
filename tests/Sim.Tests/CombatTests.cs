@@ -104,3 +104,34 @@ public class CombatTests
         Assert.True(world.Flow.DistAt(C - 8, C) < before, "the route in should get cheaper once a wall is gone");
     }
 }
+
+public class RepairTests
+{
+    [Fact]
+    public void ALeftAloneWallMendsAndPaysForIt()
+    {
+        var world = TestWorlds.Rich();
+        var wall = TestWorlds.Built(world, BuildingKind.Wall, TestWorlds.C + 6, TestWorlds.C);
+        wall.Hp = wall.Def.Hp / 2;
+        TestWorlds.RunSeconds(world, 1);
+        double wood = world.Colony[Resource.Wood];
+        Assert.True(wall.Hp < wall.Def.Hp * 0.51f, "mended before the delay");
+        TestWorlds.RunSeconds(world, world.Rules.Repair.DelaySeconds + 5);
+        Assert.True(wall.Hp > wall.Def.Hp * 0.6f, $"hp {wall.Hp}");
+        Assert.True(world.Colony[Resource.Wood] < wood, "repair was free");
+        TestWorlds.RunSeconds(world, 30);
+        Assert.Equal(wall.Def.Hp, wall.Hp, 1);
+    }
+
+    [Fact]
+    public void RepairWaitsForTheMoney()
+    {
+        var world = World.Create(new WorldOptions(7, Balance.DefaultMapSize, 0, Rules.Default.WithStartingResources(new Cost { Gold = 1000, Wood = 1000, Stone = 60 })));
+        world.DrainEvents();
+        var wall = TestWorlds.Built(world, BuildingKind.Wall, TestWorlds.C + 6, TestWorlds.C);
+        for (int r = 0; r < Colony.Resources; r++) world.Colony.Stock[r] = 0;
+        wall.Hp = wall.Def.Hp / 2;
+        TestWorlds.RunSeconds(world, 20);
+        Assert.Equal(wall.Def.Hp / 2, wall.Hp, 1);
+    }
+}

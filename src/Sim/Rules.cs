@@ -80,6 +80,20 @@ public sealed class Cost
 /// Only what's in sight now shows the horde; sleeping demons, once seen, stay
 /// drawn where they stand. Building needs explored ground.
 /// </summary>
+/// <summary>
+/// Damaged buildings mend themselves once left alone: after DelaySeconds
+/// without losing health, PerSecond of their full health a second, paid for
+/// as they go at CostFraction of their build cost per full repair. With too
+/// little in store, repair waits.
+/// </summary>
+public sealed record RepairRules
+{
+    public bool Enabled { get; init; } = true;
+    public float DelaySeconds { get; init; } = 8;
+    public float PerSecond { get; init; } = 0.03f;
+    public double CostFraction { get; init; } = 0.4;
+}
+
 public sealed record FogRules
 {
     public bool Enabled { get; init; } = true;
@@ -320,6 +334,7 @@ public sealed class Rules
 
     public WoodsRules Woods { get; private init; } = new();
     public FogRules Fog { get; private init; } = new();
+    public RepairRules Repair { get; private init; } = new();
 
     public TechDef[] Techs { get; private init; } = [];
 
@@ -349,7 +364,7 @@ public sealed class Rules
         {
             StartingResources = scaled.StartingResources, ColonistGoldPerSecond = scaled.ColonistGoldPerSecond, ColonistFoodPerSecond = scaled.ColonistFoodPerSecond,
             RefundFraction = scaled.RefundFraction, PossessionSpawnSeconds = scaled.PossessionSpawnSeconds, StartingUnits = scaled.StartingUnits,
-            Survival = scaled.Survival, Hellgates = scaled.Hellgates, Wilds = scaled.Wilds, Woods = scaled.Woods, Fog = scaled.Fog, Techs = scaled.Techs, Difficulties = Difficulties, Corruptions = Corruptions,
+            Survival = scaled.Survival, Hellgates = scaled.Hellgates, Wilds = scaled.Wilds, Woods = scaled.Woods, Fog = scaled.Fog, Repair = scaled.Repair, Techs = scaled.Techs, Difficulties = Difficulties, Corruptions = Corruptions,
             Buildings = scaled.Buildings, Units = scaled.Units, Demons = scaled.Demons,
             Difficulty = level,
             Hash = scaled.Hash ^ ((ulong)level + 1) * 0x100000001B3UL,
@@ -387,6 +402,7 @@ public sealed class Rules
         public WildsRules Wilds { get; init; } = new();
         public WoodsRules Woods { get; init; } = new();
         public FogRules Fog { get; init; } = new();
+        public RepairRules Repair { get; init; } = new();
         public TechDef[] Techs { get; init; } = [];
         public Dictionary<Difficulty, DifficultyDef> Difficulties { get; init; } = new();
         public CorruptionDef[] Corruptions { get; init; } = [];
@@ -419,6 +435,7 @@ public sealed class Rules
             Wilds = file.Wilds,
             Woods = file.Woods,
             Fog = file.Fog,
+            Repair = file.Repair,
             Techs = file.Techs,
             Difficulties = file.Difficulties,
             Corruptions = file.Corruptions,
@@ -456,7 +473,7 @@ public sealed class Rules
         {
             StartingResources = copy.StartingResources, ColonistGoldPerSecond = copy.ColonistGoldPerSecond, ColonistFoodPerSecond = copy.ColonistFoodPerSecond,
             RefundFraction = copy.RefundFraction, PossessionSpawnSeconds = copy.PossessionSpawnSeconds, StartingUnits = copy.StartingUnits,
-            Survival = copy.Survival, Hellgates = copy.Hellgates, Wilds = copy.Wilds, Woods = copy.Woods, Fog = copy.Fog, Techs = copy.Techs, Difficulties = Difficulties, Corruptions = pool,
+            Survival = copy.Survival, Hellgates = copy.Hellgates, Wilds = copy.Wilds, Woods = copy.Woods, Fog = copy.Fog, Repair = copy.Repair, Techs = copy.Techs, Difficulties = Difficulties, Corruptions = pool,
             Buildings = copy.Buildings, Units = copy.Units, Demons = copy.Demons, Difficulty = Difficulty,
             Hash = copy.Hash ^ Fnv(JsonSerializer.Serialize(pool, Options)),
         };
@@ -486,6 +503,12 @@ public sealed class Rules
 
     /// <summary>A copy with different wilds (sleeping packs).</summary>
     /// <summary>A copy with different woods (forest that blocks, and woodsmen).</summary>
+    public Rules WithRepair(Func<RepairRules, RepairRules> change)
+    {
+        var repair = change(Repair);
+        return Copy(r => r.Repair = repair);
+    }
+
     public Rules WithFog(Func<FogRules, FogRules> change)
     {
         var fog = change(Fog);
@@ -522,11 +545,12 @@ public sealed class Rules
         public WildsRules Wilds = new();
         public WoodsRules Woods = new();
         public FogRules Fog = new();
+        public RepairRules Repair = new();
     }
 
     Rules Copy(Action<Builder> change)
     {
-        var b = new Builder { StartingResources = StartingResources, Buildings = Buildings, Units = Units, Demons = Demons, Survival = Survival, Hellgates = Hellgates, Wilds = Wilds, Woods = Woods, Fog = Fog };
+        var b = new Builder { StartingResources = StartingResources, Buildings = Buildings, Units = Units, Demons = Demons, Survival = Survival, Hellgates = Hellgates, Wilds = Wilds, Woods = Woods, Fog = Fog, Repair = Repair };
         change(b);
         return new Rules
         {
@@ -541,6 +565,7 @@ public sealed class Rules
             Wilds = b.Wilds,
             Woods = b.Woods,
             Fog = b.Fog,
+            Repair = b.Repair,
             Techs = Techs,
             Difficulties = Difficulties,
             Corruptions = Corruptions,
@@ -554,7 +579,7 @@ public sealed class Rules
     }
 
     static string Describe(Builder b) =>
-        JsonSerializer.Serialize(new { b.StartingResources, b.Buildings, b.Units, b.Demons, b.Survival, b.Hellgates, b.Wilds, b.Woods, b.Fog }, Options);
+        JsonSerializer.Serialize(new { b.StartingResources, b.Buildings, b.Units, b.Demons, b.Survival, b.Hellgates, b.Wilds, b.Woods, b.Fog, b.Repair }, Options);
 
     static T[] Dense<TKey, T>(Dictionary<TKey, T> map, string what) where TKey : struct, Enum
     {

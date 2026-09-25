@@ -261,6 +261,7 @@ public sealed partial class World
         UnitSystem.Step(this, dt);
         WoodsSystem.Step(this, dt);
         Vision.Step(this);
+        RepairSystem.Step(this, dt);
         Abilities.Heal(this, dt);
         Combat.TowersFire(this, dt);
         StepPossessed(dt);

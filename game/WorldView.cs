@@ -211,6 +211,13 @@ public partial class WorldView : Node2D
                 if (state.SelectedBuilding == b.Id) DrawPolyline([.. Iso.Diamond(b.X, b.Y, b.W, b.H), top], Palette.Selected, 2);
                 if (!b.Complete) Bar(barAt, width / 2, b.Def.BuildSeconds <= 0 ? 1 : b.Built / b.Def.BuildSeconds, new Color(0.95f, 0.9f, 0.3f));
                 if (b.Hp < b.Def.Hp) Bar(barAt + new Vector2(0, 4), width / 2, b.Hp / b.Def.Hp, new Color(0.95f, 0.25f, 0.2f));
+                if (b.Repairing)
+                {
+                    // Mending: a small green cross beside the health bar.
+                    var at = barAt + new Vector2(width / 4 + 6, 5);
+                    DrawLine(at - new Vector2(3, 0), at + new Vector2(3, 0), new Color(0.4f, 1, 0.4f), 2);
+                    DrawLine(at - new Vector2(0, 3), at + new Vector2(0, 3), new Color(0.4f, 1, 0.4f), 2);
+                }
                 string tag = b.Possessed ? $"POSSESSED x{b.Occupants}" : b.Complete && !b.Active ? (b.OnGround ? "no crew" : "dark") : "";
                 if (tag.Length > 0) Text(font, front + new Vector2(-24, 18), tag, 11, b.Possessed ? new Color(1, 0.7f, 1) : new Color(1, 0.65f, 0.6f));
             }

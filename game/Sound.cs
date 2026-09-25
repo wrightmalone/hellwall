@@ -11,7 +11,7 @@ namespace Hellwall.Game;
 /// </summary>
 public partial class Sound : Node2D
 {
-    public enum Cue { Shot, Boom, Horn, Howl, Burst, Built, Possessed, Fallen }
+    public enum Cue { Shot, Boom, Horn, Howl, Burst, Built, Possessed, Fallen, Promoted, Felled, Voice, Victory }
 
     const int Rate = 22050;
     readonly Dictionary<Cue, AudioStreamWav> _streams = new();
@@ -35,6 +35,14 @@ public partial class Sound : Node2D
         _streams[Cue.Built] = Make(0.5, (t, _) => (Math.Sin(2 * Math.PI * 660 * t) * Envelope(t, 0.01, 0.25) + Math.Sin(2 * Math.PI * 880 * t) * Envelope(t - 0.12, 0.01, 0.35)) * 0.25);
         _streams[Cue.Possessed] = Make(1.0, (t, _) => (Math.Sin(2 * Math.PI * 98 * t) + Math.Sin(2 * Math.PI * 104 * t)) * 0.3 * Envelope(t, 0.05, 1.0));
         _streams[Cue.Fallen] = Make(2.5, (t, n) => (Saw(55, t) * 0.35 + n * 0.1) * Envelope(t, 0.05, 2.5));
+        // A rising three-note chime: a soldier made rank.
+        _streams[Cue.Promoted] = Make(0.6, (t, _) => (Math.Sin(2 * Math.PI * 523 * t) * Envelope(t, 0.01, 0.2) + Math.Sin(2 * Math.PI * 659 * t) * Envelope(t - 0.12, 0.01, 0.2) + Math.Sin(2 * Math.PI * 784 * t) * Envelope(t - 0.24, 0.01, 0.35)) * 0.22);
+        // A creak and a thump: a tree comes down.
+        _streams[Cue.Felled] = Make(0.6, (t, n) => (Math.Sin(2 * Math.PI * (180 - 120 * t) * t) * 0.25 * Envelope(t, 0.02, 0.3) + (n * 0.5 + Math.Sin(2 * Math.PI * 60 * t)) * 0.4 * Math.Exp(-Math.Max(0, t - 0.3) * 12) * (t > 0.3 ? 1 : 0)));
+        // A soft two-tone blip under a spoken line.
+        _streams[Cue.Voice] = Make(0.25, (t, _) => (Math.Sin(2 * Math.PI * 440 * t) * Envelope(t, 0.01, 0.1) + Math.Sin(2 * Math.PI * 587 * t) * Envelope(t - 0.08, 0.01, 0.15)) * 0.15);
+        // A major chord, swelling: the colony endures.
+        _streams[Cue.Victory] = Make(2.2, (t, _) => (Math.Sin(2 * Math.PI * 262 * t) + Math.Sin(2 * Math.PI * 330 * t) * 0.8 + Math.Sin(2 * Math.PI * 392 * t) * 0.7) * 0.18 * Envelope(t, 0.3, 2.2));
 
         for (int i = 0; i < 24; i++)
         {
@@ -83,6 +91,10 @@ public partial class Sound : Node2D
             case BuildingCompleted: Play(Cue.Built); break;
             case BuildingPossessed: Play(Cue.Possessed); break;
             case OutcomeChanged { Outcome: Outcome.Lost }: Play(Cue.Fallen); break;
+            case OutcomeChanged { Outcome: Outcome.Won }: Play(Cue.Victory); break;
+            case UnitPromoted p: Play(Cue.Promoted, new Vector2(p.X, p.Y)); break;
+            case TreeFelled f: Play(Cue.Felled, new Vector2(f.X, f.Y)); break;
+            case ScenarioMessage { Text.Length: > 0 }: Play(Cue.Voice); break;
         }
     }
 

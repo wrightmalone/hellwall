@@ -86,6 +86,8 @@ public sealed partial class World
                 w.Write(b.RallyY);
                 w.Write(b.WoodWindow);
                 w.Write(b.WoodTimer);
+                w.Write(b.WatchedHp);
+                w.Write(b.Calm);
                 w.Write(b.Possessed);
                 w.Write(b.Occupants);
                 w.Write(b.PossessTimer);
@@ -284,6 +286,8 @@ public sealed partial class World
             b.RallyY = r.ReadInt32();
             b.WoodWindow = r.ReadSingle();
             b.WoodTimer = r.ReadSingle();
+            b.WatchedHp = r.ReadSingle();
+            b.Calm = r.ReadSingle();
             b.Possessed = r.ReadBoolean();
             b.Occupants = r.ReadInt32();
             b.PossessTimer = r.ReadSingle();
