@@ -209,7 +209,7 @@ Missions are data, in [src/Sim/data/campaign.json](src/Sim/data/campaign.json). 
 - clock length, wave and Convergence size, Hellgates and packs;
 - starting stockpile;
 - locked buildings, soldiers and techs;
-- goals: Survive, CloseGates, Population or Slay;
+- goals: Survive, CloseGates, Population, Slay or LootRuins;
 - the missions it requires.
 
 Missions speak through a **talking head**, top centre: speakers with portraits (campaign.json
