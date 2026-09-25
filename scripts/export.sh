@@ -19,8 +19,9 @@ note() {
 Hellwall $VERSION - playtest build
 
 A colony-survival RTS: hold a walled town against demon hordes. The first
-screen picks the mode (60-day survival or endless), difficulty, map and seed.
-F1 shows the controls. F5 saves, F9 loads.
+screen offers the campaign, a skirmish (survival or endless, with settings on
+the right) and a map editor. F1 shows the controls; Esc (with nothing
+selected) is the pause menu, with save, load, fullscreen and volume.
 
 $1
 

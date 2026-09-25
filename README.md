@@ -187,9 +187,9 @@ To watch the probe's town hold a wave at 4x speed:
 - **Skirmish settings** (right-hand column of the menu): map size, days, waves, Hellgates,
   packs, stragglers, starting stock, fog of war and living woods. At their defaults it's the
   standard run; otherwise the run is a scenario of its own, which its saves carry.
-- **Hand-made maps:** the **Map editor** (main menu) paints terrain on any generated start
-  and saves to `user://maps/`. Saved maps join the skirmish Map list. Packs, stragglers and
-  Hellgates are scattered over the painted ground when a run starts.
+- **Hand-made maps:** the **Map editor** (main menu) paints terrain on any generated start,
+  places sleeping packs and Hellgates by hand, and saves to `user://maps/`. Saved maps join
+  the skirmish Map list.
 - **Fog of war:** the map is dark until something of yours has seen it; you can only build
   on explored ground. Awake demons show only where you're looking. Sleeping packs stand as
   crowds of demons where you saw them, and wake where they stand. `--reveal` turns it off.

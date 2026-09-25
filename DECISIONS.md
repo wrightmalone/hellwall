@@ -552,10 +552,13 @@ made alone; flag any you'd change.
   paint grass, forest, rock, water, iron or silver with a round brush, save to
   `user://maps/<name>.json`. Saved maps appear in the skirmish Map list ("Hand-made: ...").
   The Keep's clearing can't be painted.
-- **What the editor doesn't place:** packs, strays and Hellgates. They're scattered over the
-  painted ground at the start of each run, like on a generated map, with the skirmish
-  settings. Hand-placed packs and gates, a start position other than the centre, and
-  triggers are the obvious next steps; the scenario format has room for them.
+- **Hand-placed packs and Hellgates** (Packs, Gates and Erase tools). A placed pack is a
+  sleeping pack of 8-150 Imps or Hounds at that spot; a map can also keep scattering packs at
+  random (on by default) or have only its own. Placed gates replace the random ones
+  entirely. Nothing can be placed within 20 tiles of the Keep.
+- **Not in the editor yet:** a start position other than the centre, triggers and goals
+  (a map is a skirmish, not a mission), and undo. The scenario format has room for all three.
+- `--selftest=editor` (in verify.sh) paints, places, saves, reads back and starts a run.
 
 ### My own swings
 
