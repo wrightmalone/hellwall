@@ -460,8 +460,9 @@ talking heads, fog of war with demons spread over the map, an edge-of-map resour
 advanced units, and whatever else I thought worth a swing. Each decision below is one I
 made alone; flag any you'd change.
 
-**Where things stand.** Everything on your list is in, and a build of it is in
-`out/build/` (0.9.0; a later one may follow, see the bottom of this section). My own
+**Where things stand.** Everything on your list is in, and the latest build of all of it is
+`out/build/Hellwall-0.10.0-macos.zip` (and `-windows.zip`); 0.9.0 has everything up to
+repair and the Spitter. verify.sh passes on the final code. My own
 swings, in the order I'd rate them: fog plus visible sleeping demons (the map finally looks
 like TAB), ruins, veterancy, repair plus the Spitter, the end-of-run chart and score, patrol,
 Cottages, music. Balance at Normal is back in its band after each change (the sweep's
