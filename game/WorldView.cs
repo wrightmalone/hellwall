@@ -74,6 +74,8 @@ public partial class WorldView : Node2D
         return node;
     }
 
+    readonly Dictionary<int, BuildingKind> _kinds = new();
+
     void SyncBuildings()
     {
         var seen = new HashSet<int>();
@@ -81,6 +83,13 @@ public partial class WorldView : Node2D
         foreach (var b in World.Buildings)
         {
             seen.Add(b.Id);
+            // An upgrade changes what stands there: throw the old picture away.
+            if (_buildings.TryGetValue(b.Id, out var old) && _kinds.GetValueOrDefault(b.Id) != b.Kind)
+            {
+                old.QueueFree();
+                _buildings.Remove(b.Id);
+            }
+            _kinds[b.Id] = b.Kind;
             if (!_buildings.TryGetValue(b.Id, out var sprite))
             {
                 sprite = b.IsWallLike ? new WallSprite(World, b) : new BuildingSprite(b);
@@ -244,6 +253,7 @@ public partial class WorldView : Node2D
                 var barAt = new Vector2(front.X - width / 4, front.Y + 3);
                 if (state.SelectedBuilding == b.Id) DrawPolyline([.. Iso.Diamond(b.X, b.Y, b.W, b.H), top], Palette.Selected, 2);
                 if (!b.Complete) Bar(barAt, width / 2, b.Def.BuildSeconds <= 0 ? 1 : b.Built / b.Def.BuildSeconds, new Color(0.95f, 0.9f, 0.3f));
+                if (b.Upgrading && b.Def.UpgradesTo is { } up) Bar(barAt, width / 2, b.UpgradeProgress / Math.Max(1, world.Def(up).BuildSeconds), new Color(0.6f, 0.8f, 1f));
                 if (b.Hp < b.Def.Hp) Bar(barAt + new Vector2(0, 4), width / 2, b.Hp / b.Def.Hp, new Color(0.95f, 0.25f, 0.2f));
                 if (b.Repairing)
                 {

@@ -139,7 +139,7 @@ public static class StateHash
             h = Mix(h, (uint)m.Step); h = Mix(h, (uint)m.Tree); h = Mix(h, Bits(m.Carry)); h = Mix(h, Bits(m.Wait));
             foreach (int t in m.Path) h = Mix(h, (uint)t);
         }
-        foreach (var b in world.Buildings) { h = Mix(h, Bits(b.WoodWindow)); h = Mix(h, Bits(b.WoodTimer)); h = Mix(h, Bits(b.WatchedHp)); h = Mix(h, Bits(b.Calm)); }
+        foreach (var b in world.Buildings) { h = Mix(h, Bits(b.WoodWindow)); h = Mix(h, Bits(b.WoodTimer)); h = Mix(h, Bits(b.WatchedHp)); h = Mix(h, Bits(b.Calm)); h = MixByte(h, b.Upgrading ? (byte)1 : (byte)0); h = Mix(h, Bits(b.UpgradeProgress)); }
         // Flow field and spatial hash are pure functions of the above, so they aren't hashed.
         return h;
     }

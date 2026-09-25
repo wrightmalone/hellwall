@@ -90,6 +90,8 @@ public sealed partial class World
                 w.Write(b.WoodTimer);
                 w.Write(b.WatchedHp);
                 w.Write(b.Calm);
+                w.Write(b.Upgrading);
+                w.Write(b.UpgradeProgress);
                 w.Write(b.Possessed);
                 w.Write(b.Occupants);
                 w.Write(b.PossessTimer);
@@ -297,6 +299,8 @@ public sealed partial class World
             b.WoodTimer = r.ReadSingle();
             b.WatchedHp = r.ReadSingle();
             b.Calm = r.ReadSingle();
+            b.Upgrading = r.ReadBoolean();
+            b.UpgradeProgress = r.ReadSingle();
             b.Possessed = r.ReadBoolean();
             b.Occupants = r.ReadInt32();
             b.PossessTimer = r.ReadSingle();

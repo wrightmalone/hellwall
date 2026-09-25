@@ -125,6 +125,7 @@ public static class Art
     {
         BuildingKind.Keep => [Grey(1), Grey(21)],
         BuildingKind.House => [Brown(24)],
+        BuildingKind.Cottage => [Grey(24)],
         BuildingKind.Woodcutter => [Brown(35)],
         BuildingKind.Hunter => [Brown(44)],
         BuildingKind.Fishery => [Brown(40)],

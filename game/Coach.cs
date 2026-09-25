@@ -74,6 +74,8 @@ public partial class Coach : PanelContainer
             () => _spat, () => false));
         _tips.Add(new("silver", () => $"Pale silver veins lie only near the map's edge. A {K(BuildingKind.SilverMine)} there pays for Exorcists, your longest-reaching soldiers. It's a long way out: holy ground has to reach it.",
             () => World.Day >= 20, () => Count(BuildingKind.SilverMine) > 0));
+        _tips.Add(new("cottage", () => $"Room is running out. Select a House and upgrade it to a {K(BuildingKind.Cottage)}: twice the colonists on the same ground, for stone. It keeps working while the builders are at it.",
+            () => Count(BuildingKind.House) >= 6, () => Count(BuildingKind.Cottage) > 0));
         _tips.Add(new("ruins", () => "Ruins (the dark stones, gold on the minimap): old settlements whose people now guard them as Thralls. Clear the guards and walk a soldier in to take what they left.",
             () => World.Ruins.Any(r => !r.Looted && World.Vision.IsExplored(r.X, r.Y)), () => World.Ruins.Any(r => r.Looted)));
         _tips.Add(new("corruption", () => "The horde is being corrupted. Each corruption lasts for the rest of the run, and they add up. The top right lists what the horde has become.",

@@ -7,7 +7,8 @@ public static class Blurbs
 {
     public static string Of(BuildingKind kind) => kind switch
     {
-        BuildingKind.House => "homes for colonists, who pay gold and crew everything else",
+        BuildingKind.House => "homes for colonists, who pay gold and crew everything else; select one to upgrade it",
+        BuildingKind.Cottage => "a House rebuilt in stone: twice the colonists on the same ground",
         BuildingKind.Farm => "food from the open grass around it",
         BuildingKind.Hunter => "food from the forest around it; small and cheap",
         BuildingKind.Fishery => "food from the water around it: a use for the lakeshore",

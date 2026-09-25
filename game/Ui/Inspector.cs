@@ -12,7 +12,7 @@ public partial class Inspector : PanelContainer
 
     Label _name = null!, _status = null!, _detail = null!;
     ProgressBar _hp = null!;
-    Button _demolish = null!;
+    Button _demolish = null!, _upgrade = null!;
 
     public override void _Ready()
     {
@@ -33,6 +33,9 @@ public partial class Inspector : PanelContainer
         _detail = UiKit.Label("", 12, UiKit.Muted);
         _detail.AutowrapMode = TextServer.AutowrapMode.WordSmart;
         box.AddChild(_detail);
+        _upgrade = UiKit.TextButton("Upgrade", 12);
+        _upgrade.Pressed += () => { if (State.SelectedBuilding is { } id) Send(new UpgradeBuilding(id)); };
+        box.AddChild(_upgrade);
         _demolish = UiKit.TextButton("X  Demolish", 12);
         _demolish.Pressed += () => { if (State.SelectedBuilding is { } id) Send(new Demolish(id)); };
         box.AddChild(_demolish);
@@ -63,6 +66,14 @@ public partial class Inspector : PanelContainer
             if (b.Def.SanctityUse > 0) d.Add($"draws {b.Def.SanctityUse:0} sanctity");
             _detail.Text = string.Join("\n", d);
             _demolish.Visible = b.Kind != BuildingKind.Keep;
+            _upgrade.Visible = b.Def.UpgradesTo != null && b.Complete && !b.Possessed;
+            if (b.Def.UpgradesTo is { } to)
+            {
+                var upDef = World.Def(to);
+                _upgrade.Disabled = b.Upgrading || !World.Colony.CanAfford(upDef.Cost);
+                _upgrade.Text = b.Upgrading ? $"Upgrading to {to}... {b.UpgradeProgress / upDef.BuildSeconds:P0}" : $"Upgrade to {to} ({upDef.Cost})";
+                _upgrade.TooltipText = $"{to}: {Blurbs.Of(to)}\n{upDef.Hp:0} hp{Hud.Describe(upDef)}\nIt works as it is while the builders are at it.";
+            }
             _demolish.Text = b.Possessed ? "X  Purge" : "X  Demolish";
         }
         else if (State.SelectedUnits.Count > 0)
@@ -76,6 +87,7 @@ public partial class Inspector : PanelContainer
             _status.AddThemeColorOverride("font_color", UiKit.Text);
             _detail.Text = units.Count == 1 ? $"{units[0].Order} · {units[0].Kills} kills{NextRank(units[0])}" : string.Join(", ", units.GroupBy(u => u.Order).Select(g => $"{g.Count()} {g.Key.ToString().ToLowerInvariant()}"));
             _demolish.Visible = false;
+            _upgrade.Visible = false;
         }
         else Visible = false;
     

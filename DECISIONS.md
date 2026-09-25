@@ -598,6 +598,22 @@ made alone; flag any you'd change.
 - **Interface size** (75-175%) in both menus, for big or dense screens.
 - **End-of-run chart:** colonists, soldiers and awake demons over the days (each on its own
   scale), with wave landings marked. The history lives in the sim, so saves keep it.
+- **Ruins** (the gaps list's "villages", changed): five old settlements 40-95 tiles out (scaled
+  to the map), each guarded by a sleeping pack of about 45 Thralls, its lost people. Once the
+  guards are awake and none are within 8 tiles, a soldier who walks in takes the loot: 250
+  gold, 100 wood, 100 stone and 40 iron near home, up to twice that at the far end. Dark
+  broken stones once seen, a gold dot on the minimap until looted. A skirmish setting
+  (None/Some/Many). The bot loots them only by accident.
+- **The Fishery** (O): food from the water around it, so lakeshores are worth building on.
+  Slightly better per tile than a Hunter, worse than a Farm.
+- **A Works build tab:** Mines, Silver Mines, the Barracks and the Scriptorium moved out of
+  Town, which had grown to ten. That's the "build / build advanced" split you mentioned,
+  by purpose rather than tier; worth a look once the tech tree adds more.
+- **Housing tiers:** select a House and upgrade it to a **Cottage** (60 gold, 40 stone,
+  12 s): 12 colonists instead of 6 on the same 2x2. It keeps working while it's rebuilt; a
+  Cottage can't be placed directly. The bot doesn't upgrade, so the sweeps don't see it.
+  A third tier (a Manor?) is one line of data once you want it.
+- **Tooltips** say what each building and soldier is for, as well as its numbers.
 - **Sounds** (still synthesized placeholders): a chime for a promotion, a creak and thump
   for a felled tree, a soft blip under a spoken line, a chord for victory.
 

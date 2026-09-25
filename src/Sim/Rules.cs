@@ -243,6 +243,11 @@ public sealed record BuildingDef
     /// <summary>Researches techs (the Scriptorium).</summary>
     public bool Researches { get; init; }
 
+    /// <summary>What it can be rebuilt as, in place (same footprint), paying that building's cost.</summary>
+    public BuildingKind? UpgradesTo { get; init; }
+    /// <summary>Only reached by upgrading: can't be placed.</summary>
+    public bool UpgradeOnly { get; init; }
+
     /// <summary>When the woods block (WoodsRules.Blocks), its crew go out and fell trees rather than gathering from a radius.</summary>
     public bool Woodsmen { get; init; }
 

@@ -37,5 +37,8 @@ public sealed record SetRally(int BuildingId, int X, int Y) : Command;
 /// <summary>Start researching a tech at a Scriptorium. Paid for up front; refunded if the building is lost.</summary>
 public sealed record Research(int BuildingId, string TechId) : Command;
 
+/// <summary>Rebuild a building as what it upgrades to (a House as a Cottage), in place.</summary>
+public sealed record UpgradeBuilding(int BuildingId) : Command;
+
 /// <summary>Order soldiers to a tile. They share one route map for the order.</summary>
 public sealed record OrderUnits(int[] UnitIds, OrderKind Order, int X, int Y) : Command;

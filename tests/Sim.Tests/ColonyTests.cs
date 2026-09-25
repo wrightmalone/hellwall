@@ -183,3 +183,27 @@ public class ColonyTests
         throw new InvalidOperationException("the Wardstone added no buildable ground");
     }
 }
+
+public class UpgradeTests
+{
+    [Fact]
+    public void AHouseUpgradesToACottageInPlaceAndHousesTwice()
+    {
+        var world = TestWorlds.Rich();
+        var house = TestWorlds.Built(world, BuildingKind.House, TestWorlds.C + 5, TestWorlds.C);
+        TestWorlds.RunSeconds(world, 1);
+        int before = world.Colony.Colonists;
+        double stone = world.Colony[Resource.Stone];
+        var events = TestWorlds.Run(world, new UpgradeBuilding(house.Id));
+        Assert.DoesNotContain(events, e => e is CommandRejected);
+        Assert.True(world.Colony[Resource.Stone] < stone);
+        Assert.Equal(BuildingKind.House, house.Kind); // still a House, and still housing, while it's rebuilt
+        TestWorlds.RunSeconds(world, world.Rules[BuildingKind.Cottage].BuildSeconds + 1);
+        Assert.Equal(BuildingKind.Cottage, house.Kind);
+        TestWorlds.RunSeconds(world, 1);
+        Assert.Equal(before + world.Rules[BuildingKind.Cottage].Housing - world.Rules[BuildingKind.House].Housing, world.Colony.Colonists);
+        Assert.Contains("upgrade", TestWorlds.Run(world, new PlaceBuilding(BuildingKind.Cottage, TestWorlds.C - 8, TestWorlds.C)).OfType<CommandRejected>().Single().Reason);
+        var loaded = World.Load(world.Save(), world.Rules);
+        Assert.Equal(BuildingKind.Cottage, loaded.Buildings.Single(b => b.Id == house.Id).Kind);
+    }
+}

@@ -29,6 +29,8 @@ public enum BuildingKind : byte
     SilverMine,
     /// <summary>Food from the water around it: makes a lakeshore worth building on.</summary>
     Fishery,
+    /// <summary>A House rebuilt in stone: twice the room on the same ground. Only by upgrading a House.</summary>
+    Cottage,
 }
 
 public sealed class Building
@@ -77,6 +79,10 @@ public sealed class Building
     public float WatchedHp;
     public float Calm;
     public bool Repairing;
+
+    /// <summary>Being rebuilt as its Def.UpgradesTo (it works as it was meanwhile), and for how long so far.</summary>
+    public bool Upgrading;
+    public float UpgradeProgress;
 
     /// <summary>Scriptorium: the tech being researched here, if any, and seconds of work done on it.</summary>
     public string? Researching;

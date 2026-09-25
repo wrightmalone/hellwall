@@ -282,6 +282,7 @@ public sealed partial class World
         Vision.Step(this);
         RepairSystem.Step(this, dt);
         RuinSystem.Step(this);
+        StepUpgrades(dt);
         if (Survival != null && Tick % (int)(Rules.Survival.DaySeconds * Balance.TickHz / 2) == 0)
             Stats.History.Add(new HistorySample(Tick, Colony.Colonists, _units.Count, Horde.Count));
         Abilities.Heal(this, dt);
@@ -393,6 +394,7 @@ public sealed partial class World
     public string? CheckPlacement(BuildingKind kind, int x, int y)
     {
         if (kind == BuildingKind.Keep) return "only one Keep";
+        if (Def(kind).UpgradeOnly) return "upgrade a building to get one";
         if (Scenario?.Locks(kind) == true) return "not in this mission";
         var def = Def(kind);
         if (def.RequiresTech is { } needs && !Tech.Has(needs)) return $"needs {Rules.Tech(needs).Name}";
@@ -603,6 +605,7 @@ public sealed partial class World
             CancelTraining c => TryCancel(c),
             SetRally r => TrySetRally(r),
             Research r => TryResearch(r),
+            UpgradeBuilding u => TryUpgrade(u.BuildingId),
             OrderUnits o => TryOrder(o),
             _ => "unknown command",
         };
@@ -636,6 +639,46 @@ public sealed partial class World
         OnLayoutChanged();
         _events.Add(new BuildingPlaced(Tick, building.Id, kind, x, y));
         return building;
+    }
+
+    string? TryUpgrade(int id)
+    {
+        if (!_buildingById.TryGetValue(id, out var b)) return "no such building";
+        if (b.Def.UpgradesTo is not { } to) return $"{b.Kind} has no upgrade";
+        if (!b.Complete || b.Possessed) return "not while it's being built or possessed";
+        if (b.Upgrading) return "already upgrading";
+        if (Scenario?.Locks(to) == true) return "not in this mission";
+        var def = Def(to);
+        if (def.RequiresTech is { } needs && !Tech.Has(needs)) return $"needs {Rules.Tech(needs).Name}";
+        if (Colony.Shortfall(def.Cost) is { } shortfall) return shortfall;
+        Colony.Pay(def.Cost);
+        b.Upgrading = true;
+        b.UpgradeProgress = 0;
+        return null;
+    }
+
+    /// <summary>Upgrades under way: the building works as it was until the new one is finished.</summary>
+    void StepUpgrades(float dt)
+    {
+        foreach (var b in _buildings)
+        {
+            if (!b.Upgrading) continue;
+            if (b.Possessed) { b.Upgrading = false; continue; }
+            var to = b.Def.UpgradesTo!.Value;
+            var def = Def(to);
+            b.UpgradeProgress += dt;
+            if (b.UpgradeProgress < def.BuildSeconds) continue;
+            var from = b.Kind;
+            float share = b.Hp / b.Def.Hp;
+            b.Kind = to;
+            b.Def = def;
+            b.Hp = def.Hp * share;
+            b.WatchedHp = b.Hp;
+            b.Upgrading = false;
+            b.UpgradeProgress = 0;
+            MarkNetworkDirty();
+            _events.Add(new BuildingUpgraded(Tick, b.Id, from, to));
+        }
     }
 
     string? TryDemolish(int id)
