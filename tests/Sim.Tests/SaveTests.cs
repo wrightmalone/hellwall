@@ -106,3 +106,15 @@ public class SaveTests
         Assert.Throws<InvalidOperationException>(() => world.Save());
     }
 }
+
+public class DamagedSaveTests
+{
+    [Fact]
+    public void ATruncatedSaveIsRefusedCleanly()
+    {
+        var world = TestWorlds.Rich();
+        var bytes = world.Save();
+        foreach (int keep in new[] { 12, bytes.Length / 3, bytes.Length / 2, bytes.Length - 3 })
+            Assert.Throws<FormatException>(() => World.Load(bytes[..keep], world.Rules));
+    }
+}

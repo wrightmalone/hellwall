@@ -17,7 +17,7 @@ namespace Hellwall.Sim;
 public sealed partial class World
 {
     const uint Magic = 0x56535748; // "HWSV"
-    const int FormatVersion = 8;
+    const int FormatVersion = 9;
 
     public byte[] Save()
     {
@@ -235,6 +235,17 @@ public sealed partial class World
 
     /// <summary>Rebuild a world from Save's bytes. The rules must be the ones it was saved under (at Normal or at the save's own difficulty, which the save records).</summary>
     public static World Load(byte[] data, Rules rules)
+    {
+        // A save that doesn't read as this build writes them (an older layout, or damage) is refused
+        // with a FormatException, never an exception the game doesn't expect.
+        try { return Read(data, rules); }
+        catch (Exception e) when (e is EndOfStreamException or IndexOutOfRangeException or ArgumentException or InvalidOperationException or OverflowException or KeyNotFoundException or System.Text.Json.JsonException)
+        {
+            throw new FormatException($"this save doesn't match this build ({e.GetType().Name})", e);
+        }
+    }
+
+    static World Read(byte[] data, Rules rules)
     {
         using var r = new BinaryReader(new MemoryStream(data));
         if (r.ReadUInt32() != Magic) throw new FormatException("not a Hellwall save");
