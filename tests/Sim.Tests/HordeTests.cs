@@ -276,3 +276,20 @@ public class HordeTests
         }
     }
 }
+
+public class SurvivalAllocationTests
+{
+    /// <summary>The steady-state tick of a real run (fog, ruins, patrons, history, repair) allocates nothing either.</summary>
+    [Fact]
+    public void ASurvivalTickAllocatesNothing()
+    {
+        // No garrison: shots are events, and events are meant to allocate. Everything else a real run has is here.
+        var world = World.Create(new WorldOptions(7, 256, 0, Rules.Default, Survival: true));
+        world.UnitList.Clear();
+        for (int t = 0; t < 400; t++) world.Step(); // warm up
+        long before = GC.GetAllocatedBytesForCurrentThread();
+        for (int t = 0; t < 200; t++) world.Step();
+        long allocated = GC.GetAllocatedBytesForCurrentThread() - before;
+        Assert.True(allocated == 0, $"{allocated} bytes allocated over 200 ticks");
+    }
+}

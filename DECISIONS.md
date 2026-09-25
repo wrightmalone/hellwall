@@ -469,6 +469,15 @@ like TAB), ruins, veterancy, repair plus the Spitter, the end-of-run chart and s
 Cottages, music. Balance at Normal is back in its band after each change (the sweep's
 numbers are with each item). Things for you to decide are marked **Decide**.
 
+**A review pass** (a second agent read the whole sim diff for save, hash, determinism and
+logic bugs). Save/load and the hash came out clean. It found, and I fixed: an upgrade's cost
+was lost if the building was demolished, lost or possessed mid-upgrade (now refunded);
+Spitters shot possessed buildings (now skipped, so possessions still spill their Thralls);
+a soldier killed this tick could still shoot and be promoted back to life (the dead no
+longer act); and three per-tick allocations (ruins, the research lookup, the human flow-field
+sweep, which a patrol would have kept running all game). A new test holds a survival
+world's tick, with fog, ruins, patrons and repair, to zero allocations.
+
 **The balance, start of this session against the end** (bot wins out of 24: eight seeds
 times three build paths; Normal and Plains unless named):
 

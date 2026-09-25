@@ -207,3 +207,18 @@ public class UpgradeTests
         Assert.Equal(BuildingKind.Cottage, loaded.Buildings.Single(b => b.Id == house.Id).Kind);
     }
 }
+
+public class UpgradeRefundTests
+{
+    [Fact]
+    public void DemolishingAnUpgradingHouseRefundsTheUpgrade()
+    {
+        var world = TestWorlds.Rich();
+        var house = TestWorlds.Built(world, BuildingKind.House, TestWorlds.C + 5, TestWorlds.C);
+        double stone = world.Colony[Resource.Stone];
+        TestWorlds.Run(world, new UpgradeBuilding(house.Id));
+        Assert.True(world.Colony[Resource.Stone] < stone);
+        TestWorlds.Run(world, new Demolish(house.Id));
+        Assert.Equal(stone, world.Colony[Resource.Stone], 3); // the Cottage's 40 stone back (a House costs none)
+    }
+}

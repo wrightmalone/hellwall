@@ -387,7 +387,12 @@ public sealed class Rules
         };
     }
 
-    public TechDef Tech(string id) => Techs.FirstOrDefault(t => t.Id == id) ?? throw new KeyNotFoundException($"no tech '{id}'");
+    /// <summary>A tech by id. A loop, not LINQ: research looks its tech up every tick, and a closure a tick adds up.</summary>
+    public TechDef Tech(string id)
+    {
+        foreach (var t in Techs) if (t.Id == id) return t;
+        throw new KeyNotFoundException($"no tech '{id}'");
+    }
 
     public BuildingDef[] Buildings { get; private init; } = [];
     public UnitDef[] Units { get; private init; } = [];

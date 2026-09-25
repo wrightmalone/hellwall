@@ -49,7 +49,9 @@ internal static class RuinSystem
         {
             if (ruin.Looted) continue;
             float rx = ruin.X + 0.5f, ry = ruin.Y + 0.5f;
-            if (world.Packs.FirstOrDefault(p => p.Id == ruin.GuardPackId) is { Awake: false }) continue;
+            bool guarded = false;
+            foreach (var p in world.PackList) if (p.Id == ruin.GuardPackId) { guarded = !p.Awake; break; } // the List, not the interface: no boxed enumerator
+            if (guarded) continue;
             bool soldier = false;
             foreach (var u in world.UnitList)
                 if ((u.X - rx) * (u.X - rx) + (u.Y - ry) * (u.Y - ry) <= ClaimRadius * ClaimRadius) { soldier = true; break; }

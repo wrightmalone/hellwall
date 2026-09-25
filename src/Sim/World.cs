@@ -87,6 +87,7 @@ public sealed partial class World
 
     /// <summary>Ordered by id, ascending.</summary>
     public IReadOnlyList<Pack> Packs => _packs;
+    internal List<Pack> PackList => _packs;
 
     /// <summary>Every Hellgate the map started with, standing or not. Ordered by id.</summary>
     public IReadOnlyList<Hellgate> Gates => _gates;
@@ -551,17 +552,26 @@ public sealed partial class World
     }
 
     bool _humanFieldsDirty;
+    readonly HashSet<FlowField> _fieldsInUse = new();
+    readonly List<int> _fieldKeys = new();
 
     void RebuildHumanFieldsIfNeeded()
     {
         // Release fields nobody is using any more.
         if (_humanFields.Count > 0)
         {
-            var inUse = new HashSet<FlowField>();
-            foreach (var u in _units) if (u.Field != null) inUse.Add(u.Field);
-            foreach (var key in _humanFields.Keys.ToList())
+            // Reused sets, not new ones: with a patrol out, fields are live all game, and this runs every tick.
+            _fieldsInUse.Clear();
+            foreach (var u in _units)
             {
-                if (inUse.Contains(_humanFields[key])) continue;
+                if (u.Field != null) _fieldsInUse.Add(u.Field);
+                // A patrol's other end: it'll be wanted again at the turn, so keep it rather than rebuild the whole map then.
+                if (u.Order == OrderKind.Patrol && _humanFields.TryGetValue(Terrain.Index(u.PatrolX, u.PatrolY), out var back)) _fieldsInUse.Add(back);
+            }
+            _fieldKeys.Clear();
+            foreach (var (key, field) in _humanFields) if (!_fieldsInUse.Contains(field)) _fieldKeys.Add(key);
+            foreach (var key in _fieldKeys)
+            {
                 _spareFields.Add(_humanFields[key]);
                 _humanFields.Remove(key);
             }
@@ -668,7 +678,7 @@ public sealed partial class World
         foreach (var b in _buildings)
         {
             if (!b.Upgrading) continue;
-            if (b.Possessed) { b.Upgrading = false; continue; }
+            if (b.Possessed) { CancelUpgrade(b); continue; }
             var to = b.Def.UpgradesTo!.Value;
             var def = Def(to);
             b.UpgradeProgress += dt;
@@ -708,8 +718,18 @@ public sealed partial class World
         MarkNetworkDirty();
     }
 
+    /// <summary>An upgrade that won't finish (its building demolished, lost or possessed): what was paid for it comes back.</summary>
+    void CancelUpgrade(Building b)
+    {
+        if (!b.Upgrading) return;
+        Colony.Refund(Def(b.Def.UpgradesTo!.Value).Cost, 1);
+        b.Upgrading = false;
+        b.UpgradeProgress = 0;
+    }
+
     void RefundQueue(Building building)
     {
+        CancelUpgrade(building);
         foreach (var kind in building.Queue) Colony.Refund(Def(kind).Cost, 1);
         building.Queue.Clear();
         if (building.Researching is { } id)

@@ -75,6 +75,7 @@ internal static class Combat
         float best = r2;
         foreach (var u in world.UnitList)
         {
+            if (u.Hp <= 0) continue;
             float dx = u.X - x, dy = u.Y - y, d2 = dx * dx + dy * dy;
             if (d2 <= best) { best = d2; soldier = u; }
         }
@@ -90,6 +91,7 @@ internal static class Combat
         bool bestIsWall = true;
         foreach (var b in world.BuildingList)
         {
+            if (b.Possessed || b.Hp <= 0) continue; // the horde's own, or already down
             float ex = MathF.Max(MathF.Max(b.X - x, 0), x - (b.X + b.W));
             float ey = MathF.Max(MathF.Max(b.Y - y, 0), y - (b.Y + b.H));
             float d2 = ex * ex + ey * ey;

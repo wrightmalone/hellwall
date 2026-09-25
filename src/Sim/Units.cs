@@ -136,6 +136,7 @@ internal static class UnitSystem
         var units = world.UnitList;
         foreach (var u in units)
         {
+            if (u.Hp <= 0) continue; // killed this tick: removed at its end, and meanwhile does nothing (no shot, no promotion back to life)
             u.PrevX = u.X;
             u.PrevY = u.Y;
             u.Cooldown = Math.Max(0, u.Cooldown - dt);
