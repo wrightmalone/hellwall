@@ -241,7 +241,7 @@ public partial class CommandCard : PanelContainer
             bool locked = mission || (def.RequiresTech is { } needs && !World.Tech.Has(needs));
             bool affordable = colony.CanAfford(def.Cost);
             button.Modulate = State.Armed == kind ? new Color(0.75f, 1, 0.7f) : locked ? new Color(1, 1, 1, 0.3f) : affordable ? Colors.White : new Color(1, 0.75f, 0.75f, 0.75f);
-            button.TooltipText = $"{kind}\n{def.Cost}{Hud.Describe(def)}" + (mission ? "\nnot in this mission" : locked ? $"\nneeds {World.Rules.Tech(def.RequiresTech!).Name}" : affordable ? "" : "\nyou can't afford it yet");
+            button.TooltipText = $"{kind}: {Blurbs.Of(kind)}\n{def.Cost} · {def.Hp:0} hp · {def.BuildSeconds:0} s to build{Hud.Describe(def)}" + (mission ? "\nnot in this mission" : locked ? $"\nneeds {World.Rules.Tech(def.RequiresTech!).Name}" : affordable ? "" : "\nyou can't afford it yet");
         }
         foreach (var t in _tabs) t.ButtonPressed = _tabs.IndexOf(t) == _tab;
 
@@ -255,7 +255,7 @@ public partial class CommandCard : PanelContainer
                 bool locked = mission || (def.RequiresTech is { } needs && !World.Tech.Has(needs));
                 bool affordable = colony.CanAfford(def.Cost);
                 button.Modulate = locked ? new Color(1, 1, 1, 0.3f) : affordable ? Colors.White : new Color(1, 0.75f, 0.75f, 0.75f);
-                button.TooltipText = $"{kind}: {def.Cost}\n{def.Hp:0} hp, range {def.Weapon.Range}, {def.Weapon.Damage:0} dmg every {def.Weapon.Cooldown}s" +
+                button.TooltipText = $"{kind}: {Blurbs.Of(kind)}\n{def.Cost}\n{def.Hp:0} hp, range {def.Weapon.Range}, {def.Weapon.Damage:0} dmg every {def.Weapon.Cooldown}s" +
                     (mission ? "\nnot in this mission" : locked ? $"\nneeds {World.Rules.Tech(def.RequiresTech!).Name}" : "") + "\nshift-click: five";
             }
             for (int i = 0; i < _queue.Count; i++)
