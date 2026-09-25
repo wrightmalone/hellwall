@@ -65,9 +65,12 @@ public partial class NewGameMenu : CanvasLayer
         backdrop.SetAnchorsPreset(Control.LayoutPreset.FullRect);
         AddChild(backdrop);
 
-        var centre = new CenterContainer();
-        centre.SetAnchorsPreset(Control.LayoutPreset.FullRect);
-        AddChild(centre);
+        // Scrolls when the page is taller than the window (a large interface size on a small screen).
+        var scroll = new ScrollContainer { HorizontalScrollMode = ScrollContainer.ScrollMode.Disabled };
+        scroll.SetAnchorsPreset(Control.LayoutPreset.FullRect);
+        AddChild(scroll);
+        var centre = new CenterContainer { SizeFlagsHorizontal = Control.SizeFlags.ExpandFill, SizeFlagsVertical = Control.SizeFlags.ExpandFill };
+        scroll.AddChild(centre);
         var page = new VBoxContainer();
         page.AddThemeConstantOverride("separation", 10);
         centre.AddChild(page);

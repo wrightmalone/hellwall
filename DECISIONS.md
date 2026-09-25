@@ -633,6 +633,10 @@ numbers are with each item). Things for you to decide are marked **Decide**.
   doesn't pause for the choice; the offer waits. The bot takes the first card. Sweep with
   them: 14/24 (from 11), spread 3-6 per path, average day 60-63. **Decide:** the saints'
   names and the milestones are placeholders for the story.
+- **Noise view** (F4): the noise grid over the ground, orange as it builds and red where it's
+  loud enough to wake a sleeping pack. The gaps list suggested making noise visible; this is
+  the cheap version (a toggle, not always on).
+- **The main menu scrolls** when a large interface size makes it taller than the window.
 - **Weekly challenge** (main menu): a seed and map kind from the ISO year and week, at Normal,
   the same for everyone; its best score is kept like any other. Ready for a shared
   leaderboard, if there's ever somewhere to post scores.

@@ -219,6 +219,22 @@ public partial class WorldView : Node2D
                 Iso.Ellipse(this, feet, 0.34f, new Color(0.35f, 0.7f, 1f, 0.95f), 2);
             }
 
+            // F4: noise, one cell at a time, in the cell's diamond: orange as it builds, red at waking level.
+            if (View.State.ShowNoise)
+            {
+                var noise = world.Noise;
+                int cs = noise.CellSize;
+                for (int cy = 0; cy < noise.Height; cy++)
+                    for (int cx = 0; cx < noise.Width; cx++)
+                    {
+                        float level = noise.Level[cy * noise.Width + cx];
+                        if (level < 0.15f * Balance.WakeThreshold) continue;
+                        float t = Mathf.Clamp(level / Balance.WakeThreshold, 0, 1);
+                        var colour = level >= Balance.WakeThreshold ? new Color(1, 0.2f, 0.15f, 0.35f) : new Color(1, 0.6f, 0.2f, 0.08f + 0.2f * t);
+                        DrawColoredPolygon(Iso.Diamond(cx * cs, cy * cs, cs, cs), colour);
+                    }
+            }
+
             // Sleeping packs are drawn as the demons themselves (HordeRenderer). With a building
             // armed, the ground each keeps clear is ringed, so it's plain why you can't build there.
             if (View.State.Armed != null)

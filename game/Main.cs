@@ -220,6 +220,7 @@ public partial class Main : Node2D
         // scripts/verify.sh looks for this line: the engine banner alone doesn't prove the C# scene ran.
         if (options.GetValueOrDefault("selftest") == "controls") CallDeferred(nameof(SelfTestControls));
         if (options.ContainsKey("pausemenu")) CallDeferred(nameof(OpenPauseMenu)); // for screenshots of it
+        if (options.ContainsKey("noise")) _state.ShowNoise = true;
         GD.Print($"hellwall: world ready seed={_world.Seed} map={_world.Map} difficulty={_world.Rules.Difficulty} endless={_world.Survival?.Endless ?? false} hash={StateHash.Hex(_world)}");
         _started = true;
     }
@@ -660,6 +661,10 @@ public partial class Main : Node2D
                 break;
             case Key.F1: _hud.ToggleHelp(); break;
             case Key.F3: _hud.ShowDebug = !_hud.ShowDebug; break;
+            case Key.F4:
+                _state.ShowNoise = !_state.ShowNoise;
+                _state.Say(_state.ShowNoise ? "Noise view: orange where the colony is loud; red wakes sleeping packs" : "Noise view off");
+                break;
             case Key.F5: QuickSave(); break;
             case Key.F9: QuickLoad(); break;
             case Key.X or Key.Delete when selected != null:

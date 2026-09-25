@@ -17,6 +17,8 @@ public sealed class ClientState
     public bool AttackMoveArmed;
     /// <summary>With AttackMoveArmed: the click gives a patrol, not an attack-move.</summary>
     public bool PatrolArmed;
+    /// <summary>F4: the noise grid over the ground, so it's plain what will wake the packs.</summary>
+    public bool ShowNoise;
     public int? SelectedBuilding;
     public readonly HashSet<int> SelectedUnits = new();
     public readonly Dictionary<int, int[]> Groups = new();
