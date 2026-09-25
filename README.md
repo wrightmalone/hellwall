@@ -351,6 +351,11 @@ p99 9.1 ms, sim 4.8 ms/tick.
 | drag | box-select soldiers (shift adds) |
 | right-click with soldiers | attack-move; shift+right-click for a plain move |
 | `H` / `Shift+S` | hold / stop |
+| `Z` then click | patrol between here and there |
+| `Ctrl+A` / double-click a soldier | every soldier / every soldier of that kind on screen |
+| `O` | Fishery (food from water) |
+| select a House | upgrade it to a Cottage (twice the room) |
+| Esc or F10 | pause menu |
 | `Ctrl+1`–`9` / `Alt+1`–`9` | set / recall a control group |
 | `Q` `E` `R` with a Barracks selected | train Militia / Marksman / Templar (Crossbowmen by button) |
 | `9`, `=`, `G`, `B`, `U`, `N` | Stone Wall, Lance Tower, Gate, Barracks, Scriptorium, Silver Mine |

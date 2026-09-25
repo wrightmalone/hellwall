@@ -10,6 +10,8 @@ public enum OrderKind : byte
     AttackMove,
     /// <summary>Never move; shoot what's in range.</summary>
     Hold,
+    /// <summary>Attack-move there, then back to where the order was given, and on, for ever.</summary>
+    Patrol,
 }
 
 /// <summary>
@@ -33,6 +35,8 @@ public sealed class Unit
     public int DestY;
     /// <summary>Demons this soldier has killed: veterancy.</summary>
     public int Kills;
+    /// <summary>A patrol's other end: where the soldier stood when ordered.</summary>
+    public int PatrolX, PatrolY;
 
     /// <summary>Kills to reach each rank (Veteran, Elite, Champion).</summary>
     public static readonly int[] RankKills = [8, 25, 60];
@@ -179,10 +183,17 @@ internal static class UnitSystem
                     vy = dy / d * u.Def.Speed;
                 }
             }
-            else if (u.Order is OrderKind.Move or OrderKind.AttackMove && u.Field != null)
+            else if (u.Order is OrderKind.Move or OrderKind.AttackMove or OrderKind.Patrol && u.Field != null)
             {
                 float ddx = u.DestX + 0.5f - u.X, ddy = u.DestY + 0.5f - u.Y;
-                if (ddx * ddx + ddy * ddy < 0.5f)
+                if (ddx * ddx + ddy * ddy < 0.5f && u.Order == OrderKind.Patrol)
+                {
+                    // Turn round: the far end becomes the near one.
+                    (u.DestX, u.PatrolX) = (u.PatrolX, u.DestX);
+                    (u.DestY, u.PatrolY) = (u.PatrolY, u.DestY);
+                    u.Field = world.HumanFieldTo(u.DestX, u.DestY);
+                }
+                else if (ddx * ddx + ddy * ddy < 0.5f)
                 {
                     u.Order = OrderKind.Idle;
                     u.Field = null;

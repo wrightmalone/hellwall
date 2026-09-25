@@ -15,6 +15,8 @@ public sealed class ClientState
     public BuildingKind? Armed;
     /// <summary>A was pressed with soldiers selected: the next left-click on the ground attack-moves them there.</summary>
     public bool AttackMoveArmed;
+    /// <summary>With AttackMoveArmed: the click gives a patrol, not an attack-move.</summary>
+    public bool PatrolArmed;
     public int? SelectedBuilding;
     public readonly HashSet<int> SelectedUnits = new();
     public readonly Dictionary<int, int[]> Groups = new();

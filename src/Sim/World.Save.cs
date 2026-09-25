@@ -114,6 +114,8 @@ public sealed partial class World
                 w.Write(u.DestX);
                 w.Write(u.DestY);
                 w.Write(u.Kills);
+                w.Write(u.PatrolX);
+                w.Write(u.PatrolY);
                 w.Write(u.Field != null);
             }
 
@@ -321,7 +323,7 @@ public sealed partial class World
             var u = new Unit
             {
                 Id = id, Kind = kind, Def = world.Def(kind), X = r.ReadSingle(), Y = r.ReadSingle(), PrevX = r.ReadSingle(), PrevY = r.ReadSingle(),
-                Hp = r.ReadSingle(), Cooldown = r.ReadSingle(), Order = (OrderKind)r.ReadByte(), DestX = r.ReadInt32(), DestY = r.ReadInt32(), Kills = r.ReadInt32(),
+                Hp = r.ReadSingle(), Cooldown = r.ReadSingle(), Order = (OrderKind)r.ReadByte(), DestX = r.ReadInt32(), DestY = r.ReadInt32(), Kills = r.ReadInt32(), PatrolX = r.ReadInt32(), PatrolY = r.ReadInt32(),
             };
             if (r.ReadBoolean()) needsField.Add(u);
             world._units.Add(u);

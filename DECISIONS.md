@@ -614,6 +614,9 @@ made alone; flag any you'd change.
   Cottage can't be placed directly. The bot doesn't upgrade, so the sweeps don't see it.
   A third tier (a Manor?) is one line of data once you want it.
 - **Tooltips** say what each building and soldier is for, as well as its numbers.
+- **Patrol** (Z then click, or the card's button): soldiers attack-move to the point, then back
+  to where they stood, for ever, fighting what comes in reach. For guarding a wall line or a
+  road to an outpost.
 - **Sounds** (still synthesized placeholders): a chime for a promotion, a creak and thump
   for a felled tree, a soft blip under a spoken line, a chord for victory.
 

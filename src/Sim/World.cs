@@ -567,7 +567,7 @@ public sealed partial class World
         foreach (var (key, field) in _humanFields) field.BuildHuman(this, key % Terrain.Width, key / Terrain.Width);
     }
 
-    FlowField HumanFieldTo(int x, int y)
+    internal FlowField HumanFieldTo(int x, int y)
     {
         int key = Terrain.Index(x, y);
         if (_humanFields.TryGetValue(key, out var field)) return field;
@@ -845,7 +845,7 @@ public sealed partial class World
         if (o.UnitIds.Length == 0) return "no units";
         FlowField? field = null;
         int dx = o.X, dy = o.Y;
-        if (o.Order is OrderKind.Move or OrderKind.AttackMove)
+        if (o.Order is OrderKind.Move or OrderKind.AttackMove or OrderKind.Patrol)
         {
             // Aim at the nearest tile a soldier can actually stand on.
             var tile = FindTileNear(o.X, o.Y, 6, IsHumanWalkable);
@@ -862,6 +862,8 @@ public sealed partial class World
             u.DestX = dx;
             u.DestY = dy;
             u.Field = field;
+            u.PatrolX = (int)u.X;
+            u.PatrolY = (int)u.Y;
             ordered++;
         }
         return ordered == 0 ? "no such units" : null;

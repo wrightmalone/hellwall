@@ -334,7 +334,7 @@ public partial class WorldView : Node2D
             if (state.AttackMoveArmed)
             {
                 Iso.Ellipse(this, new Vector2(state.HoveredTile.X + 0.5f, state.HoveredTile.Y + 0.5f), 0.45f, new Color(1, 0.35f, 0.3f, 0.9f), 2);
-                Text(font, state.MouseWorld + new Vector2(14, -6), "Attack-move", 14, new Color(1, 0.55f, 0.5f));
+                Text(font, state.MouseWorld + new Vector2(14, -6), state.PatrolArmed ? "Patrol" : "Attack-move", 14, new Color(1, 0.55f, 0.5f));
             }
 
             if (state.DragStart is { } ds && state.Armed == null && !state.AttackMoveArmed)

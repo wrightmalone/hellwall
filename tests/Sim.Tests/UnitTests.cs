@@ -174,3 +174,32 @@ public class VeterancyTests
         Assert.Equal(marksman.Kills, loaded.Units.Single(x => x.Id == marksman.Id).Kills);
     }
 }
+
+public class PatrolTests
+{
+    [Fact]
+    public void APatrolWalksBackAndForth()
+    {
+        var world = TestWorlds.Rich(TestWorlds.Dummies());
+        var keep = world.Buildings.Single(b => b.Kind == BuildingKind.Keep);
+        world.TrySpawnUnit(UnitKind.Militia, keep);
+        var u = world.Units.Last();
+        int homeX = (int)u.X, homeY = (int)u.Y;
+        var (tx, ty) = TestWorlds.GrassAtDistance(world, 12, 14);
+        TestWorlds.Run(world, new OrderUnits([u.Id], OrderKind.Patrol, tx, ty));
+        bool reachedFar = false, cameBack = false;
+        for (int t = 0; t < 60 * Balance.TickHz; t++)
+        {
+            world.Step();
+            float dFar = (u.X - tx - 0.5f) * (u.X - tx - 0.5f) + (u.Y - ty - 0.5f) * (u.Y - ty - 0.5f);
+            float dHome = (u.X - homeX - 0.5f) * (u.X - homeX - 0.5f) + (u.Y - homeY - 0.5f) * (u.Y - homeY - 0.5f);
+            if (dFar < 1) reachedFar = true;
+            if (reachedFar && dHome < 1) cameBack = true;
+        }
+        Assert.True(reachedFar, "never reached the far end");
+        Assert.True(cameBack, "never came back");
+        Assert.Equal(OrderKind.Patrol, u.Order);
+        var loaded = World.Load(world.Save(), world.Rules);
+        Assert.Equal(StateHash.Compute(world), StateHash.Compute(loaded));
+    }
+}

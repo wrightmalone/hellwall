@@ -221,7 +221,7 @@ public partial class CommandCard : PanelContainer
         _body.AddChild(groups);
         var orders = new HBoxContainer();
         orders.AddThemeConstantOverride("separation", 4);
-        foreach (var (label, order) in new[] { ("A  Attack-move", "attack"), ("H  Hold", "hold"), ("Shift+S  Stop", "stop") })
+        foreach (var (label, order) in new[] { ("A  Attack-move", "attack"), ("Z  Patrol", "patrol"), ("H  Hold", "hold"), ("Shift+S  Stop", "stop") })
         {
             var o = order;
             var b = UiKit.TextButton(label, 12);

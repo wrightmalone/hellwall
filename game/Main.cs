@@ -259,6 +259,12 @@ public partial class Main : Node2D
                 _state.Armed = null;
                 Input.SetDefaultCursorShape(Input.CursorShape.Cross);
                 break;
+            case "patrol":
+                _state.AttackMoveArmed = true;
+                _state.PatrolArmed = true;
+                _state.Armed = null;
+                Input.SetDefaultCursorShape(Input.CursorShape.Cross);
+                break;
             case "hold": Send(new OrderUnits(_state.SelectedUnits.ToArray(), OrderKind.Hold, 0, 0)); break;
             case "stop": Send(new OrderUnits(_state.SelectedUnits.ToArray(), OrderKind.Idle, 0, 0)); break;
         }
@@ -323,6 +329,7 @@ public partial class Main : Node2D
     void DisarmAttackMove()
     {
         _state.AttackMoveArmed = false;
+        _state.PatrolArmed = false;
         Input.SetDefaultCursorShape(Input.CursorShape.Arrow);
     }
 
@@ -531,7 +538,7 @@ public partial class Main : Node2D
                 if (mb.Pressed && _state.AttackMoveArmed)
                 {
                     if (_state.SelectedUnits.Count > 0)
-                        Send(new OrderUnits(_state.SelectedUnits.ToArray(), OrderKind.AttackMove, _state.HoveredTile.X, _state.HoveredTile.Y));
+                        Send(new OrderUnits(_state.SelectedUnits.ToArray(), _state.PatrolArmed ? OrderKind.Patrol : OrderKind.AttackMove, _state.HoveredTile.X, _state.HoveredTile.Y));
                     if (!mb.ShiftPressed) DisarmAttackMove(); // shift-click to give several in a row
                     _swallowRelease = true;
                     break;
@@ -612,7 +619,14 @@ public partial class Main : Node2D
             case Key.Escape when _state.AttackMoveArmed:
                 DisarmAttackMove();
                 break;
+            case Key.Z when _state.SelectedUnits.Count > 0:
+                _state.AttackMoveArmed = true;
+                _state.PatrolArmed = true;
+                _state.Armed = null;
+                Input.SetDefaultCursorShape(Input.CursorShape.Cross);
+                break;
             case Key.A when _state.SelectedUnits.Count > 0 && !key.CtrlPressed && !key.AltPressed:
+                _state.PatrolArmed = false;
                 _state.AttackMoveArmed = true;
                 _state.Armed = null;
                 Input.SetDefaultCursorShape(Input.CursorShape.Cross);
