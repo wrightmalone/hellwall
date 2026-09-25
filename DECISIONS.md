@@ -759,6 +759,14 @@ last lost by at least one).
   ending around day 50); 360 with elites from 35% is 16/24, average day 60 on every path.
   **Decide:** if you want it denser still, `wilds.packs` in rules.json is the dial, and the
   bot says the waves would then need to come down to match.
+- **The expedition missions keep lighter wilds:** The Gatekeepers 140 packs and The Reliquary
+  220 (the new default is 360). With the default, every path lost both: the army walks out
+  through the packs, and now everything it stirs up comes after it. With these, legion closes
+  the gates again and the Reliquary is won by all three. The Long Siege is now won by all
+  three (it was lost by all).
+- verify.sh's performance bench missed its budget on this run, but so did the build from
+  before these changes, side by side, with the machine's load average at 11-18; the sweep,
+  campaign curve and both self-tests pass.
 - Saves are format 13.
 
 ## Things I noticed that you should decide
