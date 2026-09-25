@@ -232,6 +232,7 @@ public partial class Main : Node2D
         if (options.GetValueOrDefault("selftest") == "controls") CallDeferred(nameof(SelfTestControls));
         if (options.ContainsKey("pausemenu")) CallDeferred(nameof(OpenPauseMenu)); // for screenshots of it
         if (options.ContainsKey("noise")) _state.ShowNoise = true;
+        ForestWatch.Log = DisplayServer.GetName() == "headless";
         if (options.ContainsKey("select-keep")) _state.SelectedBuilding = _world.Buildings.First(b => b.Kind == BuildingKind.Keep).Id; // screenshots of the inspector
         GD.Print($"hellwall: world ready seed={_world.Seed} map={_world.Map} difficulty={_world.Rules.Difficulty} endless={_world.Survival?.Endless ?? false} hash={StateHash.Hex(_world)}");
         _started = true;
@@ -245,7 +246,7 @@ public partial class Main : Node2D
     void BuildHud()
     {
         _hud?.QueueFree();
-        _minimap = new Minimap { World = _world, Camera = _camera, MoveCamera = p => _camera.Position = p };
+        _minimap = new Minimap { World = _world, Camera = _camera, MoveCamera = p => _camera.Position = p, IgnoreInput = () => Dragging };
         _hud = new Hud
         {
             World = _world, State = _state, Send = Send, Minimap = _minimap, NewRun = NewRun,
@@ -491,8 +492,19 @@ public partial class Main : Node2D
     bool _minimapStale;
     double _minimapClock;
 
+    /// <summary>Living woods: warns before the woodsmen cut a way in for the horde.</summary>
+    readonly ForestWatch _forest = new();
+    double _forestClock;
+
     void HandleEvents()
     {
+        _forestClock += GetProcessDeltaTime();
+        if (_forestClock > 0.5)
+        {
+            _forestClock = 0;
+            _forest.Step(_world, _hud.Alerts);
+            _state.EndangeredTrees = _forest.Endangered;
+        }
         _minimapClock += GetProcessDeltaTime();
         if (_minimapStale && _minimapClock > 0.5)
         {
@@ -528,6 +540,7 @@ public partial class Main : Node2D
                     _hud.Voice.Say(Campaign.Default.Speaker(m.Speaker), m.Text);
                     break;
                 case TreeFelled f:
+                    _forest.Felled(f, _world.Terrain.Width, _hud.Alerts);
                     _terrainView!.PaintCell(f.X, f.Y);
                     _minimapStale = true;
                     break;
@@ -572,6 +585,24 @@ public partial class Main : Node2D
         _pauseMenu = null;
         _paused = _pausedBeforeMenu;
     }
+
+    /// <summary>
+    /// A box select or a wall line ends wherever the button comes up, even over the minimap or a
+    /// panel: taken here, before the interface sees it, or a drag that ends on the HUD is lost.
+    /// </summary>
+    public override void _Input(InputEvent @event)
+    {
+        if (!_started || _pauseMenu != null || _state.DragStart == null) return;
+        if (@event is not InputEventMouseButton { ButtonIndex: MouseButton.Left, Pressed: false } mb) return;
+        if (_swallowRelease) { _swallowRelease = false; return; }
+        if (_state.Armed is { } k) PlaceLine(k);
+        else FinishSelection(mb.ShiftPressed);
+        _state.DragStart = null;
+        GetViewport().SetInputAsHandled();
+    }
+
+    /// <summary>True while a box select or a wall line is being dragged: the minimap stays out of it.</summary>
+    public bool Dragging => _state.DragStart != null;
 
     public override void _UnhandledInput(InputEvent @event)
     {

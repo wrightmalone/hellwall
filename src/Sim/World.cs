@@ -162,6 +162,10 @@ public sealed partial class World
     /// <summary>A tree comes down: the tile becomes open ground, and routes and gathering are recomputed.</summary>
     public int TreesFelled { get; internal set; }
 
+    /// <summary>A tree's hit points left, and at full health (for the client's warnings).</summary>
+    public float TreeHealth(int tile) => TreeHp[tile];
+    public float TreeFullHealth => Rules.Woods.TreeHp;
+
     /// <summary>Tests and tools: turn a rectangle (inclusive) into standing forest at full health, leaving buildings alone.</summary>
     internal void PlantForest(int x0, int y0, int x1, int y1)
     {

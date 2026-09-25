@@ -41,6 +41,8 @@ public sealed class ClientState
     public const double MarkLife = 4;
     /// <summary>Where an order was just given, shrinking away: green for a move, red for an attack.</summary>
     public readonly List<(float X, float Y, bool Attack, double Age)> OrderPings = new();
+    /// <summary>Living woods: trees whose felling would open a way in (ForestWatch), ringed in amber.</summary>
+    public IReadOnlyCollection<int> EndangeredTrees = Array.Empty<int>();
     public readonly List<(DemonHowled Howl, double Age)> Howls = new();
     public readonly List<(string Text, double Age)> Log = new();
 

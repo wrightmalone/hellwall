@@ -131,11 +131,14 @@ public partial class WorldView : Node2D
         int step = (int)(Time.GetTicksMsec() / 100); // walk frames at 10 a second
         foreach (var u in World.Units)
             Figure(seen, step, u.Id, Art.Unit(u.Kind), Art.UnitScale, u.X, u.Y, u.PrevX, u.PrevY, null);
-        // Woodsmen: a militiaman's figure, a size smaller; chopping, he faces the tree and swings (the walk cycle, slowed).
+        // Woodsmen: their own figure (forest green), a size smaller; chopping, he faces the tree and swings, over and over.
         var w = World.Terrain.Width;
         foreach (var m in World.Woodsmen)
-            Figure(seen, step, m.Id, Art.Unit(UnitKind.Militia), Art.UnitScale * 0.8f, m.X, m.Y, m.PrevX, m.PrevY,
-                m.State == WoodsmanState.Chopping && m.Tree >= 0 ? new Vector2(m.Tree % w + 0.5f - m.X, m.Tree / w + 0.5f - m.Y) : null);
+        {
+            bool chopping = m.State == WoodsmanState.Chopping && m.Tree >= 0;
+            Figure(seen, step, m.Id, chopping ? "res://art/baked/unit-woodsman-chop.png" : "res://art/baked/unit-woodsman.png", Art.UnitScale * 0.8f, m.X, m.Y, m.PrevX, m.PrevY,
+                chopping ? new Vector2(m.Tree % w + 0.5f - m.X, m.Tree / w + 0.5f - m.Y) : null);
+        }
         foreach (var id in _units.Keys.Where(id => !seen.Contains(id)).ToList())
         {
             _units[id].QueueFree();
@@ -161,12 +164,14 @@ public partial class WorldView : Node2D
             _units[id] = sprite;
             Sorted.AddChild(sprite);
         }
+        var texture = Art.Tex(sheet);
+        if (sprite.Texture != texture) sprite.Texture = texture; // a woodsman swaps between walking and chopping
         float dx = x - prevX, dy = y - prevY;
         bool moving = dx * dx + dy * dy > 1e-6f;
         if (chopping is { } at) _facing[id] = Art.Facing(at.X, at.Y);
         else if (moving) _facing[id] = Art.Facing(dx, dy);
         int facing = _facing.GetValueOrDefault(id, 1);
-        int frame = chopping != null ? (step / 2 + id) % 2 * 2 : moving ? (step + id) % Art.Frames : 0;
+        int frame = chopping != null || moving ? (step + id) % Art.Frames : 0; // chopping: the swing sheet, looped
         sprite.RegionRect = new Rect2(frame * Art.Cell, facing * Art.Cell, Art.Cell, Art.Cell);
         sprite.Position = Iso.P(Mathf.Lerp(prevX, x, State.Alpha), Mathf.Lerp(prevY, y, State.Alpha));
     }
@@ -371,6 +376,14 @@ public partial class WorldView : Node2D
                 var to = Iso.P(shot.ToX, shot.ToY) - new Vector2(0, 8);
                 DrawLine(from, to, new Color(Palette.Tracer, a), shot.FromUnit ? 1 : 2);
                 if (shot.Splash > 0) Iso.Ellipse(this, new Vector2(shot.ToX, shot.ToY), shot.Splash, new Color(1, 0.6f, 0.2f, a), 2);
+            }
+
+            // Trees whose felling would open a way in: an amber ring, pulsing.
+            float pulse = 0.55f + 0.35f * Mathf.Sin((float)Time.GetTicksMsec() / 180f);
+            foreach (int tree in state.EndangeredTrees)
+            {
+                int tw = world.Terrain.Width;
+                Iso.Ellipse(this, new Vector2(tree % tw + 0.5f, tree / tw + 0.5f), 0.7f, new Color(1, 0.7f, 0.25f, pulse), 2.5f);
             }
 
             foreach (var (px, py, attack, age) in state.OrderPings)

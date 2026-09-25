@@ -792,6 +792,24 @@ last lost by at least one).
   buildings, every bot path won the final mission, and the campaign curve needs it lost by at
   least one. At 1.4x, pyre wins, fortress and legion lose.
 
+## From the third playtest
+
+- **A box select that ends over the minimap (or any panel) works.** The minimap used to take the
+  drag's mouse motion (jumping the camera) and swallow the release (so the select never
+  finished). The release of a box select or a wall line is now taken before the interface sees
+  it, and the minimap ignores input while a box is being drawn.
+- **Living woods warns before the woodsmen open a way in.** When a woodsman is half-way through
+  a tree that would cut a new gap through the forest near your town (within 14 tiles of a
+  building), an amber alert (click to go there) and a pulsing amber ring on the tree; when it
+  falls, a red "the forest is open" alert. "A new gap" means: the tree keeps apart two stretches
+  of open ground on its sides that don't otherwise meet within 6 tiles. Tested on a band one tree
+  thick (warns), three thick (doesn't), and one with a gap two tiles off (doesn't).
+  **Decide:** a way to tell woodsmen to spare a stretch of forest (a "keep" marker) would be the
+  natural next step if you want to protect a flank on purpose.
+- **Woodsmen have their own figure and a swing.** A forest-green Rogue, baked with its walk and,
+  while chopping, its dagger strike looped (the model has no axe, and at this size the swing
+  reads as chopping).
+
 ## Buildings from KayKit Medieval Hexagon (you downloaded it and the Medieval Village MegaKit)
 
 - **Every building but walls and gates is now a baked KayKit model** (`tools/bake_buildings.gd`,

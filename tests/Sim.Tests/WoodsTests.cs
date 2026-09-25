@@ -85,3 +85,38 @@ public class WoodsTests
         Assert.Equal(StateHash.Compute(world), StateHash.Compute(loaded));
     }
 }
+
+public class GapTests
+{
+    static Terrain Band(int thickness)
+    {
+        // Open ground west and east of a north-south band of forest, the whole height of the window and more.
+        var t = new Terrain(40, 40);
+        for (int y = 0; y < 40; y++)
+            for (int x = 0; x < 40; x++)
+                t.Set(x, y, x >= 20 && x < 20 + thickness ? Tile.Forest : Tile.Grass);
+        return t;
+    }
+
+    [Fact]
+    public void TheLastTreeOfABandOpensAGap()
+    {
+        var t = Band(1);
+        Assert.True(WoodsSystem.OpensAGap(t, 20, 20));
+    }
+
+    [Fact]
+    public void ATreeWithForestBehindItDoesNot()
+    {
+        var t = Band(3);
+        Assert.False(WoodsSystem.OpensAGap(t, 20, 20)); // the edge of a thick band: still forest behind
+    }
+
+    [Fact]
+    public void AGapNearbyMeansThisIsNoNewOpening()
+    {
+        var t = Band(1);
+        t.Set(20, 22, Tile.Grass); // already a gap two tiles south
+        Assert.False(WoodsSystem.OpensAGap(t, 20, 20));
+    }
+}

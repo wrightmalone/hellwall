@@ -22,7 +22,7 @@ public sealed class Woodsman
     public float Wait;
 }
 
-internal static class WoodsSystem
+public static class WoodsSystem
 {
     /// <summary>A lodge's wood rate is measured over this many seconds of deliveries, for the HUD and the bot.</summary>
     const float Window = 30;
@@ -192,6 +192,52 @@ internal static class WoodsSystem
                 queue.Enqueue((n, depth + 1));
             }
         }
+        return false;
+    }
+
+    static bool Open(Terrain t, int x, int y) => t.InBounds(x, y) && t.Get(x, y) is Tile.Grass or Tile.Ore or Tile.Silver;
+
+    /// <summary>
+    /// Would felling the tree at (x, y) cut a new way through the forest: does it keep apart two
+    /// stretches of open ground on its sides that don't otherwise meet within `window` tiles?
+    /// Terrain only (buildings don't count). For the client's warning; allocates, so not per tick.
+    /// </summary>
+    public static bool OpensAGap(Terrain t, int x, int y, int window = 6)
+    {
+        int side = window * 2 + 1;
+        var label = new int[side * side];
+        int next = 0, first = -1;
+        var queue = new Queue<(int, int)>();
+        for (int oy = -1; oy <= 1; oy++)
+            for (int ox = -1; ox <= 1; ox++)
+            {
+                if (ox == 0 && oy == 0) continue;
+                int nx = x + ox, ny = y + oy;
+                if (!Open(t, nx, ny)) continue;
+                int lx = nx - x + window, ly = ny - y + window;
+                int here = label[ly * side + lx];
+                if (here == 0)
+                {
+                    // Flood this neighbour's stretch of open ground within the window, the tree itself still standing.
+                    here = ++next;
+                    label[ly * side + lx] = here;
+                    queue.Enqueue((lx, ly));
+                    while (queue.Count > 0)
+                    {
+                        var (cx, cy) = queue.Dequeue();
+                        foreach (var (sx, sy) in new[] { (1, 0), (-1, 0), (0, 1), (0, -1) })
+                        {
+                            int qx = cx + sx, qy = cy + sy;
+                            if (qx < 0 || qy < 0 || qx >= side || qy >= side || label[qy * side + qx] != 0) continue;
+                            if ((qx == window && qy == window) || !Open(t, x - window + qx, y - window + qy)) continue;
+                            label[qy * side + qx] = here;
+                            queue.Enqueue((qx, qy));
+                        }
+                    }
+                }
+                if (first < 0) first = here;
+                else if (here != first) return true; // two stretches that only this tree keeps apart
+            }
         return false;
     }
 }

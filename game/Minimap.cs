@@ -20,6 +20,8 @@ public partial class Minimap : Control
     public World World = null!;
     public Camera2D Camera = null!;
     public Action<Vector2> MoveCamera = null!;
+    /// <summary>While this says so (a box select being dragged over it), the minimap takes no input.</summary>
+    public Func<bool>? IgnoreInput;
 
     ImageTexture? _terrain;
     readonly Dictionary<int, float> _lastHp = new();
@@ -78,6 +80,7 @@ public partial class Minimap : Control
 
     public override void _GuiInput(InputEvent @event)
     {
+        if (IgnoreInput?.Invoke() == true) return;
         if (@event is InputEventMouseButton { ButtonIndex: MouseButton.Left, Pressed: true } mb) Jump(mb.Position);
         else if (@event is InputEventMouseMotion { ButtonMask: MouseButtonMask.Left } mm) Jump(mm.Position);
     }

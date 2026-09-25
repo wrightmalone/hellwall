@@ -31,6 +31,8 @@ var variants := [
 	["unit-chaplain", RP + "Cleric.gltf", null, 1.0, ["", ""], 1.0, "Walk"],
 	["unit-outrider", RP + "Monk.gltf", null, 1.0, ["", ""], 1.05, "Walk"],
 	["unit-exorcist", RP + "Wizard.gltf", Color(0.86, 0.9, 1.0), 1.0, ["", ""], 1.0, "Walk", 0.5], # silver-white: the advanced tier
+	["unit-woodsman", RP + "Rogue.gltf", Color(0.42, 0.5, 0.26), 1.0, ["", ""], 0.9, "Walk", 0.45], # forest green: a woodsman, not a soldier
+	["unit-woodsman-chop", RP + "Rogue.gltf", Color(0.42, 0.5, 0.26), 1.0, ["", ""], 0.9, "Dagger_Attack", 0.45], # the swing, looped while he chops
 	# Demons: Quaternius Ultimate Monsters, fitted to a height (6th field) and walked with
 	# their own clip (7th); the Thrall stays Kenney's zombie, a possessed colonist.
 	["demon-imp", QM + "Big/Demon.gltf", null, 1.0, ["", ""], 0.72, "Walk"],
