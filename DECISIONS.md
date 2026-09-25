@@ -552,7 +552,7 @@ numbers are with each item). Things for you to decide are marked **Decide**.
 
 - **Skirmish is the single-run menu, grown:** map size (192/256/320), days (30-90), waves
   (Gentle to Brutal), Hellgates (0-6), packs (Sparse/Normal/Crowded, scaled to map area),
-  stragglers, starting stock, fog, living woods. Left at the defaults it's exactly the old
+  stragglers, ruins, starting stock, fog, living woods. The menu remembers them. Left at the defaults it's exactly the old
   survival run; anything else becomes a scenario of its own that travels inside its saves,
   so quickload works for skirmishes too.
 - **Map editor** (main menu): start from any generated map (kind, seed, size) or a saved one,
@@ -580,17 +580,16 @@ numbers are with each item). Things for you to decide are marked **Decide**.
 - **Coach tips** for fog (the first "unexplored ground" refusal), promotions, Spitters and
   silver (from day 20).
 - **Campaign lines** introduce the Spitter (The Pass, day 20) and silver (Wildwood, day 18).
-- **Repair (from the gaps list):** a building that hasn't lost health for 8 s mends 3% of its
+- **Repair (from the gaps list):** a building that hasn't lost health for 12 s mends 2% of its
   full health a second, paying 40% of its build cost per full repair as it goes, and waits
   when the store is short. A green cross shows by the health bar while it mends. The Keep
   never mends: holding it is the whole game. No button: in a game this size, clicking to
-  repair a hundred walls is busywork. Repair at first (8 s, 3%/s) took the Normal sweep from
-  12/24 to 17/24; with the Spitter at 5% it was 19/24. Final numbers: repair after 12 s at
-  2%/s, Spitters 8% of each wave with 22 damage: **13/24, each path 4-5/8, average day 58-63**,
-  back where Normal was designed to sit.
-- **The Spitter,** a ranged demon (also from the gaps list), to push back: from wave 6, 5% of
-  each wave. It stops at the walls like the rest, and spits 18 damage every 2.2 s at the
-  nearest soldier within 5 tiles, or else whatever building in range isn't wall (numbers below). So walls
+  repair a hundred walls is busywork. At first (8 s, 3%/s) it took the Normal sweep from
+  12/24 to 17/24, and 19/24 with the first Spitter; with these numbers and the Spitter's below,
+  **13/24, each path 4-5/8, average day 58-63**, where Normal was designed to sit.
+- **The Spitter,** a ranged demon (also from the gaps list), to push back: from wave 6, 8% of
+  each wave. It stops at the walls like the rest, and spits 22 damage every 2.2 s at the
+  nearest soldier within 5 tiles, or else whatever building in range isn't wall. So walls
   alone no longer keep towers safe; you kill Spitters before they reach the wall, or build
   towers a few tiles back. Spit never possesses. Baked from the pack's Alien, bile green.
 - **Score** on the end panel: days x 100 + kills + 150 per research - 5 per building lost,
