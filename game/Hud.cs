@@ -47,7 +47,7 @@ public partial class Hud : CanvasLayer
     readonly Dictionary<Side, Label> _edgeWarnings = new();
 
     const string HelpText =
-        "BUILD   pick from the build card (bottom) or 1-0 - =  M C L P  G B U; click to place; drag walls for a line; right-click or Esc to stop\n" +
+        "BUILD   pick from the build card (bottom) or 1-0 - =  M N O C L P  G B U; click to place; drag walls for a line; right-click or Esc to stop\n" +
         "SELECT  click a building or soldier; drag to box-select soldiers (shift adds)\n" +
         "ORDER   A then click, or right-click: attack-move · Z then click: patrol · shift+right-click move · H hold · Shift+S stop\n" +
         "BARRACKS  select it to train: Q E R T Y F V, shift-click for five; click a queued soldier to cancel; right-click the ground for a rally point\n" +

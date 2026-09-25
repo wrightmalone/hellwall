@@ -184,6 +184,7 @@ To watch the probe's town hold a wave at 4x speed:
 - **Difficulty:** Easy, Normal, Hard or Nightmare. Each scales wave, Convergence, pack and
   Hellgate band sizes, and starting resources, from Normal (which is `rules.json` as written).
   Only the numbers change, never the rules.
+- **Weekly challenge:** one seeded run a week, the same for everyone, with its own best score.
 - **Skirmish settings** (right-hand column of the menu): map size, days, waves, Hellgates,
   packs, stragglers, starting stock, fog of war and living woods. At their defaults it's the
   standard run; otherwise the run is a scenario of its own, which its saves carry.
@@ -272,6 +273,11 @@ Every content number lives in [src/Sim/data/rules.json](src/Sim/data/rules.json)
 - **Buildings** cost gold, wood and stone, and take time to build.
 - **Silver** comes only from pale veins near the map's edge, worked by a Silver Mine (N).
   The Exorcist (long-range holy fire, V at a Barracks) is made of it.
+- **Patron saints:** at 40, 90 and 160 colonists, choose one of three blessings (eight in
+  all, data in `rules.json`, marked `patron`).
+- **Ruins** out in the wilds, guarded by sleeping Thralls: clear the guards and walk a soldier
+  in for their loot. **Houses upgrade** in place to Cottages (twice the room). A **Fishery**
+  takes food from water. Buildings **repair** themselves once left alone, for a fee.
 - **Veterancy:** soldiers rank up with kills (Veteran 8, Elite 25, Champion 60): +15% damage
   and +12% health a rank, shown as gold chevrons.
 - **Iron** is the army's resource. Every soldier costs iron (Militia 5, Marksman
@@ -356,6 +362,7 @@ p99 9.1 ms, sim 4.8 ms/tick.
 | `O` | Fishery (food from water) |
 | select a House | upgrade it to a Cottage (twice the room) |
 | Esc or F10 | pause menu |
+| F4 | noise view: where the colony is loud enough to wake the packs |
 | `Ctrl+1`–`9` / `Alt+1`–`9` | set / recall a control group |
 | `Q` `E` `R` with a Barracks selected | train Militia / Marksman / Templar (Crossbowmen by button) |
 | `9`, `=`, `G`, `B`, `U`, `N` | Stone Wall, Lance Tower, Gate, Barracks, Scriptorium, Silver Mine |
