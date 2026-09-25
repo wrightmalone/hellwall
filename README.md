@@ -199,7 +199,7 @@ To watch the probe's town hold a wave at 4x speed:
 
 ## The campaign
 
-*The Hellwall March* is eight missions on a map. Each opens once the missions
+*The Hellwall March* is nine missions on a map. Each opens once the missions
 before it are won, and it grows harder as it goes:
 - the first is Easy, fifteen days, with most towers and all research locked;
 - the last is Hard, sixty days, with four Hellgates to close.

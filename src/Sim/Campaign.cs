@@ -13,6 +13,8 @@ public enum ObjectiveKind : byte
     Population,
     /// <summary>Slay this many demons.</summary>
     Slay,
+    /// <summary>Take the loot from this many ruins.</summary>
+    LootRuins,
 }
 
 public sealed record ObjectiveDef
@@ -25,6 +27,7 @@ public sealed record ObjectiveDef
         ObjectiveKind.Survive => "Survive the Convergence",
         ObjectiveKind.CloseGates => Count == 1 ? "Close a Hellgate" : $"Close {Count} Hellgates",
         ObjectiveKind.Population => $"Grow to {Count} colonists",
+        ObjectiveKind.LootRuins => Count == 1 ? "Loot a ruin" : $"Loot {Count} ruins",
         _ => $"Slay {Count} demons",
     };
 }
@@ -273,6 +276,7 @@ internal static class ObjectiveSystem
         ObjectiveKind.Survive => world.Survival is { ConvergenceSpent: true },
         ObjectiveKind.CloseGates => world.Gates.Count(g => !g.Alive) >= goal.Count,
         ObjectiveKind.Population => world.Colony.Colonists >= goal.Count,
+        ObjectiveKind.LootRuins => world.Ruins.Count(r => r.Looted) >= goal.Count,
         _ => world.Stats.DemonsKilled >= goal.Count,
     };
 }

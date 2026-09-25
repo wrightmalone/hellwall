@@ -42,6 +42,8 @@ public sealed class Bot
     public bool Verbose;
     int _lastWaveMoved = -1;
     int? _raidGate;
+    /// <summary>The ruin an expedition is out to loot, while one is.</summary>
+    int? _lootRuin;
 
     public Bot(World world, Style style, string plan = "fortress")
     {
@@ -139,13 +141,34 @@ public sealed class Bot
     }
 
     /// <summary>
+    /// Loot ruins, when a mission asks for it: with an army to spare and no
+    /// wave due soon, everyone but a home guard attack-moves to the nearest
+    /// unlooted ruin, and stays until it's taken (the guards fight them there).
+    /// </summary>
+    void Loot()
+    {
+        if (!_world.Goals.Any(g => g.Kind == ObjectiveKind.LootRuins) || _raidGate != null) return;
+        if (_lootRuin is { } current && _world.Ruins.FirstOrDefault(r => r.Id == current) is { Looted: false }) return; // under way
+        _lootRuin = null;
+        const int homeGuard = 6, force = 10;
+        var next = _world.Survival?.Next;
+        double untilWave = next == null ? double.MaxValue : (next.LandsAtTick - _world.Tick) / (double)Balance.TickHz;
+        if (_world.Units.Count < homeGuard + force || untilWave < 120 || next is { Announced: true }) return;
+        var ruin = _world.Ruins.Where(r => !r.Looted).OrderBy(r => MathF.Abs(r.X - _c) + MathF.Abs(r.Y - _c)).FirstOrDefault();
+        if (ruin == null) return;
+        var party = _world.Units.OrderByDescending(u => u.Hp).Skip(homeGuard).Select(u => u.Id).ToArray();
+        _lootRuin = ruin.Id;
+        Do(new OrderUnits(party, OrderKind.AttackMove, ruin.X, ruin.Y));
+    }
+
+    /// <summary>
     /// Clear the wilds: with no wave due soon, send the army at the nearest
     /// sleeping pack it can beat, so the ground around it can be built on.
     /// The next announced wave calls it home, like a raid.
     /// </summary>
     void Clear()
     {
-        if (_raidGate != null) return;
+        if (_raidGate != null || _lootRuin != null) return;
         var next = _world.Survival?.Next;
         double untilWave = next == null ? double.MaxValue : (next.LandsAtTick - _world.Tick) / (double)Balance.TickHz;
         int towersUp = _world.Buildings.Count(b => b.Def.Weapon != null && b.Complete);
@@ -242,6 +265,7 @@ public sealed class Bot
         }
 
         Raid();
+        Loot();
         Clear();
 
         // Meet each wave: once it's announced, stand the garrison just inside the ring on its side.
@@ -251,6 +275,7 @@ public sealed class Bot
             _lastWaveMoved = next.Number;
             _raidGate = null; // any raid is called home
             _clearing = null; // and any clearing: pick it up again after the wave
+            _lootRuin = null; // and any expedition
             var units = _world.Units.Select(u => u.Id).ToArray();
             if (next.Final)
             {

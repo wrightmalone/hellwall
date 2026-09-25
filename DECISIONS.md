@@ -633,6 +633,13 @@ last lost by at least one).
   from won-by-legion to lost-by-all. Without them the curve is back (legion wins The
   Gatekeepers, pyre The Hellwall). The Long Siege is now lost by all three paths, each at
   the Convergence (days 62-63): coin-flip territory, but worth a look if it stays that way.
+- **A ninth mission, The Reliquary** (after Drowned Country, a side branch, not needed for the
+  finale): six ruins on Plains, Normal, 35 days; loot three and survive. A new goal kind,
+  LootRuins. The bot now sends expeditions to ruins when a mission asks for it, and wins it
+  with fortress and pyre; legion is busy raiding gates and loses on the clock.
+- **Manors:** a Cottage upgrades again after Masonry (120 gold, 80 stone, 10 iron) to a Manor,
+  20 colonists on a House's ground.
+- **The editor has undo** (Ctrl+Z or the button): every stroke or placement, 40 deep.
 - **The Fishery** (O): food from the water around it, so lakeshores are worth building on.
   Slightly better per tile than a Hunter, worse than a Farm.
 - **A Works build tab:** Mines, Silver Mines, the Barracks and the Scriptorium moved out of

@@ -278,6 +278,54 @@
       ]
     },
     {
+      "id": "reliquary",
+      "name": "The Reliquary",
+      "mapX": 0.3,
+      "mapY": 0.86,
+      "requires": [
+        "drowned"
+      ],
+      "briefing": "Beyond the lakes lie the old reliquary towns, taken in the first years of the war. Their people stand guard over them still, as Thralls. Clear three of them and bring back what the faithful left behind, then hold until the Convergence.",
+      "seed": 909,
+      "map": "Plains",
+      "difficulty": "Normal",
+      "days": 35,
+      "waves": 0.9,
+      "convergence": 0.8,
+      "hellgates": 2,
+      "ruins": 6,
+      "objectives": [
+        {
+          "kind": "LootRuins",
+          "count": 3
+        },
+        {
+          "kind": "Survive"
+        }
+      ],
+      "triggers": [
+        {
+          "day": 2,
+          "say": "Six old towns within a few days' march. The dead stand watch in every one. Send soldiers, not colonists.",
+          "speaker": "abbess"
+        },
+        {
+          "day": 10,
+          "say": "The dead at the ruins don't sleep deeply. Towers first, then go.",
+          "speaker": "captain"
+        },
+        {
+          "afterGoal": 0,
+          "say": "Three reliquaries emptied. Now bring everyone home and hold.",
+          "speaker": "steward",
+          "give": {
+            "gold": 200,
+            "stone": 100
+          }
+        }
+      ]
+    },
+    {
       "id": "long-siege",
       "name": "The Long Siege",
       "mapX": 0.78,
