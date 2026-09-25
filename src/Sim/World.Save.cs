@@ -177,6 +177,12 @@ public sealed partial class World
             foreach (bool fired in TriggersFired) w.Write(fired);
             SaveWoods(w);
             foreach (bool seen in Vision.Explored) w.Write(seen);
+            w.Write(_ruins.Count);
+            foreach (var ruin in _ruins)
+            {
+                w.Write(ruin.Id); w.Write(ruin.X); w.Write(ruin.Y); w.Write(ruin.GuardPackId); w.Write(ruin.Looted);
+                for (int res = 0; res < Colony.Resources; res++) w.Write(ruin.Loot[(Resource)res]);
+            }
         }
         return stream.ToArray();
     }
@@ -377,6 +383,14 @@ public sealed partial class World
         var explored = new bool[world.Vision.Explored.Length];
         for (int i = 0; i < explored.Length; i++) explored[i] = r.ReadBoolean();
         world.Vision.Load(explored);
+        for (int n = r.ReadInt32(); n > 0; n--)
+        {
+            var ruin = new Ruin { Id = r.ReadInt32(), X = r.ReadInt32(), Y = r.ReadInt32(), GuardPackId = r.ReadInt32(), Looted = r.ReadBoolean() };
+            var loot = new double[Colony.Resources];
+            for (int res = 0; res < loot.Length; res++) loot[res] = r.ReadDouble();
+            ruin.Loot = new Cost { Gold = loot[0], Wood = loot[1], Stone = loot[2], Food = loot[3], Iron = loot[4], Silver = loot[5] };
+            world._ruins.Add(ruin);
+        }
 
         // Derived state: rebuilt, not stored.
         world._flowDirty = true;

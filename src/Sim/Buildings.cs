@@ -27,6 +27,8 @@ public enum BuildingKind : byte
     Censer,
     /// <summary>Works silver veins, which lie only near the map's edge.</summary>
     SilverMine,
+    /// <summary>Food from the water around it: makes a lakeshore worth building on.</summary>
+    Fishery,
 }
 
 public sealed class Building

@@ -79,3 +79,26 @@ public class WildsTests
         }
     }
 }
+
+public class RuinTests
+{
+    [Fact]
+    public void SoldiersWhoClearARuinTakeItsLoot()
+    {
+        var rules = TestWorlds.Dummies(Rules.Default).WithWilds(w => w with { Packs = 0, Strays = 0, Ruins = 1 }).WithFog(f => f with { Enabled = false });
+        var world = World.Create(new WorldOptions(7, 256, 0, rules, Survival: true));
+        world.DrainEvents();
+        var ruin = Assert.Single(world.Ruins);
+        var keep = world.Buildings.Single(b => b.Kind == BuildingKind.Keep);
+        for (int i = 0; i < 12; i++) world.TrySpawnUnit(UnitKind.Marksman, keep);
+        double gold = world.Colony[Resource.Gold];
+        world.Enqueue(new OrderUnits(world.Units.Select(u => u.Id).ToArray(), OrderKind.AttackMove, ruin.X, ruin.Y));
+        var events = TestWorlds.RunSeconds(world, 150);
+        Assert.Contains(events, e => e is RuinLooted l && l.RuinId == ruin.Id);
+        Assert.True(ruin.Looted);
+        Assert.True(world.Colony[Resource.Gold] > gold + 200, $"gold {gold:0} -> {world.Colony[Resource.Gold]:0}");
+        var loaded = World.Load(world.Save(), world.Rules);
+        Assert.True(loaded.Ruins.Single().Looted);
+        Assert.Equal(StateHash.Compute(world), StateHash.Compute(loaded));
+    }
+}

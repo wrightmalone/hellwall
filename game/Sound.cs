@@ -93,6 +93,7 @@ public partial class Sound : Node2D
             case OutcomeChanged { Outcome: Outcome.Lost }: Play(Cue.Fallen); break;
             case OutcomeChanged { Outcome: Outcome.Won }: Play(Cue.Victory); break;
             case UnitPromoted p: Play(Cue.Promoted, new Vector2(p.X, p.Y)); break;
+            case RuinLooted: Play(Cue.Built); break;
             case TreeFelled f: Play(Cue.Felled, new Vector2(f.X, f.Y)); break;
             case ScenarioMessage { Text.Length: > 0 }: Play(Cue.Voice); break;
         }

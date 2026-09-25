@@ -25,6 +25,7 @@ public static class Palette
         BuildingKind.Woodcutter => new(0.55f, 0.40f, 0.22f),
         BuildingKind.Quarry => new(0.62f, 0.60f, 0.58f),
         BuildingKind.Hunter => new(0.58f, 0.66f, 0.36f),
+        BuildingKind.Fishery => new(0.35f, 0.55f, 0.75f),
         BuildingKind.Shrine => new(0.95f, 0.92f, 0.70f),
         BuildingKind.Wardstone => new(0.85f, 0.80f, 0.55f),
         BuildingKind.Wall => new(0.66f, 0.66f, 0.70f),
@@ -51,6 +52,7 @@ public static class Palette
         BuildingKind.Woodcutter => "Wc",
         BuildingKind.Quarry => "Qu",
         BuildingKind.Hunter => "Hu",
+        BuildingKind.Fishery => "Fi",
         BuildingKind.Shrine => "Sh",
         BuildingKind.Wardstone => "",
         BuildingKind.Watchtower => "Tw",
@@ -91,6 +93,6 @@ public static class Palette
         (BuildingKind.Woodcutter, Key.Key4, "4"), (BuildingKind.Quarry, Key.Key5, "5"), (BuildingKind.Shrine, Key.Key6, "6"),
         (BuildingKind.Wardstone, Key.Key7, "7"), (BuildingKind.Wall, Key.Key8, "8"), (BuildingKind.StoneWall, Key.Key9, "9"),
         (BuildingKind.Watchtower, Key.Key0, "0"), (BuildingKind.Bombard, Key.Minus, "-"), (BuildingKind.LanceTower, Key.Equal, "="),
-        (BuildingKind.Mine, Key.M, "M"), (BuildingKind.SilverMine, Key.N, "N"), (BuildingKind.Censer, Key.C, "C"), (BuildingKind.Belfry, Key.L, "L"), (BuildingKind.Skyspire, Key.P, "P"), (BuildingKind.Gate, Key.G, "G"), (BuildingKind.Barracks, Key.B, "B"), (BuildingKind.Scriptorium, Key.U, "U"),
+        (BuildingKind.Mine, Key.M, "M"), (BuildingKind.Fishery, Key.O, "O"), (BuildingKind.SilverMine, Key.N, "N"), (BuildingKind.Censer, Key.C, "C"), (BuildingKind.Belfry, Key.L, "L"), (BuildingKind.Skyspire, Key.P, "P"), (BuildingKind.Gate, Key.G, "G"), (BuildingKind.Barracks, Key.B, "B"), (BuildingKind.Scriptorium, Key.U, "U"),
     ];
 }

@@ -125,6 +125,9 @@ public partial class AlertFeed : VBoxContainer
                 // The line itself is spoken in the talking head; the feed keeps a card to jump to where they're coming from.
                 Push("script-" + m.Index, $"{m.Spawned} demons from the {m.Side.ToString().ToLowerInvariant()}", Gold, EdgeOf(m.Side), 16);
                 break;
+            case RuinLooted l:
+                Push("ruin-" + l.RuinId, $"Ruins looted: {l.Loot}", Gold, new Vector2(l.X, l.Y), 12);
+                break;
             case UnitPromoted p:
                 Push("rank-" + p.UnitId, $"A {p.Kind} is now {Unit.RankName(p.Rank)}", Gold, new Vector2(p.X, p.Y), 6);
                 break;

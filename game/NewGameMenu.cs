@@ -51,9 +51,10 @@ public partial class NewGameMenu : CanvasLayer
     static readonly int[] GateChoices = [0, 2, 4, 6];
     static readonly (string Label, double Scale)[] WildsChoices = [("Sparse", 0.5), ("Normal", 1), ("Crowded", 1.5)];
     static readonly (string Label, int Count)[] StrayChoices = [("None", 0), ("Some", 60), ("Many", 150)];
+    static readonly (string Label, int Count)[] RuinChoices = [("None", 0), ("Some", 5), ("Many", 10)];
     static readonly (string Label, double Scale)[] StartChoices = [("Lean", 0.6), ("Normal", 1), ("Rich", 2)];
 
-    OptionButton _size = null!, _days = null!, _waves = null!, _gates = null!, _wilds = null!, _strays = null!, _start = null!;
+    OptionButton _size = null!, _days = null!, _waves = null!, _gates = null!, _wilds = null!, _strays = null!, _start = null!, _ruinsOption = null!;
     CheckButton _fog = null!;
     VBoxContainer _more = null!;
     readonly List<ScenarioDef> _handMade = new();
@@ -134,6 +135,7 @@ public partial class NewGameMenu : CanvasLayer
         _gates = Options(_more, "Hellgates", GateChoices.Select(g => g == 0 ? "None" : g.ToString()).ToArray(), 2);
         _wilds = Options(_more, "Packs", WildsChoices.Select(w => w.Label).ToArray(), 1);
         _strays = Options(_more, "Stragglers", StrayChoices.Select(w => w.Label).ToArray(), 0);
+        _ruinsOption = Options(_more, "Ruins", RuinChoices.Select(w => w.Label).ToArray(), 1);
         _start = Options(_more, "Start with", StartChoices.Select(w => w.Label).ToArray(), 1);
         _fog = new CheckButton { Text = "Fog of war", ButtonPressed = true };
         _more.AddChild(_fog);
@@ -193,7 +195,7 @@ public partial class NewGameMenu : CanvasLayer
         var handMade = _map.Selected >= MapKinds ? _handMade[_map.Selected - MapKinds] : null;
         var kind = handMade?.Map ?? (MapKind)_map.Selected;
         bool plain = handMade == null && _size.Selected == 1 && _days.Selected == 2 && _waves.Selected == 1 && _gates.Selected == 2
-            && _wilds.Selected == 1 && _strays.Selected == 0 && _start.Selected == 1 && _fog.ButtonPressed;
+            && _wilds.Selected == 1 && _strays.Selected == 0 && _ruinsOption.Selected == 1 && _start.Selected == 1 && _fog.ButtonPressed;
         if (plain)
         {
             Start(new GameSetup(seed, kind, difficulty, endless, Woods: _woods.ButtonPressed));
@@ -217,6 +219,7 @@ public partial class NewGameMenu : CanvasLayer
             // A hand-made map that wants only its own packs keeps it that way.
             Packs = handMade?.Packs == 0 ? 0 : (int)Math.Round(rules.Wilds.Packs * WildsChoices[_wilds.Selected].Scale * area),
             Strays = (int)Math.Round(StrayChoices[_strays.Selected].Count * area),
+            Ruins = RuinChoices[_ruinsOption.Selected].Count,
             Start = rules.StartingResources.Scale(StartChoices[_start.Selected].Scale),
             Fog = _fog.ButtonPressed,
             LivingWoods = _woods.ButtonPressed,

@@ -17,7 +17,8 @@ public class SkirmishTests
         var world = World.Create(Custom().Options(Rules.Default));
         Assert.Equal(192, world.Terrain.Width);
         Assert.Equal(2, world.Gates.Count);
-        Assert.Equal(40, world.Packs.Count(p => !p.Stray));
+        var guards = world.Ruins.Select(r => r.GuardPackId).ToHashSet();
+        Assert.Equal(40, world.Packs.Count(p => !p.Stray && !guards.Contains(p.Id)));
         Assert.Equal(10, world.Packs.Count(p => p.Stray));
         Assert.True(world.ForestBlocks);
         Assert.False(world.Vision.Enabled);
@@ -63,7 +64,7 @@ public class PlacedTests
     {
         var map = new ScenarioDef
         {
-            Id = "placed", MapSize = 192, Seed = 5, Packs = 0, Strays = 0,
+            Id = "placed", MapSize = 192, Seed = 5, Packs = 0, Strays = 0, Ruins = 0,
             PlacedPacks = [new PlacedPack(40, 40, 30), new PlacedPack(150, 60, 12, DemonKind.Hound)],
             PlacedGates = [new PlacedGate(20, 150)],
         };

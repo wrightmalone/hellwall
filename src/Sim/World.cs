@@ -107,6 +107,16 @@ public sealed partial class World
     readonly List<Unit> _units = new();
     readonly List<Pack> _packs = new();
     readonly List<Hellgate> _gates = new();
+    readonly List<Ruin> _ruins = new();
+    public IReadOnlyList<Ruin> Ruins => _ruins;
+    internal List<Ruin> RuinList => _ruins;
+
+    internal Pack AddPack(int x, int y, int count, DemonKind kind)
+    {
+        var pack = new Pack { Id = _nextId++, X = x, Y = y, Count = Math.Max(1, count), Kind = kind };
+        _packs.Add(pack);
+        return pack;
+    }
 
     /// <summary>Per tile: a standing Hellgate is here. Blocks walkers like rock.</summary>
     readonly bool[] _gateTile;
@@ -231,6 +241,7 @@ public sealed partial class World
         }
         world.ScatterPacks(options.DormantPacks > 0 ? options.DormantPacks : options.Survival ? world.Rules.Wilds.Packs : 0);
         if (options.Survival && options.DormantPacks == 0) world.ScatterStrays(world.Rules.Wilds.Strays);
+        if (options.Survival && options.DormantPacks == 0) RuinSystem.Place(world);
         if (options.Scenario is { } s)
             foreach (var p in s.PlacedPacks)
                 if (world.Terrain.InBounds(p.X, p.Y) && p.Count > 0)
@@ -270,6 +281,7 @@ public sealed partial class World
         WoodsSystem.Step(this, dt);
         Vision.Step(this);
         RepairSystem.Step(this, dt);
+        RuinSystem.Step(this);
         if (Survival != null && Tick % (int)(Rules.Survival.DaySeconds * Balance.TickHz / 2) == 0)
             Stats.History.Add(new HistorySample(Tick, Colony.Colonists, _units.Count, Horde.Count));
         Abilities.Heal(this, dt);

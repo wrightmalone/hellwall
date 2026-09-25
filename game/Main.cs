@@ -179,7 +179,8 @@ public partial class Main : Node2D
         TheMusic.World = _world;
 
         _camera = new Camera2D { Position = Iso.P(_world.Terrain.Width / 2f, _world.Terrain.Height / 2f), Zoom = Vector2.One * 1.1f / Display.UiScale };
-        if (options.TryGetValue("look", out var look) && look.Split(',') is [var lx, var ly, ..] parts)
+        if (options.GetValueOrDefault("look") == "ruin" && _world.Ruins.Count > 0) _camera.Position = Iso.P(_world.Ruins[0].X, _world.Ruins[0].Y);
+        else if (options.TryGetValue("look", out var look) && look.Split(',') is [var lx, var ly, ..] parts)
         {
             _camera.Position = Iso.P(float.Parse(lx), float.Parse(ly));
             if (parts.Length > 2) _camera.Zoom = Vector2.One * float.Parse(parts[2]);

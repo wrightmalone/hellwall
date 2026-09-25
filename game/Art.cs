@@ -117,6 +117,9 @@ public static class Art
     static string Red(int i) => $"{TD}Towers (red)/tower_{i:00}.png";
     static string Brown(int i) => $"{TD}Towers (brown)/tower_{i:00}.png";
 
+    /// <summary>A ruin: three broken stone pieces, drawn dark (see WorldView.RuinSprite).</summary>
+    public static readonly string[] RuinPieces = [Grey(18), Grey(8), Grey(28)];
+
     /// <summary>Mostly one piece each: stacked towers buried the town. Only the Keep and the Lance Tower stand taller.</summary>
     public static string[] BuildingPieces(BuildingKind kind) => kind switch
     {
@@ -124,6 +127,7 @@ public static class Art
         BuildingKind.House => [Brown(24)],
         BuildingKind.Woodcutter => [Brown(35)],
         BuildingKind.Hunter => [Brown(44)],
+        BuildingKind.Fishery => [Brown(40)],
         BuildingKind.Farm => [Brown(12)],
         BuildingKind.Quarry => [Grey(7)],
         BuildingKind.Mine => [Brown(29)],

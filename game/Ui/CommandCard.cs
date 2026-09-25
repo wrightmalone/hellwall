@@ -20,7 +20,8 @@ public partial class CommandCard : PanelContainer
 
     static readonly (string Name, BuildingKind[] Kinds)[] Tabs =
     [
-        ("Town", [BuildingKind.House, BuildingKind.Farm, BuildingKind.Hunter, BuildingKind.Woodcutter, BuildingKind.Quarry, BuildingKind.Mine, BuildingKind.SilverMine, BuildingKind.Barracks, BuildingKind.Scriptorium]),
+        ("Town", [BuildingKind.House, BuildingKind.Farm, BuildingKind.Hunter, BuildingKind.Fishery, BuildingKind.Woodcutter, BuildingKind.Quarry]),
+        ("Works", [BuildingKind.Mine, BuildingKind.SilverMine, BuildingKind.Barracks, BuildingKind.Scriptorium]),
         ("Holy", [BuildingKind.Shrine, BuildingKind.Wardstone]),
         ("Walls", [BuildingKind.Wall, BuildingKind.StoneWall, BuildingKind.Gate]),
         ("Towers", [BuildingKind.Watchtower, BuildingKind.Bombard, BuildingKind.LanceTower, BuildingKind.Censer, BuildingKind.Belfry, BuildingKind.Skyspire]),

@@ -92,6 +92,8 @@ public sealed record ScenarioDef
     public Cost? Start { get; init; }
     /// <summary>Straggler groups (-1: the rules' own).</summary>
     public int Strays { get; init; } = -1;
+    /// <summary>Ruins to loot (-1: the rules' own).</summary>
+    public int Ruins { get; init; } = -1;
     /// <summary>Forest is a wall and woodsmen fell it (woods.blocks).</summary>
     public bool LivingWoods { get; init; }
     public bool Fog { get; init; } = true;
@@ -140,6 +142,7 @@ public sealed record ScenarioDef
         if (Packs >= 0) r = r.WithWilds(w => w with { Packs = Packs });
         if (Start != null) r = r.WithStartingResources(Start);
         if (Strays >= 0) r = r.WithWilds(w => w with { Strays = Strays });
+        if (Ruins >= 0) r = r.WithWilds(w => w with { Ruins = Ruins });
         if (LivingWoods) r = r.WithWoods(w => w with { Blocks = true });
         if (!Fog) r = r.WithFog(f => f with { Enabled = false });
         return r;

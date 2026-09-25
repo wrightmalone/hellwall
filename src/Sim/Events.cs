@@ -46,6 +46,9 @@ public sealed record DemonsKilled(int Tick, int Count) : SimEvent(Tick);
 /// A shot the player's side fired, so the client can draw it. Damage is
 /// resolved instantly; there are no projectiles in the sim.
 /// </summary>
+/// <summary>Soldiers reached a cleared ruin and took what was there.</summary>
+public sealed record RuinLooted(int Tick, int RuinId, int X, int Y, string Loot) : SimEvent(Tick);
+
 /// <summary>A Spitter spat at a soldier or a building.</summary>
 public sealed record DemonSpat(int Tick, float FromX, float FromY, float ToX, float ToY) : SimEvent(Tick);
 

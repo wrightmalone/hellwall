@@ -116,6 +116,8 @@ public partial class Minimap : Control
         int step = Math.Max(1, h.Count / 3000);
         for (int i = 0; i < h.Count; i += step)
             if (world.Vision.IsVisible(h.X[i], h.Y[i])) DrawRect(new Rect2(M(h.X[i], h.Y[i]), Vector2.One), new Color(1, 0.15f, 0.1f));
+        foreach (var r in world.Ruins)
+            if (!r.Looted && world.Vision.IsExplored(r.X, r.Y)) DrawCircle(M(r.X + 0.5f, r.Y + 0.5f), 2.5f, UiKit.Gold);
         foreach (var g in world.Gates)
             if (g.Alive && world.Vision.IsExplored(g.X + 1, g.Y + 1)) DrawColoredPolygon([M(g.X, g.Y), M(g.X + 3, g.Y), M(g.X + 3, g.Y + 3), M(g.X, g.Y + 3)], new Color(1, 0.1f, 0.5f));
         foreach (var u in world.Units)

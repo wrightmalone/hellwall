@@ -36,8 +36,42 @@ public partial class WorldView : Node2D
     {
         SyncBuildings();
         SyncUnits();
+        SyncRuins();
         _ground.QueueRedraw();
         _overlay.QueueRedraw();
+    }
+
+    readonly Dictionary<int, Node2D> _ruins = new();
+
+    /// <summary>Ruins stand once seen; a looted one is left paler.</summary>
+    void SyncRuins()
+    {
+        foreach (var r in World.Ruins)
+        {
+            if (!_ruins.TryGetValue(r.Id, out var node))
+            {
+                if (!World.Vision.IsExplored(r.X, r.Y)) continue;
+                node = RuinSprite(r);
+                _ruins[r.Id] = node;
+                Sorted.AddChild(node);
+            }
+            node.Modulate = r.Looted ? new Color(0.75f, 0.72f, 0.7f, 0.8f) : new Color(0.5f, 0.46f, 0.44f);
+        }
+    }
+
+    static Node2D RuinSprite(Ruin r)
+    {
+        var node = new Node2D { Position = Iso.P(r.X + 2, r.Y + 2) };
+        (float dx, float dy, float size)[] layout = [(-1.4f, -0.6f, 1.2f), (0.6f, -1.2f, 0.9f), (0.2f, 0.8f, 1.0f)];
+        for (int i = 0; i < layout.Length; i++)
+        {
+            var tex = Art.Tex(Art.RuinPieces[i]);
+            float w = tex.GetWidth(), h = tex.GetHeight();
+            float scale = layout[i].size * 2 * Iso.HalfW / w;
+            var at = Iso.P(r.X + 0.5f + layout[i].dx, r.Y + 0.5f + layout[i].dy) - node.Position;
+            node.AddChild(new Sprite2D { Texture = tex, Centered = false, Scale = new Vector2(scale, scale), Position = at + new Vector2(-w / 2 * scale, -(h - w / 4) * scale), RotationDegrees = i == 1 ? 8 : 0 });
+        }
+        return node;
     }
 
     void SyncBuildings()

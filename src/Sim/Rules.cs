@@ -145,6 +145,13 @@ public sealed record WildsRules
     public int StrayMax { get; init; } = 4;
     /// <summary>Strays keep this far from the Keep: close ones wake to the first hammering and pick at a town with no walls yet.</summary>
     public int StrayMinDistance { get; init; } = 34;
+    /// <summary>Old settlements to loot (on a 256 map; distances scale with the map), each guarded by about RuinGuards Thralls.</summary>
+    public int Ruins { get; init; } = 0;
+    public int RuinGuards { get; init; } = 50;
+    public int RuinMinDistance { get; init; } = 40;
+    public int RuinMaxDistance { get; init; } = 95;
+    /// <summary>What a near ruin holds; the furthest hold twice as much.</summary>
+    public Cost RuinLoot { get; init; } = Cost.None;
 }
 
 public enum Difficulty : byte
