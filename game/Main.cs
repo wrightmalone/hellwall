@@ -230,6 +230,7 @@ public partial class Main : Node2D
         if (options.GetValueOrDefault("selftest") == "controls") CallDeferred(nameof(SelfTestControls));
         if (options.ContainsKey("pausemenu")) CallDeferred(nameof(OpenPauseMenu)); // for screenshots of it
         if (options.ContainsKey("noise")) _state.ShowNoise = true;
+        if (options.ContainsKey("select-keep")) _state.SelectedBuilding = _world.Buildings.First(b => b.Kind == BuildingKind.Keep).Id; // screenshots of the inspector
         GD.Print($"hellwall: world ready seed={_world.Seed} map={_world.Map} difficulty={_world.Rules.Difficulty} endless={_world.Survival?.Endless ?? false} hash={StateHash.Hex(_world)}");
         _started = true;
     }
