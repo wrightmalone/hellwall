@@ -37,9 +37,9 @@
   ],
 
   "wilds": {
-    "packs": 160, "minDistance": 20, "spacing": 8, "nearCount": 12, "farCount": 90,
+    "packs": 160, "minDistance": 20, "spacing": 8, "nearCount": 12, "farCount": 80,
     "houndChance": 0.15, "clearRadius": 10, "wakeRadius": 7,
-    "sleepDensity": 0.45, "strays": 250, "strayMax": 4
+    "sleepDensity": 0.45, "strays": 0, "strayMax": 4, "strayMinDistance": 40, "wakeSpread": 0.4
   },
 
   "fog": {
@@ -99,6 +99,9 @@
     "Mine":       { "size": [2, 2], "hp": 300,  "buildSeconds": 10, "cost": { "gold": 60, "wood": 20 },
                     "workers": 3, "sanctityUse": 2,
                     "produces": "Iron", "perTile": 0.04, "gatherRadius": 4, "gathers": ["Ore"] },
+    "SilverMine": { "size": [2, 2], "hp": 300, "buildSeconds": 12, "cost": { "gold": 80, "wood": 30, "stone": 20 },
+                    "workers": 3, "sanctityUse": 2,
+                    "produces": "Silver", "perTile": 0.03, "gatherRadius": 4, "gathers": ["Silver"] },
     "Shrine":     { "size": [2, 2], "hp": 300,  "buildSeconds": 10, "cost": { "gold": 60, "stone": 20 },
                     "workers": 2, "sanctitySupply": 45, "consecrateRadius": 6 },
     "Wardstone":  { "size": [1, 1], "hp": 120,  "buildSeconds": 4,  "cost": { "gold": 25, "wood": 5 },
@@ -112,7 +115,7 @@
                     "sanctityUse": 6, "possessable": false,
                     "weapon": { "range": 8, "damage": 50, "cooldown": 2.0, "splash": 2.2, "noise": 30 } },
     "Barracks":   { "size": [3, 3], "hp": 600,  "buildSeconds": 15, "cost": { "gold": 120, "wood": 30 },
-                    "workers": 4, "sanctityUse": 4, "trains": ["Militia", "Marksman", "Templar", "Crossbowman", "Chaplain", "Outrider"] },
+                    "workers": 4, "sanctityUse": 4, "trains": ["Militia", "Marksman", "Templar", "Crossbowman", "Chaplain", "Outrider", "Exorcist"] },
     "Belfry":     { "size": [2, 2], "hp": 350,  "buildSeconds": 10, "cost": { "gold": 90, "wood": 60, "stone": 10 },
                     "sanctityUse": 4, "possessable": false, "requiresTech": "masonry",
                     "slowRadius": 7, "slowFactor": 0.55 },
@@ -137,7 +140,9 @@
                   "healPerSecond": 5, "healRadius": 4,
                   "weapon": { "range": 4, "damage": 6, "cooldown": 1.0, "noise": 6 } },
     "Outrider": { "hp": 240, "speed": 4.2, "trainSeconds": 12, "cost": { "gold": 70, "food": 25, "iron": 30 }, "upkeepGold": 0.08, "requiresTech": "husbandry",
-                  "weapon": { "range": 1.4, "damage": 34, "cooldown": 0.9, "splash": 0.5, "noise": 8 } }
+                  "weapon": { "range": 1.4, "damage": 34, "cooldown": 0.9, "splash": 0.5, "noise": 8 } },
+    "Exorcist": { "hp": 90, "speed": 2.2, "trainSeconds": 14, "cost": { "gold": 80, "food": 20, "iron": 10, "silver": 15 }, "upkeepGold": 0.09,
+                  "weapon": { "range": 11, "damage": 40, "cooldown": 2.2, "splash": 1.4, "noise": 9 } }
   },
 
   "techs": [

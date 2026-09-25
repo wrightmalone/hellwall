@@ -13,7 +13,7 @@ namespace Hellwall.Sim;
 /// </summary>
 public sealed class Colony
 {
-    public const int Resources = 5;
+    public const int Resources = 6;
 
     public readonly double[] Stock = new double[Resources];
 

@@ -35,6 +35,10 @@ public sealed partial class World
             w.Write((byte)Rules.Difficulty);
             w.Write((byte)Map);
             w.Write(Scenario?.Id ?? "");
+            // A skirmish or a hand-made map isn't in the campaign: it travels with the save.
+            bool inline = Scenario != null && Campaign.Default.Find(Scenario.Id) != Scenario;
+            w.Write(inline);
+            if (inline) w.Write(Scenario!.ToJson());
             w.Write(Rules.Woods.Blocks); // a run option (living woods), so the save carries it
 
             w.Write(Tick);
@@ -103,6 +107,7 @@ public sealed partial class World
                 w.Write((byte)u.Order);
                 w.Write(u.DestX);
                 w.Write(u.DestY);
+                w.Write(u.Kills);
                 w.Write(u.Field != null);
             }
 
@@ -226,7 +231,9 @@ public sealed partial class World
         var difficulty = (Difficulty)r.ReadByte();
         var map = (MapKind)r.ReadByte();
         string scenarioId = r.ReadString();
-        var scenario = scenarioId.Length == 0 ? null : Campaign.Default.Find(scenarioId) ?? throw new FormatException($"this save is from a mission this build doesn't have ('{scenarioId}')");
+        bool inline = r.ReadBoolean();
+        var scenario = inline ? ScenarioDef.FromJson(r.ReadString())
+            : scenarioId.Length == 0 ? null : Campaign.Default.Find(scenarioId) ?? throw new FormatException($"this save is from a mission this build doesn't have ('{scenarioId}')");
         if (scenario != null) rules = scenario.RulesFrom(rules);
         if (r.ReadBoolean() && !rules.Woods.Blocks) rules = rules.WithWoods(w => w with { Blocks = true });
         if (rulesHash != rules.ForDifficulty(difficulty).Hash) throw new FormatException("this save was made under different rules");
@@ -297,7 +304,7 @@ public sealed partial class World
             var u = new Unit
             {
                 Id = id, Kind = kind, Def = world.Def(kind), X = r.ReadSingle(), Y = r.ReadSingle(), PrevX = r.ReadSingle(), PrevY = r.ReadSingle(),
-                Hp = r.ReadSingle(), Cooldown = r.ReadSingle(), Order = (OrderKind)r.ReadByte(), DestX = r.ReadInt32(), DestY = r.ReadInt32(),
+                Hp = r.ReadSingle(), Cooldown = r.ReadSingle(), Order = (OrderKind)r.ReadByte(), DestX = r.ReadInt32(), DestY = r.ReadInt32(), Kills = r.ReadInt32(),
             };
             if (r.ReadBoolean()) needsField.Add(u);
             world._units.Add(u);

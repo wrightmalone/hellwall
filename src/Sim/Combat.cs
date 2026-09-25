@@ -109,9 +109,12 @@ internal static class Combat
     }
 
     /// <summary>Resolve one shot: damage the target (and anything in the splash), make noise, tell the client.</summary>
-    public static void Fire(World world, float fx, float fy, float tx, float ty, int target, WeaponDef weapon, bool fromUnit)
+    /// <returns>How many demons this shot killed (for a soldier's veterancy).</returns>
+    public static int Fire(World world, float fx, float fy, float tx, float ty, int target, WeaponDef weapon, bool fromUnit, float damageScale = 1)
     {
         var h = world.Horde;
+        float damage = weapon.Damage * damageScale;
+        int killed = 0;
         if (weapon.Splash > 0)
         {
             float s2 = weapon.Splash * weapon.Splash;
@@ -125,16 +128,23 @@ internal static class Combat
                     {
                         int j = grid.Items[k];
                         float dx = h.X[j] - tx, dy = h.Y[j] - ty;
-                        if (dx * dx + dy * dy <= s2) h.Hp[j] -= weapon.Damage;
+                        if (dx * dx + dy * dy > s2 || h.Hp[j] <= 0) continue;
+                        h.Hp[j] -= damage;
+                        if (h.Hp[j] <= 0) killed++;
                     }
                 }
         }
         else
         {
-            h.Hp[target] -= weapon.Damage;
+            if (h.Hp[target] > 0)
+            {
+                h.Hp[target] -= damage;
+                if (h.Hp[target] <= 0) killed++;
+            }
         }
         if (weapon.Noise > 0) world.Noise.Emit(fx, fy, weapon.Noise, Balance.CombatNoiseIntensity);
         world.Emit(new ShotFired(world.Tick, fx, fy, tx, ty, weapon.Splash, fromUnit));
+        return killed;
     }
 
     /// <summary>The nearest live demon within range of a point, or -1. Ties go to the lower slot.</summary>

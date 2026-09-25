@@ -30,6 +30,7 @@ var variants := [
 	["unit-crossbowman", RP + "Ranger.gltf", Color(0.35, 0.5, 0.95), 1.0, ["", ""], 1.0, "Walk", 0.45],
 	["unit-chaplain", RP + "Cleric.gltf", null, 1.0, ["", ""], 1.0, "Walk"],
 	["unit-outrider", RP + "Monk.gltf", null, 1.0, ["", ""], 1.05, "Walk"],
+	["unit-exorcist", RP + "Wizard.gltf", Color(0.86, 0.9, 1.0), 1.0, ["", ""], 1.0, "Walk", 0.5], # silver-white: the advanced tier
 	# Demons: Quaternius Ultimate Monsters, fitted to a height (6th field) and walked with
 	# their own clip (7th); the Thrall stays Kenney's zombie, a possessed colonist.
 	["demon-imp", QM + "Big/Demon.gltf", null, 1.0, ["", ""], 0.72, "Walk"],

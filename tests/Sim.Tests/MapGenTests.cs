@@ -35,4 +35,27 @@ public class MapGenTests
     {
         Assert.Equal(MapGen.Generate(42, 256, MapKind.Lakes).Tiles, MapGen.Generate(42, 256, MapKind.Lakes).Tiles);
     }
+
+    [Theory]
+    [InlineData(MapKind.Plains)]
+    [InlineData(MapKind.Lakes)]
+    [InlineData(MapKind.Highlands)]
+    [InlineData(MapKind.Wildwood)]
+    public void SilverLiesOnlyNearTheEdge(MapKind kind)
+    {
+        foreach (uint seed in new uint[] { 3, 7, 11 })
+        {
+            var t = MapGen.Generate(seed, 256, kind);
+            int c = 128, silver = 0;
+            for (int y = 0; y < 256; y++)
+                for (int x = 0; x < 256; x++)
+                {
+                    if (t.Get(x, y) != Tile.Silver) continue;
+                    silver++;
+                    float d = MathF.Sqrt((x - c) * (x - c) + (y - c) * (y - c));
+                    Assert.True(d > c * 0.7f, $"{kind} seed {seed}: silver at ({x},{y}) is only {d:0} from the Keep");
+                }
+            Assert.True(silver >= 30, $"{kind} seed {seed}: only {silver} silver tiles");
+        }
+    }
 }

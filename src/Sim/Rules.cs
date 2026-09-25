@@ -12,6 +12,8 @@ public enum Resource : byte
     Food,
     /// <summary>Mined from ore deposits out on the map; soldiers are made of it.</summary>
     Iron,
+    /// <summary>Holy silver, from veins near the map's edge only: what the advanced soldiers are made of.</summary>
+    Silver,
 }
 
 public enum UnitKind : byte
@@ -24,6 +26,8 @@ public enum UnitKind : byte
     Chaplain,
     /// <summary>Mounted: fast and tough, for riding out to clear the wilds.</summary>
     Outrider,
+    /// <summary>The advanced tier: long-range holy fire that bursts among the horde. Costs silver.</summary>
+    Exorcist,
 }
 
 /// <summary>An amount of each resource. Used for costs and for the colony's stockpile.</summary>
@@ -34,6 +38,7 @@ public sealed class Cost
     public double Stone { get; init; }
     public double Food { get; init; }
     public double Iron { get; init; }
+    public double Silver { get; init; }
 
     public static readonly Cost None = new();
 
@@ -43,10 +48,11 @@ public sealed class Cost
         Resource.Wood => Wood,
         Resource.Stone => Stone,
         Resource.Food => Food,
-        _ => Iron,
+        Resource.Iron => Iron,
+        _ => Silver,
     };
 
-    public Cost Scale(double f) => new() { Gold = Gold * f, Wood = Wood * f, Stone = Stone * f, Food = Food * f, Iron = Iron * f };
+    public Cost Scale(double f) => new() { Gold = Gold * f, Wood = Wood * f, Stone = Stone * f, Food = Food * f, Iron = Iron * f, Silver = Silver * f };
 
     public override string ToString()
     {
@@ -115,13 +121,16 @@ public sealed record WildsRules
     public double HoundChance { get; init; } = 0.15;
     /// <summary>No building within this many tiles of a sleeping pack.</summary>
     public float ClearRadius { get; init; } = 10;
-    /// <summary>A soldier this close to a sleeping pack's edge wakes it.</summary>
+    /// <summary>A soldier within WakeRadius plus WakeSpread of the pack's spread (its crowd's radius) of the centre wakes it.</summary>
     public float WakeRadius { get; init; } = 7;
+    public float WakeSpread { get; init; } = 0.4f;
     /// <summary>How many sleeping demons stand per tile of a pack's disc: low, so a pack is a loose crowd, not a ball.</summary>
     public float SleepDensity { get; init; } = 0.45f;
     /// <summary>Stragglers: little groups of 1..StrayMax scattered over the whole map beyond MinDistance.</summary>
     public int Strays { get; init; } = 0;
     public int StrayMax { get; init; } = 4;
+    /// <summary>Strays keep this far from the Keep: close ones wake to the first hammering and pick at a town with no walls yet.</summary>
+    public int StrayMinDistance { get; init; } = 34;
 }
 
 public enum Difficulty : byte

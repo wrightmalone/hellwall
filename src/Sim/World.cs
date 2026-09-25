@@ -182,7 +182,7 @@ public sealed partial class World
         Seed = options.Seed;
         Rng = new Rng(options.Seed);
         Rules = (options.Rules ?? Rules.Default).ForDifficulty(options.Difficulty);
-        Terrain = MapGen.Generate(options.Seed, options.MapSize, options.Map);
+        Terrain = options.Scenario?.DecodeTiles() is { } painted ? Terrain.From(options.MapSize, painted) : MapGen.Generate(options.Seed, options.MapSize, options.Map);
         Map = options.Map;
         _occupancy = new int[Terrain.Width * Terrain.Height];
         _gateTile = new bool[Terrain.Width * Terrain.Height];
@@ -1031,7 +1031,7 @@ public sealed partial class World
     {
         var wilds = Rules.Wilds;
         int centre = Terrain.Width / 2;
-        int minD2 = wilds.MinDistance * wilds.MinDistance;
+        int minD2 = wilds.StrayMinDistance * wilds.StrayMinDistance;
         for (int n = 0, attempts = 0; n < count && attempts < count * 50; attempts++)
         {
             int x = Rng.NextInt(Terrain.Width);
@@ -1097,7 +1097,7 @@ public sealed partial class World
         foreach (var pack in _packs)
         {
             if (pack.Awake) continue;
-            float wake = Rules.Wilds.WakeRadius + pack.Spread(Rules.Wilds.SleepDensity), wake2 = wake * wake;
+            float wake = Rules.Wilds.WakeRadius + Rules.Wilds.WakeSpread * pack.Spread(Rules.Wilds.SleepDensity), wake2 = wake * wake;
             bool woken = Noise.LevelAtTile(pack.X, pack.Y) >= Balance.WakeThreshold;
             if (!woken && checkUnits)
                 foreach (var u in _units)

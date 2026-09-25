@@ -25,6 +25,9 @@ namespace Hellwall.Game;
 ///   --autoplay           let the headless harness's bot play (watch it, or take over any time with Esc)
 ///   --inspect=Kind       select the first building of that kind (for screenshots)
 ///   --pausemenu          open the pause menu at once (screenshots)
+///   --reveal             no fog of war
+///   --editor             open the map editor
+///   --look=x,y[,zoom]    start the camera over tile (x, y)
 ///   --selftest=controls  select the soldiers, press A, click: check they got an attack-move there, print, quit
 /// </summary>
 public partial class Main : Node2D
@@ -49,7 +52,7 @@ public partial class Main : Node2D
     readonly ClientState _state = new();
     static readonly string SavePath = ProjectSettings.GlobalizePath("user://quicksave.hwsave");
     /// <summary>Barracks train keys, in the order of its Trains list.</summary>
-    public static readonly Key[] TrainKeys = [Key.Q, Key.E, Key.R, Key.T, Key.Y, Key.F];
+    public static readonly Key[] TrainKeys = [Key.Q, Key.E, Key.R, Key.T, Key.Y, Key.F, Key.V];
     static readonly double[] Speeds = [1, 2, 4];
     int _speed;
     Hellwall.Headless.Bot? _bot;
@@ -101,11 +104,18 @@ public partial class Main : Node2D
             _campaignNext = false;
             OpenCampaign();
         }
+        else if (o.ContainsKey("editor")) OpenEditor();
         else if ((flagged || DisplayServer.GetName() == "headless") && !o.ContainsKey("menu") && !_menuNext) Begin(setup);
         else ShowMenu(setup);
     }
 
-    void ShowMenu(GameSetup setup) => AddChild(new NewGameMenu { Initial = setup, Start = Begin, OpenCampaign = OpenCampaign });
+    void ShowMenu(GameSetup setup) => AddChild(new NewGameMenu { Initial = setup, Start = Begin, OpenCampaign = OpenCampaign, OpenEditor = OpenEditor });
+
+    void OpenEditor() => AddChild(new MapEditor
+    {
+        Back = () => ShowMenu(new GameSetup(11, MapKind.Plains, Difficulty.Normal, false)),
+        Play = map => Begin(new GameSetup(map.Seed, map.Map, Difficulty.Normal, false, map with { Id = "map-" + map.Id })),
+    });
 
     void OpenCampaign()
     {
@@ -132,19 +142,25 @@ public partial class Main : Node2D
         bool scripted = _benchSeconds > 0 || _demoSeconds > 0;
         _baseRules = rules; // saves record whether the woods were living, and Load puts that back
         if (setup.Woods || options.ContainsKey("woods")) rules = rules.WithWoods(w => w with { Blocks = true });
+        if (options.ContainsKey("reveal")) rules = rules.WithFog(f => f with { Enabled = false });
         // A survival run takes its packs from rules.json (wilds).
         _world = setup.Mission is { } mission && !scripted
             ? World.Create(mission.Options(rules))
             : World.Create(new WorldOptions(seed, MapSize, 0, rules, Survival: !scripted, Difficulty: setup.Difficulty, Endless: setup.Endless && !scripted, Map: setup.Map));
 
         BuildViews();
-        _horde = new HordeRenderer(MapSize) { ZIndex = 1 };
+        _horde = new HordeRenderer(_world.Terrain.Width) { ZIndex = 1 };
         AddChild(_horde);
 
         _sound = new Sound();
         AddChild(_sound);
 
-        _camera = new Camera2D { Position = Iso.P(MapSize / 2f, MapSize / 2f), Zoom = new Vector2(1.1f, 1.1f) };
+        _camera = new Camera2D { Position = Iso.P(_world.Terrain.Width / 2f, _world.Terrain.Height / 2f), Zoom = new Vector2(1.1f, 1.1f) };
+        if (options.TryGetValue("look", out var look) && look.Split(',') is [var lx, var ly, ..] parts)
+        {
+            _camera.Position = Iso.P(float.Parse(lx), float.Parse(ly));
+            if (parts.Length > 2) _camera.Zoom = Vector2.One * float.Parse(parts[2]);
+        }
         AddChild(_camera);
 
         _withCoach = !scripted && !options.ContainsKey("autoplay") && !options.ContainsKey("selftest") && Coach.Enabled;
@@ -422,7 +438,7 @@ public partial class Main : Node2D
                 case DemonHowled h: _state.Howls.Add((h, 0)); break;
                 case OutcomeChanged o:
                     _state.Say(o.Outcome == Outcome.Lost ? $"The Keep has fallen on day {_world.Day}." : "Victory.");
-                    if (_world.Scenario is { } done) CampaignProgress.Record(Campaign.Default.Id, done.Id, o.Outcome == Outcome.Won, _world.Day);
+                    if (_world.Scenario is { } done && Campaign.Default.Contains(done)) CampaignProgress.Record(Campaign.Default.Id, done.Id, o.Outcome == Outcome.Won, _world.Day);
                     break;
                 case CorruptionTook c: _state.Say($"The horde is corrupted: {c.Name}"); break;
                 case ScenarioMessage m when m.Text.Length > 0:
@@ -457,7 +473,12 @@ public partial class Main : Node2D
         _paused = true;
         DisarmAttackMove();
         _state.Armed = null;
-        _pauseMenu = new PauseMenu { Resume = ClosePauseMenu, QuitToMenu = NewRun };
+        _pauseMenu = new PauseMenu
+        {
+            Resume = ClosePauseMenu, QuitToMenu = NewRun, Save = QuickSave,
+            Load = () => { ClosePauseMenu(); QuickLoad(); },
+            Saved = System.IO.File.Exists(SavePath) ? System.IO.File.GetLastWriteTime(SavePath) : null,
+        };
         AddChild(_pauseMenu);
     }
 
@@ -597,7 +618,7 @@ public partial class Main : Node2D
             case Key.X or Key.Delete when selected != null:
                 Send(new Demolish(selected.Id));
                 break;
-            case Key.Q or Key.E or Key.R or Key.T or Key.Y or Key.F when selected is { Def.Trains.Length: > 0 }:
+            case Key.Q or Key.E or Key.R or Key.T or Key.Y or Key.F or Key.V when selected is { Def.Trains.Length: > 0 }:
                 int i = Array.IndexOf(TrainKeys, key.Keycode);
                 if (i < selected.Def.Trains.Length) Send(new TrainUnit(selected.Id, selected.Def.Trains[i]));
                 break;
@@ -607,7 +628,7 @@ public partial class Main : Node2D
             case Key.S when _state.SelectedUnits.Count > 0 && key.ShiftPressed:
                 Send(new OrderUnits(_state.SelectedUnits.ToArray(), OrderKind.Idle, 0, 0));
                 break;
-            case Key.N:
+            case Key.F6:
                 Send(new MakeNoise(_state.HoveredTile.X, _state.HoveredTile.Y, 40, 3));
                 break;
             case Key.K:
@@ -739,7 +760,7 @@ public partial class Main : Node2D
     /// </summary>
     void StartDemo()
     {
-        const int c = MapSize / 2;
+        int c = MapSize / 2;
         for (int y = c - 8; y <= c + 8; y++)
             for (int x = c - 8; x <= c + 8; x++)
             {

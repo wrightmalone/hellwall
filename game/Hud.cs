@@ -50,11 +50,11 @@ public partial class Hud : CanvasLayer
         "BUILD   pick from the build card (bottom) or 1-0 - =  M C L P  G B U; click to place; drag walls for a line; right-click or Esc to stop\n" +
         "SELECT  click a building or soldier; drag to box-select soldiers (shift adds)\n" +
         "ORDER   A then click, or right-click: attack-move · shift+right-click move · H hold · Shift+S stop\n" +
-        "BARRACKS  select it to train: Q E R T Y F, shift-click for five; click a queued soldier to cancel; right-click the ground for a rally point\n" +
+        "BARRACKS  select it to train: Q E R T Y F V, shift-click for five; click a queued soldier to cancel; right-click the ground for a rally point\n" +
         "GROUPS  Ctrl+1-9 set · Alt+1-9 recall\n" +
         "X / Delete  demolish (purges a possessed building) · alerts on the left: click to go there\n" +
         "Esc or F10 menu · Space pause · Tab speed · F5 save · F9 load · WASD or screen edges pan · wheel zoom · minimap click to jump · F3 debug\n" +
-        "Debug: N noise at cursor · K wave · J 20k assault\n" +
+        "Debug: F6 noise at cursor · K wave · J 20k assault\n" +
         "F1 to close";
 
     public void ToggleHelp() => _help.Visible = !_help.Visible;
@@ -105,11 +105,20 @@ public partial class Hud : CanvasLayer
         endRow.AddThemeConstantOverride("separation", 8);
         if (World.Scenario != null)
         {
-            var campaign = UiKit.TextButton("Back to the campaign", 15);
-            campaign.Pressed += () => BackToCampaign();
+            if (Campaign.Default.Contains(World.Scenario))
+            {
+                var campaign = UiKit.TextButton("Back to the campaign", 15);
+                campaign.Pressed += () => BackToCampaign();
+                endRow.AddChild(campaign);
+            }
+            else
+            {
+                var menu = UiKit.TextButton("Main menu", 15);
+                menu.Pressed += () => NewRun();
+                endRow.AddChild(menu);
+            }
             var retry = UiKit.TextButton("Play it again", 15);
             retry.Pressed += () => Retry();
-            endRow.AddChild(campaign);
             endRow.AddChild(retry);
         }
         else
@@ -172,7 +181,7 @@ public partial class Hud : CanvasLayer
         {
             _banner.Visible = true;
             bool keepStands = World.Buildings.Any(b => b.Kind == BuildingKind.Keep);
-            _banner.Text = World.Outcome == Outcome.Won ? (World.Scenario != null ? "Mission won" : "The colony endures")
+            _banner.Text = World.Outcome == Outcome.Won ? (Campaign.Default.Contains(World.Scenario) ? "Mission won" : "The colony endures")
                 : !keepStands ? (World.Survival is { Endless: true } ? $"The Keep has fallen on day {World.Day}" : "The Keep has fallen")
                 : "Out of time: the Convergence came and went";
             _banner.Size = new Vector2(screen.X, 60);
@@ -186,7 +195,7 @@ public partial class Hud : CanvasLayer
                 string mode = World.Scenario is { } m ? m.Name : s == null ? "" : s.Endless ? "Endless" : "Survival";
                 string goals = World.Scenario == null ? "" : "\n" + string.Join("\n", World.Goals.Select((g, i) => $"{(World.GoalsDone[i] ? "done" : "not done")}:  {g.Describe()}")) + "\n";
                 string opens = "";
-                if (World.Scenario is { } won && World.Outcome == Outcome.Won)
+                if (World.Scenario is { } won && World.Outcome == Outcome.Won && Campaign.Default.Contains(won))
                 {
                     var c = Campaign.Default;
                     var wonSet = CampaignProgress.Won(c.Id);

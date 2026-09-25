@@ -116,7 +116,8 @@ public static class UiKit
         Sim.Resource.Wood => Art.Tex(Art.SceneryPath("pine-2")),
         Sim.Resource.Stone => Art.Tex(Art.SceneryPath("rock-2")),
         Sim.Resource.Food => Art.Tex(Art.SceneryPath("icon-food")),
-        _ => Art.Tex(Art.TerrainImages(Tile.Ore)[0]),
+        Sim.Resource.Iron => Art.Tex(Art.TerrainImages(Tile.Ore)[0]),
+        _ => Art.Tex(Art.TerrainImages(Tile.Silver)[0]),
     }, "r-" + r);
 
     public static Texture2D Holy => Trimmed(Art.Tex(Art.SceneryPath("icon-holy")), "holy");

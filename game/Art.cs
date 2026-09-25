@@ -17,13 +17,33 @@ public static class Art
 
     static readonly Dictionary<string, Texture2D> Cache = new();
 
-    public static Texture2D Tex(string path) => Cache.TryGetValue(path, out var t) ? t : Cache[path] = GD.Load<Texture2D>(path);
+    public static Texture2D Tex(string path) => Cache.TryGetValue(path, out var t) ? t : Cache[path] = path.StartsWith(SilverTint) ? Silvered(path[SilverTint.Length..]) : GD.Load<Texture2D>(path);
+
+    /// <summary>A path prefix: the image, drained of colour and washed pale blue-white (silver veins are the ore crystals, silvered).</summary>
+    public const string SilverTint = "silver:";
+
+    static Texture2D Silvered(string path)
+    {
+        var image = GD.Load<Texture2D>(path).GetImage();
+        image.Decompress();
+        if (image.GetFormat() != Image.Format.Rgba8) image.Convert(Image.Format.Rgba8);
+        for (int y = 0; y < image.GetHeight(); y++)
+            for (int x = 0; x < image.GetWidth(); x++)
+            {
+                var c = image.GetPixel(x, y);
+                float v = Mathf.Clamp(c.R * 0.3f + c.G * 0.59f + c.B * 0.11f, 0, 1);
+                float s = v * v * 1.6f; // contrast, so the facets still read
+                image.SetPixel(x, y, new Color(0.25f + s * 0.75f, 0.29f + s * 0.72f, 0.37f + s * 0.66f, c.A));
+            }
+        return ImageTexture.CreateFromImage(image);
+    }
 
     /// <summary>Terrain blocks per tile kind: every image is a 132-wide block whose top diamond is 66 high.
     /// Forest and rock tiles are grass blocks with scenery standing on them (see Scenery); ore keeps Tower Defense's crystal blocks.</summary>
     public static string[] TerrainImages(Tile tile) => tile switch
     {
         Tile.Ore => Enumerable.Range(1, 4).Select(i => $"{TD}Details/crystals_{i}.png").ToArray(),
+        Tile.Silver => Enumerable.Range(1, 4).Select(i => $"{SilverTint}{TD}Details/crystals_{i}.png").ToArray(),
         Tile.Water => [$"{Land}landscapeTiles_066.png"],
         _ => [$"{TD}Landscape/landscape_13.png"],
     };
@@ -107,6 +127,7 @@ public static class Art
         BuildingKind.Farm => [Brown(12)],
         BuildingKind.Quarry => [Grey(7)],
         BuildingKind.Mine => [Brown(29)],
+        BuildingKind.SilverMine => [Grey(29)],
         BuildingKind.Shrine => [Grey(28)],
         BuildingKind.Wardstone => [Grey(41)],
         BuildingKind.Wall => [Brown(8)],

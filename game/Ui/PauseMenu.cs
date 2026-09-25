@@ -12,6 +12,9 @@ public partial class PauseMenu : CanvasLayer
 {
     public Action Resume = null!;
     public Action QuitToMenu = null!;
+    public Action Save = null!, Load = null!;
+    /// <summary>When the quicksave was written, or null for none.</summary>
+    public DateTime? Saved;
 
     public override void _Ready()
     {
@@ -37,6 +40,21 @@ public partial class PauseMenu : CanvasLayer
         var resume = UiKit.TextButton("Resume  (Esc)", 16);
         resume.Pressed += () => Resume();
         box.AddChild(resume);
+
+        var saves = new HBoxContainer();
+        saves.AddThemeConstantOverride("separation", 8);
+        var save = UiKit.TextButton("Save  (F5)", 14);
+        save.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
+        var load = UiKit.TextButton("Load  (F9)", 14);
+        load.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
+        load.Disabled = Saved == null;
+        var when = UiKit.Label(Saved is { } t ? $"Quicksave from {t:HH:mm}" : "No quicksave yet", 12, UiKit.Muted);
+        save.Pressed += () => { Save(); when.Text = $"Saved at {DateTime.Now:HH:mm}"; load.Disabled = false; };
+        load.Pressed += () => Load();
+        saves.AddChild(save);
+        saves.AddChild(load);
+        box.AddChild(saves);
+        box.AddChild(when);
 
         box.AddChild(new HSeparator());
 

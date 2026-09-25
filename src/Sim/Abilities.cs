@@ -76,7 +76,7 @@ internal static class Abilities
                 if (u == healer || u.Hp <= 0) continue;
                 float dx = u.X - healer.X, dy = u.Y - healer.Y;
                 if (dx * dx + dy * dy > r2) continue;
-                u.Hp = MathF.Min(u.Def.Hp, u.Hp + def.HealPerSecond * dt);
+                u.Hp = MathF.Min(u.MaxHp, u.Hp + def.HealPerSecond * dt);
             }
         }
     }

@@ -25,6 +25,8 @@ public enum BuildingKind : byte
     Skyspire,
     /// <summary>Short range, rapid, quiet: burns whatever is at the wall.</summary>
     Censer,
+    /// <summary>Works silver veins, which lie only near the map's edge.</summary>
+    SilverMine,
 }
 
 public sealed class Building

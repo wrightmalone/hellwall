@@ -64,7 +64,7 @@ public partial class Coach : PanelContainer
             () => _waveAnnounced, () => Built(BuildingKind.Watchtower, 2)));
         _tips.Add(new("packs", () => $"Sleeping demons hold that ground, and nothing can be built near them. Train soldiers at a {K(BuildingKind.Barracks)}, select them (drag a box) and right-click beside the pack to clear it. They're loud: build towers first.",
             () => _packInTheWay, () => World.Units.Count >= 6));
-        _tips.Add(new("iron", () => $"Soldiers are made of iron. A {K(BuildingKind.Mine)} works the rust-red ore; the richest lies out in the wilds, behind the packs.",
+        _tips.Add(new("iron", () => $"Soldiers are made of iron. A {K(BuildingKind.Mine)} works the purple ore crystals; the richest lies out in the wilds, behind the packs.",
             () => Count(BuildingKind.Barracks) > 0, () => Count(BuildingKind.Mine) > 0));
         _tips.Add(new("corruption", () => "The horde is being corrupted. Each corruption lasts for the rest of the run, and they add up. The top right lists what the horde has become.",
             () => _corruption, () => false));

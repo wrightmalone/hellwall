@@ -18,7 +18,7 @@ public partial class NewGameMenu : CanvasLayer
     public GameSetup Initial = new(11, MapKind.Plains, Difficulty.Normal, false);
 
     OptionButton _mode = null!, _difficulty = null!, _map = null!;
-    CheckBox _woods = null!;
+    CheckButton _woods = null!;
     LineEdit _seed = null!;
     Label _about = null!;
 
@@ -38,6 +38,23 @@ public partial class NewGameMenu : CanvasLayer
         [Difficulty.Nightmare] = "Half again as many demons, nearly twice the Convergence, less to start with.",
     };
 
+    /// <summary>Open the map editor instead (null: no button).</summary>
+    public Action? OpenEditor;
+
+    // Skirmish settings: each list's middle-ish entry is the game as designed.
+    static readonly (string Label, int Size)[] Sizes = [("Small (192)", 192), ("Normal (256)", 256), ("Large (320)", 320)];
+    static readonly int[] DayChoices = [30, 45, 60, 90];
+    static readonly (string Label, double Scale)[] WaveChoices = [("Gentle", 0.6), ("Normal", 1), ("Heavy", 1.5), ("Brutal", 2.2)];
+    static readonly int[] GateChoices = [0, 2, 4, 6];
+    static readonly (string Label, double Scale)[] WildsChoices = [("Sparse", 0.5), ("Normal", 1), ("Crowded", 1.5)];
+    static readonly (string Label, int Count)[] StrayChoices = [("None", 0), ("Some", 60), ("Many", 150)];
+    static readonly (string Label, double Scale)[] StartChoices = [("Lean", 0.6), ("Normal", 1), ("Rich", 2)];
+
+    OptionButton _size = null!, _days = null!, _waves = null!, _gates = null!, _wilds = null!, _strays = null!, _start = null!;
+    CheckButton _fog = null!;
+    VBoxContainer _more = null!;
+    readonly List<ScenarioDef> _handMade = new();
+
     public override void _Ready()
     {
         var backdrop = new ColorRect { Color = new Color(0.06f, 0.04f, 0.05f, 0.94f) };
@@ -47,27 +64,44 @@ public partial class NewGameMenu : CanvasLayer
         var centre = new CenterContainer();
         centre.SetAnchorsPreset(Control.LayoutPreset.FullRect);
         AddChild(centre);
-        var box = new VBoxContainer { CustomMinimumSize = new Vector2(460, 0) };
-        box.AddThemeConstantOverride("separation", 10);
-        centre.AddChild(box);
+        var page = new VBoxContainer();
+        page.AddThemeConstantOverride("separation", 10);
+        centre.AddChild(page);
 
         var title = new Label { Text = "HELLWALL", HorizontalAlignment = HorizontalAlignment.Center };
         title.AddThemeFontSizeOverride("font_size", 48);
         title.AddThemeColorOverride("font_color", new Color(0.95f, 0.55f, 0.25f));
-        box.AddChild(title);
-
+        page.AddChild(title);
         var version = new Label { Text = $"playtest build {ProjectSettings.GetSetting("application/config/version", "dev")}", HorizontalAlignment = HorizontalAlignment.Center };
         version.AddThemeColorOverride("font_color", new Color(0.6f, 0.55f, 0.5f));
-        box.AddChild(version);
+        page.AddChild(version);
 
+        var columns = new HBoxContainer();
+        columns.AddThemeConstantOverride("separation", 28);
+        page.AddChild(columns);
+        var box = new VBoxContainer { CustomMinimumSize = new Vector2(480, 0) };
+        box.AddThemeConstantOverride("separation", 8);
+        columns.AddChild(box);
+        var side = new VBoxContainer { CustomMinimumSize = new Vector2(360, 0) };
+        side.AddThemeConstantOverride("separation", 8);
+        columns.AddChild(side);
+
+        // --- play ---
         var campaign = UiKit.TextButton($"Campaign: {Campaign.Default.Name}", 18);
         campaign.Pressed += () => { OpenCampaign(); QueueFree(); };
         box.AddChild(campaign);
-        box.AddChild(UiKit.Label("Or a single run:", 13, new Color(0.7f, 0.67f, 0.6f)));
+        if (OpenEditor != null)
+        {
+            var editor = UiKit.TextButton("Map editor", 15);
+            editor.Pressed += () => { OpenEditor(); QueueFree(); };
+            box.AddChild(editor);
+        }
+        box.AddChild(UiKit.Label("Skirmish", 16, UiKit.Gold));
 
-        _mode = Options(box, "Mode", ["Survival: 60 days, then the Convergence", "Endless: until the Keep falls"], Initial.Endless ? 1 : 0);
+        _mode = Options(box, "Mode", ["Survival: the Convergence at the end", "Endless: until the Keep falls"], Initial.Endless ? 1 : 0);
         _difficulty = Options(box, "Difficulty", Enum.GetNames<Difficulty>(), (int)Initial.Difficulty);
-        _map = Options(box, "Map", Enum.GetNames<MapKind>(), (int)Initial.Map);
+        _handMade.AddRange(MapFiles.All());
+        _map = Options(box, "Map", [.. Enum.GetNames<MapKind>(), .. _handMade.Select(m => $"Hand-made: {m.Name}")], (int)Initial.Map);
 
         var seedRow = Row(box, "Seed");
         _seed = new LineEdit { Text = Initial.Seed.ToString(), SizeFlagsHorizontal = Control.SizeFlags.ExpandFill };
@@ -76,61 +110,110 @@ public partial class NewGameMenu : CanvasLayer
         random.Pressed += () => _seed.Text = ((uint)GD.Randi() % 100000).ToString();
         seedRow.AddChild(random);
 
-        _about = new Label { AutowrapMode = TextServer.AutowrapMode.WordSmart, CustomMinimumSize = new Vector2(460, 60) };
+        _about = new Label { AutowrapMode = TextServer.AutowrapMode.WordSmart, CustomMinimumSize = new Vector2(480, 60) };
         _about.AddThemeColorOverride("font_color", new Color(0.8f, 0.78f, 0.72f));
         box.AddChild(_about);
-        _difficulty.ItemSelected += _ => Describe();
-        _map.ItemSelected += _ => Describe();
-        _mode.ItemSelected += _ => Describe();
+
+        // The rest of a skirmish's settings, in the right-hand column: left at their defaults, it's the game as designed.
+        side.AddChild(UiKit.Label("Skirmish settings", 16, UiKit.Gold));
+        _more = new VBoxContainer();
+        _more.AddThemeConstantOverride("separation", 4);
+        side.AddChild(_more);
+        _size = Options(_more, "Map size", Sizes.Select(s => s.Label).ToArray(), 1);
+        _days = Options(_more, "Days", DayChoices.Select(d => $"{d} days").ToArray(), 2);
+        _waves = Options(_more, "Waves", WaveChoices.Select(w => w.Label).ToArray(), 1);
+        _gates = Options(_more, "Hellgates", GateChoices.Select(g => g == 0 ? "None" : g.ToString()).ToArray(), 2);
+        _wilds = Options(_more, "Packs", WildsChoices.Select(w => w.Label).ToArray(), 1);
+        _strays = Options(_more, "Stragglers", StrayChoices.Select(w => w.Label).ToArray(), 0);
+        _start = Options(_more, "Start with", StartChoices.Select(w => w.Label).ToArray(), 1);
+        _fog = new CheckButton { Text = "Fog of war", ButtonPressed = true };
+        _more.AddChild(_fog);
+        _woods = new CheckButton { Text = "Living woods (experimental): forest is a wall, woodsmen fell it", ButtonPressed = Initial.Woods };
+        _woods.TooltipText = "No one walks through the trees. Woodcutters send out woodsmen who fell them one by one, so the forest\nshrinks and opens new ways into your town. The horde can hack through trees, slowly.";
+        _more.AddChild(_woods);
+        foreach (var o in new[] { _difficulty, _map, _mode, _days }) o.ItemSelected += _ => Describe();
         Describe();
 
-        _woods = new CheckBox { Text = "Living woods (experimental): forest is a wall, woodsmen fell it", ButtonPressed = Initial.Woods };
-        _woods.TooltipText = "No one walks through the trees. Woodcutters send out woodsmen who fell them one by one, so the forest\nshrinks and opens new ways into your town. The horde can hack through trees, slowly.";
-        box.AddChild(_woods);
+        var begin = new Button { Text = "Begin" };
+        begin.AddThemeFontSizeOverride("font_size", 22);
+        begin.Pressed += Begin;
+        box.AddChild(begin);
+        begin.GrabFocus();
 
-        var volumeRow = Row(box, "Master volume");
+        // --- options ---
+        side.AddChild(new HSeparator());
+        side.AddChild(UiKit.Label("Options", 16, UiKit.Gold));
+        side.AddChild(UiKit.Label("Master volume", 13));
         var volume = new HSlider { MinValue = 0, MaxValue = 1, Step = 0.05, Value = Sound.Volume, SizeFlagsHorizontal = Control.SizeFlags.ExpandFill };
         volume.ValueChanged += v => Settings.Set("volume", (float)v);
-        volumeRow.AddChild(volume);
-
-        var fullscreen = new CheckBox { Text = "Fullscreen", ButtonPressed = Display.Fullscreen };
+        side.AddChild(volume);
+        var fullscreen = new CheckButton { Text = "Fullscreen", ButtonPressed = Display.Fullscreen };
         fullscreen.Toggled += on => Display.SetFullscreen(on);
-        box.AddChild(fullscreen);
-
-        var edge = new CheckBox { Text = "Scroll at the screen edges", ButtonPressed = Main.EdgeScroll };
+        side.AddChild(fullscreen);
+        var edge = new CheckButton { Text = "Scroll at the screen edges", ButtonPressed = Main.EdgeScroll };
         edge.Toggled += on => Settings.Set("edge_scroll", on);
-        box.AddChild(edge);
-        var confine = new CheckBox { Text = "Keep the mouse inside the window", ButtonPressed = Main.ConfineMouse };
+        side.AddChild(edge);
+        var confine = new CheckButton { Text = "Keep the mouse inside the window", ButtonPressed = Main.ConfineMouse };
         confine.Toggled += on => Settings.Set("confine_mouse", on);
-        box.AddChild(confine);
-
-        var hints = new CheckBox { Text = "Hints for a first run", ButtonPressed = Coach.Enabled };
+        side.AddChild(confine);
+        var hints = new CheckButton { Text = "Hints for a first run", ButtonPressed = Coach.Enabled };
         hints.Toggled += on => Settings.Set("hints", on);
-        box.AddChild(hints);
-
-        var start = new Button { Text = "Begin" };
-        start.AddThemeFontSizeOverride("font_size", 22);
-        start.Pressed += Begin;
-        box.AddChild(start);
-        start.GrabFocus();
+        side.AddChild(hints);
+        var quit = UiKit.TextButton("Exit game", 13);
+        quit.Pressed += () => GetTree().Quit();
+        side.AddChild(quit);
     }
 
     void Describe()
     {
-        var map = (MapKind)_map.Selected;
         var difficulty = (Difficulty)_difficulty.Selected;
         string mode = _mode.Selected == 1
             ? "Endless: no Convergence and no victory. Every few days the horde takes a corruption. Your score is the day you fall."
-            : "Survive sixty days of waves, then the Convergence from every side.";
-        _about.Text = $"{mode}\n{MapAbout[map]}\n{DifficultyAbout[difficulty]}";
+            : $"Survive {DayChoices[_days?.Selected ?? 2]} days of waves, then the Convergence from every side.";
+        string map = _map.Selected < MapKinds ? MapAbout[(MapKind)_map.Selected] : _handMade[_map.Selected - MapKinds].Briefing is { Length: > 0 } b ? b : "A hand-made map.";
+        _about.Text = $"{mode}\n{map}\n{DifficultyAbout[difficulty]}";
     }
 
     void Begin()
     {
         uint seed = uint.TryParse(_seed.Text.Trim(), out var s) ? s : (uint)GD.Randi();
-        Start(new GameSetup(seed, (MapKind)_map.Selected, (Difficulty)_difficulty.Selected, _mode.Selected == 1, Woods: _woods.ButtonPressed));
+        var difficulty = (Difficulty)_difficulty.Selected;
+        bool endless = _mode.Selected == 1;
+        var handMade = _map.Selected >= MapKinds ? _handMade[_map.Selected - MapKinds] : null;
+        var kind = handMade?.Map ?? (MapKind)_map.Selected;
+        bool plain = handMade == null && _size.Selected == 1 && _days.Selected == 2 && _waves.Selected == 1 && _gates.Selected == 2
+            && _wilds.Selected == 1 && _strays.Selected == 0 && _start.Selected == 1 && _fog.ButtonPressed;
+        if (plain)
+        {
+            Start(new GameSetup(seed, kind, difficulty, endless, Woods: _woods.ButtonPressed));
+            QueueFree();
+            return;
+        }
+        // Anything off the defaults (or a hand-made map) is a skirmish: a scenario of its own, which its saves carry.
+        var rules = Rules.Default;
+        int size = handMade?.MapSize ?? Sizes[_size.Selected].Size;
+        double area = size * size / (256.0 * 256.0);
+        var skirmish = (handMade ?? new ScenarioDef()) with
+        {
+            Id = handMade != null ? "map-" + handMade.Id : "skirmish",
+            Name = handMade?.Name ?? "Skirmish",
+            Briefing = "",
+            Seed = seed, Map = kind, MapSize = size, Difficulty = difficulty, Endless = endless,
+            Days = DayChoices[_days.Selected],
+            Waves = WaveChoices[_waves.Selected].Scale,
+            Convergence = WaveChoices[_waves.Selected].Scale,
+            Hellgates = GateChoices[_gates.Selected],
+            Packs = (int)Math.Round(rules.Wilds.Packs * WildsChoices[_wilds.Selected].Scale * area),
+            Strays = (int)Math.Round(StrayChoices[_strays.Selected].Count * area),
+            Start = rules.StartingResources.Scale(StartChoices[_start.Selected].Scale),
+            Fog = _fog.ButtonPressed,
+            LivingWoods = _woods.ButtonPressed,
+        };
+        Start(new GameSetup(seed, kind, difficulty, endless, skirmish, _woods.ButtonPressed));
         QueueFree();
     }
+
+    static readonly int MapKinds = Enum.GetValues<MapKind>().Length;
 
     static HBoxContainer Row(VBoxContainer box, string label)
     {

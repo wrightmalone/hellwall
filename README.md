@@ -342,7 +342,7 @@ p99 9.1 ms, sim 4.8 ms/tick.
 | space / Tab | pause (building and orders still work) / cycle 1x, 2x, 4x |
 | F5 / F9 | quicksave / quickload |
 | WASD, arrows / wheel | pan / zoom |
-| `N` / `K` / `J` | debug: noise at the cursor / a 200-demon wave / 20k assault |
+| F6 / `K` / `J` | debug: noise at the cursor / a 200-demon wave / 20k assault |
 
 ## Bot results
 

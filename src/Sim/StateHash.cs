@@ -67,6 +67,7 @@ public static class StateHash
             h = Mix(h, Bits(u.Y));
             h = Mix(h, Bits(u.Hp));
             h = Mix(h, Bits(u.Cooldown));
+            h = Mix(h, (uint)u.Kills);
             h = MixByte(h, (byte)u.Order);
             h = Mix(h, (uint)u.DestX);
             h = Mix(h, (uint)u.DestY);

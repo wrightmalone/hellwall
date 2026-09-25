@@ -453,6 +453,41 @@ They're baked a little taller than the demons and with more fill light, because 
   map. Missions have no scripted events or story beats yet: the data has room for them, and
   that's the next layer (a trigger list: "on day N, say X, spawn Y").
 
+## The long session (your list, then my own swings)
+
+You asked for: living-woods A/B, a pause menu, a new build, then skirmish, a map editor,
+talking heads, fog of war with demons spread over the map, an edge-of-map resource for
+advanced units, and whatever else I thought worth a swing. Each decision below is one I
+made alone; flag any you'd change.
+
+### Living woods (your idea)
+
+- **It's an option, off by default** (new-game menu "Living woods", `--woods`, rule
+  `woods.blocks`). With it on, forest is a wall, the horde hacks through trees, and each
+  Woodcutter sends out its three crew as woodsmen who walk, chop, carry and fell.
+- **A/B result: it makes the game easier, not harder.** Plains went from 11/24 bot wins to
+  19/24 with the first numbers; forest is free wall that funnels the horde. The lever is tree
+  hit points: at 120 hp and a flow cost of 6 (a demon prefers a detour of up to 6 tiles to
+  hacking one tree), Plains is 13-15/24, Lakes 11/24, Wildwood 17/24. Those are the defaults
+  now. A tree still yields 30 wood (0.25 wood per hp) and a woodsman still earns 0.55 wood/s
+  while chopping, so the economy didn't change.
+- **Legion suffers, fortress and pyre gain,** on every map: an army can't walk through the
+  woods to go clearing, but walls can lean on them. If you want living woods on by default,
+  that asymmetry is the thing to design around (e.g. soldiers cut paths, or woods slow rather
+  than block soldiers).
+- **Woodsmen cross the colony's own walls** (as if by postern). Without that a walled town's
+  crews had no trees left by day 26 and the forest outside never shrank, which defeats the idea.
+- **A lodge's rate is what its woodsmen delivered** over the last 30 s, so the HUD and the bot
+  still see a wood rate.
+
+### Pause menu
+
+- **Esc with nothing selected, or F10.** Esc keeps its old jobs first (disarm, deselect,
+  take over from the bot); only an Esc with nothing to cancel opens the menu. Resume,
+  fullscreen, master volume, quit to main menu, exit. Both quits ask for a second click.
+- **Fullscreen is remembered** in settings.cfg and applied at launch; it's on the main menu too.
+- The debug noise key moved from N to F6 (N builds the new Silver Mine).
+
 ## Things I noticed that you should decide
 
 - **Scale:** addressed by 12-14 and 21. The Convergence is 9,000 plus whatever

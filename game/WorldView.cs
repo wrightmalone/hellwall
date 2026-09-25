@@ -245,7 +245,13 @@ public partial class WorldView : Node2D
                 var feet = new Vector2(Mathf.Lerp(u.PrevX, u.X, state.Alpha), Mathf.Lerp(u.PrevY, u.Y, state.Alpha));
                 var p = Iso.P(feet);
                 if (state.SelectedUnits.Contains(u.Id)) Iso.Ellipse(this, feet, 0.45f, Palette.Selected, 1.5f);
-                if (u.Hp < u.Def.Hp) Bar(p + new Vector2(-10, -Art.UnitSize - 5), 20, u.Hp / u.Def.Hp, new Color(0.3f, 1, 0.3f));
+                if (u.Hp < u.MaxHp) Bar(p + new Vector2(-10, -Art.UnitSize - 5), 20, u.Hp / u.MaxHp, new Color(0.3f, 1, 0.3f));
+                // Rank: a gold chevron per rank over the head.
+                for (int r = 0; r < u.Rank; r++)
+                {
+                    var c = p + new Vector2(-4 * (u.Rank - 1) + r * 8, -Art.UnitSize - 11);
+                    DrawPolyline([c + new Vector2(-3, 0), c + new Vector2(0, -3), c + new Vector2(3, 0)], UiKit.Gold, 1.6f);
+                }
             }
 
             // The selected Barracks' rally point: a line from its door and a flag.

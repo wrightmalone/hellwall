@@ -15,6 +15,7 @@ public static class Palette
         new(0.46f, 0.44f, 0.42f), // Rock
         new(0.18f, 0.30f, 0.50f), // Water
         new(0.55f, 0.35f, 0.30f), // Ore
+        new(0.82f, 0.86f, 0.92f), // Silver
     ];
 
     public static Color Building(BuildingKind kind) => kind switch
@@ -36,6 +37,7 @@ public static class Palette
         BuildingKind.LanceTower => new(0.28f, 0.42f, 0.70f),
         BuildingKind.Scriptorium => new(0.62f, 0.46f, 0.78f),
         BuildingKind.Mine => new(0.45f, 0.30f, 0.25f),
+        BuildingKind.SilverMine => new(0.75f, 0.78f, 0.85f),
         BuildingKind.Belfry => new(0.80f, 0.70f, 0.45f),
         BuildingKind.Skyspire => new(0.60f, 0.75f, 0.90f),
         BuildingKind.Censer => new(0.90f, 0.45f, 0.20f),
@@ -58,6 +60,7 @@ public static class Palette
         BuildingKind.LanceTower => "La",
         BuildingKind.Scriptorium => "Scr",
         BuildingKind.Mine => "Mi",
+        BuildingKind.SilverMine => "Ag",
         BuildingKind.Belfry => "Bel",
         BuildingKind.Skyspire => "Sk",
         BuildingKind.Censer => "Ce",
@@ -88,6 +91,6 @@ public static class Palette
         (BuildingKind.Woodcutter, Key.Key4, "4"), (BuildingKind.Quarry, Key.Key5, "5"), (BuildingKind.Shrine, Key.Key6, "6"),
         (BuildingKind.Wardstone, Key.Key7, "7"), (BuildingKind.Wall, Key.Key8, "8"), (BuildingKind.StoneWall, Key.Key9, "9"),
         (BuildingKind.Watchtower, Key.Key0, "0"), (BuildingKind.Bombard, Key.Minus, "-"), (BuildingKind.LanceTower, Key.Equal, "="),
-        (BuildingKind.Mine, Key.M, "M"), (BuildingKind.Censer, Key.C, "C"), (BuildingKind.Belfry, Key.L, "L"), (BuildingKind.Skyspire, Key.P, "P"), (BuildingKind.Gate, Key.G, "G"), (BuildingKind.Barracks, Key.B, "B"), (BuildingKind.Scriptorium, Key.U, "U"),
+        (BuildingKind.Mine, Key.M, "M"), (BuildingKind.SilverMine, Key.N, "N"), (BuildingKind.Censer, Key.C, "C"), (BuildingKind.Belfry, Key.L, "L"), (BuildingKind.Skyspire, Key.P, "P"), (BuildingKind.Gate, Key.G, "G"), (BuildingKind.Barracks, Key.B, "B"), (BuildingKind.Scriptorium, Key.U, "U"),
     ];
 }

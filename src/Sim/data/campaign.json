@@ -44,7 +44,8 @@
         "LanceTower",
         "Belfry",
         "Skyspire",
-        "Censer"
+        "Censer",
+        "SilverMine"
       ],
       "objectives": [
         {
@@ -71,6 +72,9 @@
           },
           "speaker": "steward"
         }
+      ],
+      "lockedUnits": [
+        "Exorcist"
       ]
     },
     {
@@ -93,7 +97,8 @@
       "lockedBuildings": [
         "Scriptorium",
         "LanceTower",
-        "Belfry"
+        "Belfry",
+        "SilverMine"
       ],
       "objectives": [
         {
@@ -113,6 +118,9 @@
           "spawnSide": "East",
           "speaker": "scout"
         }
+      ],
+      "lockedUnits": [
+        "Exorcist"
       ]
     },
     {
@@ -148,6 +156,12 @@
           "say": "Six days until the Convergence. The gates must fall before it does.",
           "speaker": "captain"
         }
+      ],
+      "lockedBuildings": [
+        "SilverMine"
+      ],
+      "lockedUnits": [
+        "Exorcist"
       ]
     },
     {
@@ -179,6 +193,12 @@
           "spawnSide": "South",
           "speaker": "scout"
         }
+      ],
+      "lockedBuildings": [
+        "SilverMine"
+      ],
+      "lockedUnits": [
+        "Exorcist"
       ]
     },
     {

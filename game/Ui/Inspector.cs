@@ -69,14 +69,16 @@ public partial class Inspector : PanelContainer
         {
             Visible = true;
             var units = World.Units.Where(u => State.SelectedUnits.Contains(u.Id)).ToList();
-            _name.Text = units.Count == 1 ? units[0].Kind.ToString() : $"{units.Count} soldiers";
-            float hp = units.Sum(u => u.Hp), max = units.Sum(u => u.Def.Hp);
+            _name.Text = units.Count == 1 ? $"{(units[0].Rank > 0 ? Unit.RankName(units[0].Rank) + " " : "")}{units[0].Kind}" : $"{units.Count} soldiers";
+            float hp = units.Sum(u => u.Hp), max = units.Sum(u => u.MaxHp);
             _hp.Value = max <= 0 ? 0 : hp / max;
             _status.Text = $"{hp:0} / {max:0} hp";
             _status.AddThemeColorOverride("font_color", UiKit.Text);
-            _detail.Text = units.Count == 1 ? $"{units[0].Order}" : string.Join(", ", units.GroupBy(u => u.Order).Select(g => $"{g.Count()} {g.Key.ToString().ToLowerInvariant()}"));
+            _detail.Text = units.Count == 1 ? $"{units[0].Order} · {units[0].Kills} kills{NextRank(units[0])}" : string.Join(", ", units.GroupBy(u => u.Order).Select(g => $"{g.Count()} {g.Key.ToString().ToLowerInvariant()}"));
             _demolish.Visible = false;
         }
         else Visible = false;
-    }
+    
+    static string NextRank(Unit u) => u.Rank >= 3 ? "" : $" ({Unit.RankKills[u.Rank] - u.Kills} to {Unit.RankName(u.Rank + 1)})";
+}
 }

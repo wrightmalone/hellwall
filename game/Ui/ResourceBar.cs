@@ -61,7 +61,8 @@ public partial class ResourceBar : PanelContainer
         Resource.Wood => "Wood: Woodcutters beside forest. Walls and building.",
         Resource.Stone => "Stone: Quarries beside rock. Towers, Shrines, research.",
         Resource.Food => "Food: Farms and Hunters. Colonists and soldiers eat it.",
-        _ => "Iron: Mines on ore (the purple crystals). Every soldier is made of it.",
+        Resource.Iron => "Iron: Mines on ore (the purple crystals). Every soldier is made of it.",
+        _ => "Silver: Silver Mines on the pale veins near the map's edge. The Exorcist is made of it.",
     };
 
     public override void _Process(double delta)

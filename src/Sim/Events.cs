@@ -31,6 +31,9 @@ public sealed record ConsecrationChanged(int Tick) : SimEvent(Tick);
 public sealed record UnitTrained(int Tick, int UnitId, UnitKind Kind, int BarracksId) : SimEvent(Tick);
 
 /// <param name="Rose">Came back as a Thrall.</param>
+/// <summary>A soldier's kills earned a new rank (1 Veteran, 2 Elite, 3 Champion).</summary>
+public sealed record UnitPromoted(int Tick, int UnitId, UnitKind Kind, int Rank, float X, float Y) : SimEvent(Tick);
+
 public sealed record UnitDied(int Tick, int UnitId, UnitKind Kind, float X, float Y, bool Rose) : SimEvent(Tick);
 
 /// <summary>A demon reached an inhabited building; its Occupants will come out as Thralls.</summary>

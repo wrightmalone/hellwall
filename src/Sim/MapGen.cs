@@ -66,7 +66,33 @@ public static class MapGen
         // Rich iron out in the wilds first, so the fairness pass sees (and never counts on) it.
         PlaceOre(terrain, seed);
         MakeFair(terrain, seed);
+        PlaceSilver(terrain, seed);
         return terrain;
+    }
+
+    /// <summary>
+    /// Silver lies only in the outer band of the map, past 80% of the way from
+    /// the Keep to the edge: one vein per 9,000 tiles of map, at least four,
+    /// spread round the compass. The advanced soldiers need it, so the late game
+    /// means reaching the far wilds, where the biggest packs sleep.
+    /// </summary>
+    static void PlaceSilver(Terrain terrain, uint seed)
+    {
+        int c = terrain.Width / 2;
+        int veins = Math.Max(4, terrain.Width * terrain.Height / 9000);
+        for (int i = 0; i < veins; i++)
+        {
+            // Evenly round the compass, with jitter, then out along that bearing to the band.
+            double angle = (i + Lattice(seed ^ 0x51F7u, i, 1) * 0.6) / veins * Math.PI * 2;
+            double reach = c * (0.8 + Lattice(seed ^ 0x51F7u, i, 2) * 0.12);
+            int x = c + (int)(Math.Cos(angle) * reach), y = c + (int)(Math.Sin(angle) * reach);
+            for (int tries = 0; tries < 6 && terrain.InBounds(x, y) && terrain.Get(x, y) is Tile.Water or Tile.Rock; tries++)
+            {
+                x -= Math.Sign(x - c);
+                y -= Math.Sign(y - c);
+            }
+            Stamp(terrain, x, y, 2 + (int)(Lattice(seed ^ 0x51F7u, i, 3) * 2), Tile.Silver, grassOnly: false);
+        }
     }
 
     /// <summary>
@@ -141,6 +167,7 @@ public static class MapGen
     /// stone), and iron may take rock.
     /// </summary>
     static bool Overwrites(Tile kind, Tile was) =>
+        (kind == Tile.Silver && was is Tile.Grass or Tile.Forest or Tile.Rock) ||
         was == Tile.Grass || (was == Tile.Forest && kind is Tile.Rock or Tile.Ore) || (was == Tile.Rock && kind == Tile.Ore);
 
     static (int X, int Y)? BestPatch(Terrain terrain, uint salt, int radius, Tile kind)

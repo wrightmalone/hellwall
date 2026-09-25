@@ -151,3 +151,26 @@ public class UnitTests
                 if (a != b) Assert.True(MathF.Abs(a.X - b.X) + MathF.Abs(a.Y - b.Y) > 0.4f, $"units {a.Id} and {b.Id} are standing on each other");
     }
 }
+
+public class VeterancyTests
+{
+    [Fact]
+    public void KillsEarnRanksAndRanksHitHarder()
+    {
+        var world = TestWorlds.Rich(TestWorlds.Dummies());
+        // A lone Marksman beside a crowd of harmless demons: he shoots until he runs out of targets.
+        var barracks = TestWorlds.Built(world, BuildingKind.Barracks, TestWorlds.C + 4, TestWorlds.C + 4);
+        TestWorlds.Run(world, new TrainUnit(barracks.Id, UnitKind.Marksman));
+        TestWorlds.RunSeconds(world, 12);
+        var marksman = world.Units.Single(x => x.Kind == UnitKind.Marksman);
+        TestWorlds.Run(world, new SpawnDemons(DemonKind.Imp, (int)marksman.X + 5, (int)marksman.Y, 40));
+        var events = TestWorlds.RunSeconds(world, 120);
+        Assert.True(marksman.Kills >= Unit.RankKills[1], $"{marksman.Kills} kills");
+        Assert.Equal(2, marksman.Rank);
+        Assert.Equal(marksman.Def.Hp * (1 + 2 * Unit.HpPerRank), marksman.MaxHp, 3);
+        Assert.Contains(events, e => e is UnitPromoted { Rank: 1 } p && p.UnitId == marksman.Id);
+        Assert.Contains(events, e => e is UnitPromoted { Rank: 2 } p && p.UnitId == marksman.Id);
+        var loaded = World.Load(world.Save(), world.Rules);
+        Assert.Equal(marksman.Kills, loaded.Units.Single(x => x.Id == marksman.Id).Kills);
+    }
+}

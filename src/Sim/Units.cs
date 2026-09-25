@@ -31,6 +31,16 @@ public sealed class Unit
     public OrderKind Order;
     public int DestX;
     public int DestY;
+    /// <summary>Demons this soldier has killed: veterancy.</summary>
+    public int Kills;
+
+    /// <summary>Kills to reach each rank (Veteran, Elite, Champion).</summary>
+    public static readonly int[] RankKills = [8, 25, 60];
+    public const float DamagePerRank = 0.15f, HpPerRank = 0.12f;
+
+    public int Rank => Kills >= RankKills[2] ? 3 : Kills >= RankKills[1] ? 2 : Kills >= RankKills[0] ? 1 : 0;
+    public float MaxHp => Def.Hp * (1 + HpPerRank * Rank);
+    public static string RankName(int rank) => rank switch { 1 => "Veteran", 2 => "Elite", 3 => "Champion", _ => "Recruit" };
 
     /// <summary>The pooled human flow field toward DestX/DestY while moving.</summary>
     internal FlowField? Field;
@@ -107,6 +117,16 @@ internal static class UnitSystem
         }
     }
 
+    /// <summary>Kills to a soldier's name; a new rank also brings its extra health, at once.</summary>
+    static void Credit(World world, Unit u, int killed)
+    {
+        int was = u.Rank;
+        u.Kills += killed;
+        if (u.Rank == was) return;
+        u.Hp += u.Def.Hp * Unit.HpPerRank * (u.Rank - was);
+        world.Emit(new UnitPromoted(world.Tick, u.Id, u.Kind, u.Rank, u.X, u.Y));
+    }
+
     public static void Step(World world, float dt)
     {
         var units = world.UnitList;
@@ -148,8 +168,9 @@ internal static class UnitSystem
                 {
                     if (u.Cooldown <= 0)
                     {
-                        Combat.Fire(world, u.X, u.Y, tx, ty, target, weapon, fromUnit: true);
+                        int killed = Combat.Fire(world, u.X, u.Y, tx, ty, target, weapon, fromUnit: true, 1 + Unit.DamagePerRank * u.Rank);
                         u.Cooldown = weapon.Cooldown;
+                        if (killed > 0) Credit(world, u, killed);
                     }
                 }
                 else if (u.Order != OrderKind.Hold && d > 1e-4f)

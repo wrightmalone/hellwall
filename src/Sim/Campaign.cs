@@ -84,6 +84,15 @@ public sealed record ScenarioDef
     public int Packs { get; init; } = -1;
     /// <summary>Starting stockpile (null: the rules' own).</summary>
     public Cost? Start { get; init; }
+    /// <summary>Straggler groups (-1: the rules' own).</summary>
+    public int Strays { get; init; } = -1;
+    /// <summary>Forest is a wall and woodsmen fell it (woods.blocks).</summary>
+    public bool LivingWoods { get; init; }
+    public bool Fog { get; init; } = true;
+    /// <summary>A hand-made map: every tile, one byte each (a Tile), row by row, base64. Empty: generated from Seed and Map.</summary>
+    public string Tiles { get; init; } = "";
+    /// <summary>Endless: no Convergence, no win; the score is the day (skirmish only).</summary>
+    public bool Endless { get; init; }
 
     /// <summary>Not available in this mission: the campaign opens the game up as it goes.</summary>
     public BuildingKind[] LockedBuildings { get; init; } = [];
@@ -120,11 +129,28 @@ public sealed record ScenarioDef
         if (Hellgates >= 0) r = r.WithHellgates(h => h with { Count = Hellgates });
         if (Packs >= 0) r = r.WithWilds(w => w with { Packs = Packs });
         if (Start != null) r = r.WithStartingResources(Start);
+        if (Strays >= 0) r = r.WithWilds(w => w with { Strays = Strays });
+        if (LivingWoods) r = r.WithWoods(w => w with { Blocks = true });
+        if (!Fog) r = r.WithFog(f => f with { Enabled = false });
         return r;
     }
 
     public WorldOptions Options(Rules rules) =>
-        new(Seed, MapSize, 0, RulesFrom(rules), Survival: true, Difficulty: Difficulty, Map: Map, Scenario: this);
+        new(Seed, MapSize, 0, RulesFrom(rules), Survival: true, Difficulty: Difficulty, Endless: Endless, Map: Map, Scenario: this);
+
+    /// <summary>The hand-made map's tiles, or null for a generated one.</summary>
+    public Tile[]? DecodeTiles()
+    {
+        if (Tiles.Length == 0) return null;
+        var bytes = Convert.FromBase64String(Tiles);
+        if (bytes.Length != MapSize * MapSize) throw new FormatException($"map '{Id}' has {bytes.Length} tiles, not {MapSize}x{MapSize}");
+        return Array.ConvertAll(bytes, b => (Tile)b);
+    }
+
+    public static string EncodeTiles(Tile[] tiles) => Convert.ToBase64String(Array.ConvertAll(tiles, t => (byte)t));
+
+    public string ToJson() => System.Text.Json.JsonSerializer.Serialize(this, Campaign.Json);
+    public static ScenarioDef FromJson(string json) => System.Text.Json.JsonSerializer.Deserialize<ScenarioDef>(json, Campaign.Json) ?? throw new FormatException("empty scenario");
 }
 
 /// <summary>A campaign: missions and the order they open in. The default ships inside the assembly (data/campaign.json).</summary>
@@ -137,6 +163,9 @@ public sealed class Campaign
 
     public ScenarioDef? Find(string id) => Scenarios.FirstOrDefault(s => s.Id == id);
 
+    /// <summary>One of this campaign's own missions (not a skirmish or a hand-made map that happens to share an id).</summary>
+    public bool Contains(ScenarioDef? s) => s != null && ReferenceEquals(Find(s.Id), s);
+
     /// <summary>A speaker by id; the first speaker (the narrator) for an empty or unknown id.</summary>
     public SpeakerDef Speaker(string id) => Speakers.FirstOrDefault(s => s.Id == id) ?? Speakers.FirstOrDefault() ?? new SpeakerDef { Name = "" };
 
@@ -147,7 +176,7 @@ public sealed class Campaign
 
     public static Campaign Default => _default ??= Parse(ReadEmbedded());
 
-    static readonly JsonSerializerOptions Json = new()
+    internal static readonly JsonSerializerOptions Json = new()
     {
         PropertyNameCaseInsensitive = true,
         ReadCommentHandling = JsonCommentHandling.Skip,
