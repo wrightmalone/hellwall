@@ -162,6 +162,13 @@ public partial class Hud : CanvasLayer
 
     RunChart _chart = null!;
 
+    /// <summary>The names of what the colony has, of one sort (research, blessings, Keep levels), or `none`.</summary>
+    string Names(Func<TechDef, bool> which, string none)
+    {
+        var names = World.Tech.Researched.Select(World.Rules.Tech).Where(which).Select(t => t.Name).ToList();
+        return names.Count == 0 ? none : string.Join(", ", names);
+    }
+
     public override void _Process(double delta)
     {
         var screen = GetViewport().GetVisibleRect().Size;
@@ -211,7 +218,10 @@ public partial class Hud : CanvasLayer
                 string scoreLine = $"Score {score:N0}" + (best > score ? $"   (best {best:N0})" : best == score ? "   (a new best)" : "") + "\n";
                 _endText.Text = $"{mode} · {World.Map} · {World.Rules.Difficulty} · seed {World.Seed}\n{goals}{scoreLine}" +
                     $"Days survived: {World.Day}\nDemons slain: {st.DemonsKilled}\nBuildings lost: {st.BuildingsLost}\nSoldiers lost: {st.UnitsLost}" +
-                    $"\nResearched: {(World.Tech.Researched.Count == 0 ? "nothing" : string.Join(", ", World.Tech.Researched.Select(id => World.Rules.Tech(id).Name)))}{corruptions}{opens}";
+                    $"\nResearched: {Names(t => !t.Patron && t.KeepLevel == 0, "nothing")}" +
+                    (Names(t => t.Patron, "") is { Length: > 0 } saints ? $"\nBlessed by: {saints}" : "") +
+                    (Names(t => t.KeepLevel > 0, "") is { Length: > 0 } raised ? $"\nThe Keep raised: {raised}" : "") +
+                    $"{corruptions}{opens}";
                 _chart.Refresh();
                 _end.Visible = true;
                 _card.Visible = false; // the run is over: nothing to build, and it would cover the buttons
