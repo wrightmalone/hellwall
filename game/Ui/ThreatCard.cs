@@ -61,13 +61,13 @@ public partial class ThreatCard : PanelContainer
             string what = next.Final ? "THE CONVERGENCE" : next.Surge ? $"Surge {next.Number}" : $"Wave {next.Number}";
             _next.Text = $"{what} in {UiKit.Clock((next.LandsAtTick - World.Tick) / tps)}";
             _next.AddThemeColorOverride("font_color", UiKit.Threat);
-            _detail.Text = $"{next.Size} from the {string.Join(" and ", next.Sides.Select(UiKit.SideOnScreen))}";
+            _detail.Text = $"{next.Size} from the {string.Join(" and ", next.Sides.Select(UiKit.SideOnScreen))}{Kinds(s, next)}";
         }
         else
         {
             _next.Text = $"{(next.Final ? "Convergence" : $"Wave {next.Number}")} on day {s.DayAt(next.LandsAtTick) - 1}";
             _next.AddThemeColorOverride("font_color", UiKit.Muted);
-            _detail.Text = $"About {next.Size}, sighted in {UiKit.Clock((next.AnnounceTick(s.Rules) - World.Tick) / tps)}";
+            _detail.Text = $"About {next.Size}, sighted in {UiKit.Clock((next.AnnounceTick(s.Rules) - World.Tick) / tps)}{Kinds(s, next)}";
         }
         if (World.Gates.Count > 0) _detail.Text += $"  ·  Hellgates {World.Gates.Count(g => g.Alive)}/{World.Gates.Count}";
 
@@ -114,5 +114,13 @@ public partial class ThreatCard : PanelContainer
             float now = Math.Clamp(X(World.Tick), 0, w);
             DrawRect(new Rect2(now - 1, 0, 2, h), UiKit.Text);
         }
+    }
+
+    /// <summary>The kinds that join the horde by this wave, besides Imps: what to build for.</summary>
+    static string Kinds(Survival s, PlannedWave wave)
+    {
+        if (s.Endless) return "";
+        var kinds = s.Rules.Mix.Where(m => m.FromWave <= wave.Number && m.Share > 0).Select(m => m.Kind + (m.Kind.ToString().EndsWith('s') ? "es" : "s")).ToList();
+        return kinds.Count == 0 ? "" : $"\nwith {string.Join(", ", kinds)}";
     }
 }

@@ -676,6 +676,8 @@ last lost by at least one).
 - **Noise view** (F4): the noise grid over the ground, orange as it builds and red where it's
   loud enough to wake a sleeping pack. The gaps list suggested making noise visible; this is
   the cheap version (a toggle, not always on).
+- **The threat card names what's coming:** "with Hounds, Gargoyles, Spitters" for the next
+  wave, from the wave mix, so you know whether to build Skyspires before the fliers arrive.
 - **A red cast over the world while a wave is announced** (deeper for the Convergence), fading
   back after it lands: you feel it coming without reading the card. Home or Backspace jumps
   the camera to the Keep.
