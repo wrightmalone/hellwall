@@ -37,6 +37,9 @@ public sealed class Unit
     public int Kills;
     /// <summary>A patrol's other end: where the soldier stood when ordered.</summary>
     public int PatrolX, PatrolY;
+    /// <summary>Where an idle soldier stands its ground: it fights within LeashRadius of here and comes back. Set when it goes idle.</summary>
+    public float AnchorX, AnchorY;
+    public bool Anchored;
 
     /// <summary>Kills to reach each rank (Veteran, Elite, Champion).</summary>
     public static readonly int[] RankKills = [8, 25, 60];
@@ -54,6 +57,9 @@ internal static class UnitSystem
 {
     /// <summary>Extra reach, beyond weapon range, at which Idle and AttackMove units close in on a demon.</summary>
     const float AggroExtra = 3f;
+
+    /// <summary>An idle soldier chases no further than this from where it stopped, then walks back: the army stays where you put it.</summary>
+    public const float LeashRadius = 6f;
 
     /// <summary>A demon this close to a soldier hits the soldier instead of the walls.</summary>
     public const float MeleeRange = 0.8f;
@@ -121,6 +127,20 @@ internal static class UnitSystem
         }
     }
 
+    /// <summary>Would stepping toward (tx, ty) take an idle soldier past its leash?</summary>
+    static bool Leashed(Unit u, float tx, float ty)
+    {
+        float dx = tx - u.AnchorX, dy = ty - u.AnchorY;
+        return dx * dx + dy * dy > LeashRadius * LeashRadius;
+    }
+
+    /// <summary>Walk back to where it was told to stand (nothing, once it's there).</summary>
+    static (float, float) BackToAnchor(Unit u)
+    {
+        float dx = u.AnchorX - u.X, dy = u.AnchorY - u.Y, d = MathF.Sqrt(dx * dx + dy * dy);
+        return d < 0.3f ? (0, 0) : (dx / d * u.Def.Speed, dy / d * u.Def.Speed);
+    }
+
     /// <summary>Kills to a soldier's name; a new rank also brings its extra health, at once.</summary>
     static void Credit(World world, Unit u, int killed)
     {
@@ -142,6 +162,7 @@ internal static class UnitSystem
             u.Cooldown = Math.Max(0, u.Cooldown - dt);
 
             var weapon = u.Def.Weapon;
+            if (u.Order == OrderKind.Idle && !u.Anchored) { u.AnchorX = u.X; u.AnchorY = u.Y; u.Anchored = true; }
             int target = -1;
             float reach = u.Order switch
             {
@@ -178,11 +199,16 @@ internal static class UnitSystem
                         if (killed > 0) Credit(world, u, killed);
                     }
                 }
-                else if (u.Order != OrderKind.Hold && d > 1e-4f)
+                else if (u.Order != OrderKind.Hold && d > 1e-4f && !(u.Order == OrderKind.Idle && Leashed(u, tx, ty)))
                 {
                     vx = dx / d * u.Def.Speed;
                     vy = dy / d * u.Def.Speed;
                 }
+                else if (u.Order == OrderKind.Idle) (vx, vy) = BackToAnchor(u);
+            }
+            else if (u.Order == OrderKind.Idle && u.Anchored)
+            {
+                (vx, vy) = BackToAnchor(u);
             }
             else if (u.Order is OrderKind.Move or OrderKind.AttackMove or OrderKind.Patrol && u.Field != null)
             {

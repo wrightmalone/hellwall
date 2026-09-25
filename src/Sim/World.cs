@@ -422,19 +422,27 @@ public sealed partial class World
     }
 
     /// <summary>What a gatherer placed here would collect per second at full sanctity, for the placement preview.</summary>
-    public double EstimateGathering(BuildingKind kind, int x, int y)
+    public double EstimateGathering(BuildingKind kind, int x, int y) => EstimateGathering(kind, x, y, out _);
+
+    /// <summary>What a gatherer placed here would yield, and the share of its ground not already worked by another (1: none shared).</summary>
+    public double EstimateGathering(BuildingKind kind, int x, int y, out double free)
     {
         var def = Def(kind);
+        free = 1;
         if (def.Produces == null) return 0;
         var claimed = new bool[Terrain.Width * Terrain.Height];
+        // Ones still going up count too: they'll take their tiles when they're done.
         foreach (var b in _buildings)
-            if (b.Complete && b.Def.Produces == def.Produces)
+            if (b.Def.Produces == def.Produces)
                 ColonySystem.CountGatherable(this, b.Def, b.CentreX, b.CentreY, claimed, claim: true);
+        int all = ColonySystem.CountGatherable(this, def, x + def.W / 2f, y + def.H / 2f, null, claim: false);
         // Once built it stands on its own footprint, which then can't be gathered.
         for (int ty = y; ty < y + def.H; ty++)
             for (int tx = x; tx < x + def.W; tx++)
                 if (Terrain.InBounds(tx, ty)) claimed[Terrain.Index(tx, ty)] = true;
-        return ColonySystem.CountGatherable(this, def, x + def.W / 2f, y + def.H / 2f, claimed, claim: false) * def.PerTile;
+        int mine = ColonySystem.CountGatherable(this, def, x + def.W / 2f, y + def.H / 2f, claimed, claim: false);
+        free = all == 0 ? 1 : mine / (double)all;
+        return mine * def.PerTile;
     }
 
     /// <summary>
@@ -915,6 +923,7 @@ public sealed partial class World
             u.Field = field;
             u.PatrolX = (int)u.X;
             u.PatrolY = (int)u.Y;
+            u.Anchored = false; // a new order: a new place to stand, once it's done
             ordered++;
         }
         return ordered == 0 ? "no such units" : null;

@@ -279,7 +279,7 @@ public partial class CommandCard : PanelContainer
         }
         else if (_mode.StartsWith("army"))
         {
-            _hint.Text = "Right-click to attack-move · shift+right-click to move";
+            _hint.Text = "Right-click to move · A then click (or shift+right-click) to attack-move";
         }
     }
 }

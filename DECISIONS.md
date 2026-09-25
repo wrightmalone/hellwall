@@ -710,6 +710,26 @@ last lost by at least one).
 - **Sounds** (still synthesized placeholders): a chime for a promotion, a creak and thump
   for a felled tree, a soft blip under a spoken line, a chord for victory.
 
+## After your first playtest of 0.12.1 (units uncontrollable, economy slow, more food)
+
+- **Idle soldiers are leashed.** Before, a soldier that had finished an attack-move went idle and
+  chased any demon within its range plus 3 tiles, then the next, for ever: with a horde about, an
+  army drifted off wherever the demons led. Now an idle soldier fights within 6 tiles of where
+  it stopped and walks back. (4 tiles cost the bot 3 wins in 24; 6 costs nothing.)
+- **Right-click moves, and a move never stops to fight.** That's the retreat and the micro.
+  Attack-move is A then click, or shift+right-click. Before it was the other way round, so
+  pulling a squad out meant it stopped to shoot at everything in range. A ring shows where each
+  order landed: green for a move, red for an attack.
+- **The placement preview warns when ground is shared.** Gatherers split their tiles first come,
+  first served, so a second Woodcutter beside the first gets only the leftover forest; the
+  preview already showed the yield, but it ignored buildings still going up and didn't say why a
+  number was low. Now it counts those too, and adds "(only 30% of its ground is free)" in amber.
+  That was very likely part of the slow economy you felt.
+- **Food is more generous:** 160 to start (from 60); Farms, Hunters and Fisheries yield about 40%
+  more per tile; colonists eat 0.018 a second (from 0.025). Sweep with all of this: 16/24, each
+  path 5-6/8.
+- Saves are format 10 (soldiers now carry where they stand).
+
 ## Things I noticed that you should decide
 
 - **Scale:** addressed by 12-14 and 21. The Convergence is 9,000 plus whatever

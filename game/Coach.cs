@@ -62,7 +62,7 @@ public partial class Coach : PanelContainer
             Always, () => Count(BuildingKind.Shrine) > 0 && Count(BuildingKind.Wardstone) > 0));
         _tips.Add(new("wave", () => $"A wave is coming: its side is marked at the screen edge. Drag a line of {K(BuildingKind.Wall, "Walls")} across that side and put {K(BuildingKind.Watchtower, "Watchtowers")} just behind. Demons break the wall nearest their path; one breach and they take every building they reach.",
             () => _waveAnnounced, () => Built(BuildingKind.Watchtower, 2)));
-        _tips.Add(new("packs", () => $"Sleeping demons hold that ground, and nothing can be built near them. Train soldiers at a {K(BuildingKind.Barracks)}, select them (drag a box) and right-click beside the pack to clear it. They're loud: build towers first.",
+        _tips.Add(new("packs", () => $"Sleeping demons hold that ground, and nothing can be built near them. Train soldiers at a {K(BuildingKind.Barracks)}, select them (drag a box), press A and click beside the pack to clear it. They're loud: build towers first.",
             () => _packInTheWay, () => World.Units.Count >= 6));
         _tips.Add(new("iron", () => $"Soldiers are made of iron. A {K(BuildingKind.Mine)} works the purple ore crystals; the richest lies out in the wilds, behind the packs.",
             () => Count(BuildingKind.Barracks) > 0, () => Count(BuildingKind.Mine) > 0));

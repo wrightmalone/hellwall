@@ -331,6 +331,12 @@ public partial class WorldView : Node2D
                 if (shot.Splash > 0) Iso.Ellipse(this, new Vector2(shot.ToX, shot.ToY), shot.Splash, new Color(1, 0.6f, 0.2f, a), 2);
             }
 
+            foreach (var (px, py, attack, age) in state.OrderPings)
+            {
+                float t = (float)(age / 0.5);
+                Iso.Ellipse(this, new Vector2(px, py), 0.9f * (1 - t) + 0.2f, attack ? new Color(1, 0.35f, 0.3f, 1 - t) : new Color(0.4f, 1, 0.45f, 1 - t), 2);
+            }
+
             // Spit: a green gob on a low arc, with a splash where it lands.
             foreach (var (spit, age) in state.Spits)
             {
@@ -406,10 +412,13 @@ public partial class WorldView : Node2D
                 }
                 var (hx, hy) = state.HoveredTile;
                 string? reason = world.CheckPlacement(kind, hx, hy);
-                string note = reason ?? (def.Produces is { } res ? $"+{world.EstimateGathering(kind, hx, hy):0.00} {res.ToString().ToLowerInvariant()}/s" : "");
+                double free = 1;
+                string note = reason ?? (def.Produces is { } res ? $"+{world.EstimateGathering(kind, hx, hy, out free):0.00} {res.ToString().ToLowerInvariant()}/s" : "");
+                // Gatherers split their ground: say so when most of it is already worked, before a crew is wasted on it.
+                if (reason == null && free < 0.6) note += free <= 0.05 ? "  (all its ground is already worked)" : $"  (only {free:P0} of its ground is free)";
                 if (def.Weapon is { } weapon) Iso.Ellipse(this, new Vector2(hx + def.W / 2f, hy + def.H / 2f), weapon.Range, new Color(1, 1, 1, 0.35f), 1);
                 if (def.SlowRadius > 0) Iso.Ellipse(this, new Vector2(hx + def.W / 2f, hy + def.H / 2f), def.SlowRadius, new Color(0.6f, 0.8f, 1, 0.35f), 1);
-                if (note.Length > 0) Text(font, Iso.P(hx + def.W, hy) + new Vector2(8, 0), note, 13, reason == null ? Colors.White : new Color(1, 0.6f, 0.6f));
+                if (note.Length > 0) Text(font, Iso.P(hx + def.W, hy) + new Vector2(8, 0), note, 13, reason != null ? new Color(1, 0.6f, 0.6f) : free < 0.6 ? new Color(1, 0.8f, 0.4f) : Colors.White);
             }
         }
 

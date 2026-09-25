@@ -17,7 +17,7 @@ namespace Hellwall.Sim;
 public sealed partial class World
 {
     const uint Magic = 0x56535748; // "HWSV"
-    const int FormatVersion = 9;
+    const int FormatVersion = 10;
 
     public byte[] Save()
     {
@@ -116,6 +116,9 @@ public sealed partial class World
                 w.Write(u.Kills);
                 w.Write(u.PatrolX);
                 w.Write(u.PatrolY);
+                w.Write(u.AnchorX);
+                w.Write(u.AnchorY);
+                w.Write(u.Anchored);
                 w.Write(u.Field != null);
             }
 
@@ -337,7 +340,7 @@ public sealed partial class World
             var u = new Unit
             {
                 Id = id, Kind = kind, Def = world.Def(kind), X = r.ReadSingle(), Y = r.ReadSingle(), PrevX = r.ReadSingle(), PrevY = r.ReadSingle(),
-                Hp = r.ReadSingle(), Cooldown = r.ReadSingle(), Order = (OrderKind)r.ReadByte(), DestX = r.ReadInt32(), DestY = r.ReadInt32(), Kills = r.ReadInt32(), PatrolX = r.ReadInt32(), PatrolY = r.ReadInt32(),
+                Hp = r.ReadSingle(), Cooldown = r.ReadSingle(), Order = (OrderKind)r.ReadByte(), DestX = r.ReadInt32(), DestY = r.ReadInt32(), Kills = r.ReadInt32(), PatrolX = r.ReadInt32(), PatrolY = r.ReadInt32(), AnchorX = r.ReadSingle(), AnchorY = r.ReadSingle(), Anchored = r.ReadBoolean(),
             };
             if (r.ReadBoolean()) needsField.Add(u);
             world._units.Add(u);

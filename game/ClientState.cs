@@ -39,6 +39,8 @@ public sealed class ClientState
     public readonly List<(float X, float Y, float Size, double Age)> Marks = new();
     public const int MaxMarks = 2500;
     public const double MarkLife = 4;
+    /// <summary>Where an order was just given, shrinking away: green for a move, red for an attack.</summary>
+    public readonly List<(float X, float Y, bool Attack, double Age)> OrderPings = new();
     public readonly List<(DemonHowled Howl, double Age)> Howls = new();
     public readonly List<(string Text, double Age)> Log = new();
 

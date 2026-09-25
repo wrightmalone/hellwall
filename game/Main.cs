@@ -451,6 +451,12 @@ public partial class Main : Node2D
         Age(_state.Shots, delta, ClientState.ShotLife);
         Age(_state.Bursts, delta, 0.4);
         Age(_state.Spits, delta, 0.45);
+        for (int i = _state.OrderPings.Count - 1; i >= 0; i--)
+        {
+            var p = _state.OrderPings[i];
+            if (p.Age + delta > 0.5) _state.OrderPings.RemoveAt(i);
+            else _state.OrderPings[i] = (p.X, p.Y, p.Attack, p.Age + delta);
+        }
         for (int i = _state.Marks.Count - 1; i >= 0; i--)
         {
             var m = _state.Marks[i];
@@ -580,7 +586,10 @@ public partial class Main : Node2D
                 if (mb.Pressed && _state.AttackMoveArmed)
                 {
                     if (_state.SelectedUnits.Count > 0)
+                    {
                         Send(new OrderUnits(_state.SelectedUnits.ToArray(), _state.PatrolArmed ? OrderKind.Patrol : OrderKind.AttackMove, _state.HoveredTile.X, _state.HoveredTile.Y));
+                        _state.OrderPings.Add((_state.HoveredTile.X + 0.5f, _state.HoveredTile.Y + 0.5f, true, 0));
+                    }
                     if (!mb.ShiftPressed) DisarmAttackMove(); // shift-click to give several in a row
                     _swallowRelease = true;
                     break;
@@ -614,7 +623,12 @@ public partial class Main : Node2D
                 else if (_state.SelectedUnits.Count == 0 && _state.SelectedBuilding is { } rb && _world.BuildingById(rb) is { Def.Trains.Length: > 0 })
                     Send(new SetRally(rb, _state.HoveredTile.X, _state.HoveredTile.Y));
                 else if (_state.SelectedUnits.Count > 0)
-                    Send(new OrderUnits(_state.SelectedUnits.ToArray(), mb.ShiftPressed ? OrderKind.Move : OrderKind.AttackMove, _state.HoveredTile.X, _state.HoveredTile.Y));
+                {
+                    // Right-click moves, and nothing stops a move: that's how you pull a squad out. Shift+right-click attack-moves.
+                    var order = mb.ShiftPressed ? OrderKind.AttackMove : OrderKind.Move;
+                    Send(new OrderUnits(_state.SelectedUnits.ToArray(), order, _state.HoveredTile.X, _state.HoveredTile.Y));
+                    _state.OrderPings.Add((_state.HoveredTile.X + 0.5f, _state.HoveredTile.Y + 0.5f, order != OrderKind.Move, 0));
+                }
                 else _state.SelectedBuilding = null;
                 break;
 

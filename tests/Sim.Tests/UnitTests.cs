@@ -203,3 +203,22 @@ public class PatrolTests
         Assert.Equal(StateHash.Compute(world), StateHash.Compute(loaded));
     }
 }
+
+public class LeashTests
+{
+    [Fact]
+    public void AnIdleSoldierDoesNotWanderOffAfterDemons()
+    {
+        var world = TestWorlds.Rich(TestWorlds.Dummies());
+        var keep = world.Buildings.Single(b => b.Kind == BuildingKind.Keep);
+        world.TrySpawnUnit(UnitKind.Militia, keep);
+        var u = world.Units.Last();
+        TestWorlds.RunSeconds(world, 0.5);
+        float ax = u.X, ay = u.Y;
+        // A demon just beyond its weapon, well beyond its leash: it mustn't go after it.
+        TestWorlds.Run(world, new SpawnDemons(DemonKind.Imp, (int)ax + 7, (int)ay, 1));
+        TestWorlds.RunSeconds(world, 10);
+        float dx = u.X - ax, dy = u.Y - ay;
+        Assert.True(dx * dx + dy * dy < 1.5f, $"wandered {MathF.Sqrt(dx * dx + dy * dy):0.0} tiles");
+    }
+}

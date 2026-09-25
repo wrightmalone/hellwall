@@ -364,7 +364,7 @@ p99 9.1 ms, sim 4.8 ms/tick.
 | Esc with nothing selected, or F10 | pause menu: fullscreen, master volume, quit to main menu, exit |
 | click | select a soldier or building |
 | drag | box-select soldiers (shift adds) |
-| right-click with soldiers | attack-move; shift+right-click for a plain move |
+| right-click with soldiers | move (they won't stop to fight); shift+right-click or A then click to attack-move |
 | `H` / `Shift+S` | hold / stop |
 | `Z` then click | patrol between here and there |
 | `Ctrl+A` / double-click a soldier | every soldier / every soldier of that kind on screen |
