@@ -80,9 +80,21 @@ public partial class Main : Node2D
     readonly List<double> _frameMs = new();
     readonly List<double> _tickMs = new();
 
+    /// <summary>One soundtrack for the whole session: it keeps playing across the menu, runs and reloads.</summary>
+    static Music? _music;
+    static Music TheMusic => _music!;
+
     public override void _Ready()
     {
         _options = ParseUserArgs();
+        if (_options.TryGetValue("dump-music", out var dump)) Music.DumpTo = dump;
+        if (_music == null || !IsInstanceValid(_music))
+        {
+            _music = new Music();
+            // Kept above the scene, so reloading the scene (a new run) doesn't restart it.
+            GetTree().Root.CallDeferred(Node.MethodName.AddChild, _music);
+        }
+        _music.World = null;
         if (_options.TryGetValue("ui-scale", out var ui)) Display.Override = float.Parse(ui, System.Globalization.CultureInfo.InvariantCulture);
         Display.Apply(GetTree().Root);
         var o = _options;
@@ -164,6 +176,7 @@ public partial class Main : Node2D
 
         _sound = new Sound();
         AddChild(_sound);
+        TheMusic.World = _world;
 
         _camera = new Camera2D { Position = Iso.P(_world.Terrain.Width / 2f, _world.Terrain.Height / 2f), Zoom = Vector2.One * 1.1f / Display.UiScale };
         if (options.TryGetValue("look", out var look) && look.Split(',') is [var lx, var ly, ..] parts)
@@ -678,6 +691,7 @@ public partial class Main : Node2D
         {
             var loaded = World.Load(System.IO.File.ReadAllBytes(SavePath), _baseRules);
             _world = loaded;
+            TheMusic.World = _world;
             BuildViews();
             // The horde layer is sized to the map, which a save may change.
             _horde.QueueFree();

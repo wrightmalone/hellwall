@@ -589,6 +589,15 @@ made alone; flag any you'd change.
 - **Score** on the end panel: days x 100 + kills + 150 per research - 5 per building lost,
   x1.5 for a win, times 0.5/1/1.6/2.5 by difficulty, x0.8 with fog off. The best per mode,
   map and difficulty is kept. Placeholder weights.
+- **Music, synthesized** (no files, nothing to license): a slow minor pad loop (Am, F, Dm,
+  E, eight seconds each) with sparse bells, and a battle layer (a heartbeat drum and a low
+  drone) that swells with how many awake demons are in sight and fades slowly after. It
+  plays across the menu and runs without restarting. A Music slider sits beside master
+  volume in both menus. `--dump-music=<dir>` writes both loops as WAVs to listen to.
+  Placeholder until there's a composer.
+- **Interface size** (75-175%) in both menus, for big or dense screens.
+- **End-of-run chart:** colonists, soldiers and awake demons over the days (each on its own
+  scale), with wave landings marked. The history lives in the sim, so saves keep it.
 - **Sounds** (still synthesized placeholders): a chime for a promotion, a creak and thump
   for a felled tree, a soft blip under a spoken line, a chord for victory.
 

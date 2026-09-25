@@ -75,6 +75,7 @@ public partial class PauseMenu : CanvasLayer
         row.AddChild(volume);
         row.AddChild(percent);
         box.AddChild(row);
+        box.AddChild(Display.MusicRow());
         box.AddChild(Display.UiScaleRow());
 
         box.AddChild(new HSeparator());
@@ -120,6 +121,17 @@ public static class Display
     {
         Settings.Set("ui_scale", scale);
         Apply();
+    }
+
+    /// <summary>A slider row for the music's volume (times the master volume), for both menus.</summary>
+    public static HBoxContainer MusicRow()
+    {
+        var row = new HBoxContainer();
+        row.AddChild(UiKit.Label("Music", 13));
+        var slider = new HSlider { MinValue = 0, MaxValue = 1, Step = 0.05, Value = Music.Volume, SizeFlagsHorizontal = Control.SizeFlags.ExpandFill, FocusMode = Control.FocusModeEnum.None };
+        slider.ValueChanged += v => Settings.Set("music", (float)v);
+        row.AddChild(slider);
+        return row;
     }
 
     /// <summary>A slider row for the interface size, for both menus.</summary>
