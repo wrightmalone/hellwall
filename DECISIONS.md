@@ -467,6 +467,24 @@ like TAB), ruins, veterancy, repair plus the Spitter, the end-of-run chart and s
 Cottages, music. Balance at Normal is back in its band after each change (the sweep's
 numbers are with each item). Things for you to decide are marked **Decide**.
 
+**The balance, start of this session against the end** (bot wins out of 24: eight seeds
+times three build paths; Normal and Plains unless named):
+
+| | before | after |
+|---|---|---|
+| Easy | 20 | 21 |
+| Normal | 11 | 14 |
+| Hard | 8 | 9 |
+| Nightmare | 1 | 3 |
+| Lakes | 6 | 8 |
+| Highlands | 18 | 13 |
+| Wildwood | 9 | 9 |
+
+Everything that changed in between (fog, looser packs, Spitters, repair, ruins, patrons,
+veterancy) moved these by a few wins at most; the curve from Easy to Nightmare still falls
+steadily. The campaign's curve still holds (the first missions won by every path, the
+last lost by at least one).
+
 ### Living woods (your idea)
 
 - **It's an option, off by default** (new-game menu "Living woods", `--woods`, rule
