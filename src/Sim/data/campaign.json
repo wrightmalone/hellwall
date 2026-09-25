@@ -388,7 +388,9 @@
           "speaker": "captain"
         }
       ],
-      "ruins": 0
+      "ruins": 0,
+      "waves": 1.4,
+      "convergence": 1.4
     }
   ]
 }

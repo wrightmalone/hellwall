@@ -788,6 +788,9 @@ last lost by at least one).
 - Tests: a Templar goes round a House to kill a demon behind it (it failed before: he pressed
   into the wall); six soldiers thread a one-tile lane between two rows of Houses; a wall that
   would seal a House is flagged. Sweep 15/24.
+- **The Hellwall's waves and Convergence are 1.4x** its rules: with soldiers that can get round
+  buildings, every bot path won the final mission, and the campaign curve needs it lost by at
+  least one. At 1.4x, pyre wins, fortress and legion lose.
 
 ## Buildings from KayKit Medieval Hexagon (you downloaded it and the Medieval Village MegaKit)
 
