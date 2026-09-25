@@ -636,6 +636,9 @@ numbers are with each item). Things for you to decide are marked **Decide**.
 - **Noise view** (F4): the noise grid over the ground, orange as it builds and red where it's
   loud enough to wake a sleeping pack. The gaps list suggested making noise visible; this is
   the cheap version (a toggle, not always on).
+- **The campaign map is an old map now,** not a brown board: land, sea, forest and contoured
+  hills from noise, darkening to a red glow in the east where the Hellwall stands, with dashed
+  roads that turn gold as missions are won. Still placeholder art, but it reads as a place.
 - **The main menu scrolls** when a large interface size makes it taller than the window.
 - **Weekly challenge** (main menu): a seed and map kind from the ISO year and week, at Normal,
   the same for everyone; its best score is kept like any other. Ready for a shared
