@@ -182,6 +182,9 @@ public partial class NewGameMenu : CanvasLayer
         var hints = new CheckButton { Text = "Hints for a first run", ButtonPressed = Coach.Enabled };
         hints.Toggled += on => Settings.Set("hints", on);
         side.AddChild(hints);
+        var credits = UiKit.TextButton("Credits", 13);
+        credits.Pressed += ShowCredits;
+        side.AddChild(credits);
         var quit = UiKit.TextButton("Exit game", 13);
         quit.Pressed += () => GetTree().Quit();
         side.AddChild(quit);
@@ -265,6 +268,26 @@ public partial class NewGameMenu : CanvasLayer
     }
 
     static readonly int MapKinds = Enum.GetValues<MapKind>().Length;
+
+    /// <summary>Who made what: the same list as CREDITS.md. Every pack is CC0; credit is a courtesy we keep.</summary>
+    const string CreditsText =
+        "HELLWALL: a playtest build\n\n" +
+        "Art (all CC0, public domain)\n" +
+        "  Kenney (kenney.nl): Tower Defense, Isometric Tiles Landscape, Graveyard Kit\n" +
+        "  Quaternius (quaternius.com): RPG Characters (the soldiers), Ultimate Monsters (the demons),\n" +
+        "    Stylized Nature MegaKit (trees, rocks, grass)\n" +
+        "  Kay Lousberg (kaylousberg.itch.io): KayKit Dungeon Pack (the gold, food and sanctity icons)\n\n" +
+        "Sound and music: synthesized in code, placeholders.\n\n" +
+        "Built with Godot (godotengine.org) and .NET.";
+
+    void ShowCredits()
+    {
+        var dialog = new AcceptDialog { Title = "Credits", DialogText = CreditsText, OkButtonText = "Close" };
+        AddChild(dialog);
+        dialog.PopupCentered();
+        dialog.Confirmed += dialog.QueueFree;
+        dialog.Canceled += dialog.QueueFree;
+    }
 
     /// <summary>This ISO week's challenge: a seed and a kind of map from the year and week, at Normal, as designed.</summary>
     static ScenarioDef Weekly()
