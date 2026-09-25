@@ -12,7 +12,7 @@ public partial class PauseMenu : CanvasLayer
 {
     public Action Resume = null!;
     public Action QuitToMenu = null!;
-    public Action Save = null!, Load = null!;
+    public Action Save = null!, Load = null!, Controls = null!;
     /// <summary>When the quicksave was written, or null for none.</summary>
     public DateTime? Saved;
 
@@ -40,6 +40,9 @@ public partial class PauseMenu : CanvasLayer
         var resume = UiKit.TextButton("Resume  (Esc)", 16);
         resume.Pressed += () => Resume();
         box.AddChild(resume);
+        var controls = UiKit.TextButton("Controls  (F1)", 14);
+        controls.Pressed += () => { Resume(); Controls(); };
+        box.AddChild(controls);
 
         var saves = new HBoxContainer();
         saves.AddThemeConstantOverride("separation", 8);

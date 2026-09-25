@@ -510,7 +510,7 @@ public partial class Main : Node2D
         _state.Armed = null;
         _pauseMenu = new PauseMenu
         {
-            Resume = ClosePauseMenu, QuitToMenu = NewRun, Save = QuickSave,
+            Resume = ClosePauseMenu, QuitToMenu = NewRun, Save = QuickSave, Controls = () => _hud.ToggleHelp(),
             Load = () => { ClosePauseMenu(); QuickLoad(); },
             Saved = System.IO.File.Exists(SavePath) ? System.IO.File.GetLastWriteTime(SavePath) : null,
         };
