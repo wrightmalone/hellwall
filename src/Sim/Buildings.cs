@@ -31,6 +31,8 @@ public enum BuildingKind : byte
     Fishery,
     /// <summary>A House rebuilt in stone: twice the room on the same ground. Only by upgrading a House.</summary>
     Cottage,
+    /// <summary>The third tier: a Cottage raised again, after Masonry. Only by upgrading a Cottage.</summary>
+    Manor,
 }
 
 public sealed class Building

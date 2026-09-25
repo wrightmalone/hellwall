@@ -70,8 +70,10 @@ public partial class Inspector : PanelContainer
             if (b.Def.UpgradesTo is { } to)
             {
                 var upDef = World.Def(to);
-                _upgrade.Disabled = b.Upgrading || !World.Colony.CanAfford(upDef.Cost);
-                _upgrade.Text = b.Upgrading ? $"Upgrading to {to}... {b.UpgradeProgress / upDef.BuildSeconds:P0}" : $"Upgrade to {to} ({upDef.Cost})";
+                bool locked = upDef.RequiresTech is { } needs && !World.Tech.Has(needs);
+                _upgrade.Disabled = b.Upgrading || locked || !World.Colony.CanAfford(upDef.Cost);
+                _upgrade.Text = b.Upgrading ? $"Upgrading to {to}... {b.UpgradeProgress / upDef.BuildSeconds:P0}"
+                    : locked ? $"{to} needs {World.Rules.Tech(upDef.RequiresTech!).Name}" : $"Upgrade to {to} ({upDef.Cost})";
                 _upgrade.TooltipText = $"{to}: {Blurbs.Of(to)}\n{upDef.Hp:0} hp{Hud.Describe(upDef)}\nIt works as it is while the builders are at it.";
             }
             _demolish.Text = b.Possessed ? "X  Purge" : "X  Demolish";
