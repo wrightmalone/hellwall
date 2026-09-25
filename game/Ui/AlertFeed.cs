@@ -100,7 +100,7 @@ public partial class AlertFeed : VBoxContainer
             case BuildingPossessed p when World.BuildingById(p.BuildingId) is { } b:
                 Push("possessed", $"{p.Kind} possessed: {p.Occupants} turning", Red, new Vector2(b.CentreX, b.CentreY), 14);
                 break;
-            case BuildingDestroyed { Kind: BuildingKind.Wall or BuildingKind.StoneWall or BuildingKind.Gate } w:
+            case BuildingDestroyed { Kind: BuildingKind.Wall or BuildingKind.StoneWall or BuildingKind.Gate or BuildingKind.StoneGate } w:
                 Push("breach", "The wall is breached", Amber, new Vector2(w.X + 0.5f, w.Y + 0.5f), 12);
                 break;
             case BuildingDestroyed d:

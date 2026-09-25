@@ -639,6 +639,8 @@ last lost by at least one).
   with fortress and pyre; legion is busy raiding gates and loses on the clock.
 - **Manors:** a Cottage upgrades again after Masonry (120 gold, 80 stone, 10 iron) to a Manor,
   20 colonists on a House's ground.
+- **A stone gate** (from the gaps list), after Masonry: 1,400 hp against a timber gate's 500,
+  in the Walls tab and drawn as stone with the gate's arch.
 - **The editor has undo** (Ctrl+Z or the button): every stroke or placement, 40 deep.
 - **The Fishery** (O): food from the water around it, so lakeshores are worth building on.
   Slightly better per tile than a Hunter, worse than a Farm.

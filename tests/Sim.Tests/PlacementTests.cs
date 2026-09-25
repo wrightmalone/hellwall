@@ -122,3 +122,19 @@ public class PlacementTests
         throw new InvalidOperationException($"seed {world.Seed} has no {tile}; pick another seed for this test");
     }
 }
+
+public class StoneGateTests
+{
+    [Fact]
+    public void AStoneGateLetsPeopleThroughAndNotTheHorde()
+    {
+        var world = TestWorlds.Rich();
+        Assert.Contains("needs Masonry", world.CheckPlacement(BuildingKind.StoneGate, TestWorlds.C + 6, TestWorlds.C));
+        world.Grant("masonry");
+        var gate = TestWorlds.Built(world, BuildingKind.StoneGate, TestWorlds.C + 6, TestWorlds.C);
+        Assert.True(gate.IsWallLike && gate.IsGate);
+        Assert.True(world.IsHumanWalkable(gate.X, gate.Y));
+        Assert.False(world.IsWalkable(gate.X, gate.Y));
+        Assert.True(gate.Def.Hp > world.Def(BuildingKind.Gate).Hp);
+    }
+}

@@ -51,7 +51,7 @@ public sealed class ClientState
     /// </summary>
     public IEnumerable<(int X, int Y)> GhostTiles()
     {
-        bool line = Armed is BuildingKind.Wall or BuildingKind.Gate && DragStart != null;
+        bool line = Armed is BuildingKind.Wall or BuildingKind.Gate or BuildingKind.StoneWall or BuildingKind.StoneGate && DragStart != null;
         if (!line)
         {
             yield return HoveredTile;

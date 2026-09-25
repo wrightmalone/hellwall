@@ -22,6 +22,7 @@ public static class Blurbs
         BuildingKind.Wall => "cheap timber; the horde breaks the wall nearest its path",
         BuildingKind.StoneWall => "a wall that lasts",
         BuildingKind.Gate => "a wall your soldiers can walk through",
+        BuildingKind.StoneGate => "a stone wall your soldiers can walk through",
         BuildingKind.Watchtower => "the everyday tower: steady arrows at the nearest demon",
         BuildingKind.Bombard => "slow, loud, splash: for crowds at the wall",
         BuildingKind.LanceTower => "long range, heavy bolts: for Brutes and the big ones",

@@ -120,6 +120,7 @@
                     "consecrateRadius": 5 },
     "Wall":       { "size": [1, 1], "hp": 400,  "buildSeconds": 2,  "cost": { "wood": 2 } },
     "Gate":       { "size": [1, 1], "hp": 500,  "buildSeconds": 4,  "cost": { "wood": 8, "stone": 2 } },
+    "StoneGate":  { "size": [1, 1], "hp": 1400, "buildSeconds": 6, "cost": { "wood": 4, "stone": 12 }, "requiresTech": "masonry" },
     "Watchtower": { "size": [2, 2], "hp": 400,  "buildSeconds": 8,  "cost": { "gold": 70, "wood": 20 },
                     "sanctityUse": 3, "possessable": false,
                     "weapon": { "range": 7, "damage": 20, "cooldown": 0.5, "noise": 14 } },
@@ -176,8 +177,8 @@
       "modifiers": [ { "group": "units", "stat": "hp", "mul": 1.2 } ] },
 
     { "id": "masonry", "name": "Masonry", "tier": 1, "cost": { "gold": 150, "stone": 60 }, "seconds": 40,
-      "description": "Stone walls, three times the hit points of wood; Belfries, whose bells slow demons.",
-      "unlocksBuildings": ["StoneWall", "Belfry"] },
+      "description": "Stone walls and gates, three times the hit points of wood; Belfries, whose bells slow demons.",
+      "unlocksBuildings": ["StoneWall", "StoneGate", "Belfry"] },
     { "id": "fletching", "name": "Fletching", "tier": 1, "cost": { "gold": 200 }, "seconds": 45,
       "description": "Towers +25% damage, soldiers +20%.",
       "modifiers": [ { "group": "towers", "stat": "damage", "mul": 1.25 }, { "group": "units", "stat": "damage", "mul": 1.2 } ] },

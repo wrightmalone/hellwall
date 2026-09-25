@@ -32,6 +32,7 @@ public static class Palette
         BuildingKind.Wardstone => new(0.85f, 0.80f, 0.55f),
         BuildingKind.Wall => new(0.66f, 0.66f, 0.70f),
         BuildingKind.Gate => new(0.50f, 0.40f, 0.30f),
+        BuildingKind.StoneGate => new(0.7f, 0.7f, 0.68f),
         BuildingKind.Watchtower => new(0.45f, 0.55f, 0.75f),
         BuildingKind.Bombard => new(0.35f, 0.38f, 0.55f),
         BuildingKind.Barracks => new(0.70f, 0.30f, 0.30f),

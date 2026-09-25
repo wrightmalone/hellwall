@@ -554,7 +554,7 @@ public partial class Main : Node2D
                 {
                     _state.DragStart = GetGlobalMousePosition();
                     _state.DragStartTile = _state.HoveredTile;
-                    if (_state.Armed is { } k && k is not (BuildingKind.Wall or BuildingKind.Gate))
+                    if (_state.Armed is { } k && k is not (BuildingKind.Wall or BuildingKind.Gate or BuildingKind.StoneWall or BuildingKind.StoneGate))
                     {
                         Send(new PlaceBuilding(k, _state.HoveredTile.X, _state.HoveredTile.Y));
                         _state.DragStart = null;

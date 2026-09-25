@@ -23,7 +23,7 @@ public partial class CommandCard : PanelContainer
         ("Town", [BuildingKind.House, BuildingKind.Farm, BuildingKind.Hunter, BuildingKind.Fishery, BuildingKind.Woodcutter, BuildingKind.Quarry]),
         ("Works", [BuildingKind.Mine, BuildingKind.SilverMine, BuildingKind.Barracks, BuildingKind.Scriptorium]),
         ("Holy", [BuildingKind.Shrine, BuildingKind.Wardstone]),
-        ("Walls", [BuildingKind.Wall, BuildingKind.StoneWall, BuildingKind.Gate]),
+        ("Walls", [BuildingKind.Wall, BuildingKind.StoneWall, BuildingKind.Gate, BuildingKind.StoneGate]),
         ("Towers", [BuildingKind.Watchtower, BuildingKind.Bombard, BuildingKind.LanceTower, BuildingKind.Censer, BuildingKind.Belfry, BuildingKind.Skyspire]),
     ];
 

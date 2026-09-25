@@ -33,6 +33,8 @@ public enum BuildingKind : byte
     Cottage,
     /// <summary>The third tier: a Cottage raised again, after Masonry. Only by upgrading a Cottage.</summary>
     Manor,
+    /// <summary>A gate in stone: a stone wall your people can walk through. After Masonry.</summary>
+    StoneGate,
 }
 
 public sealed class Building
@@ -107,7 +109,8 @@ public sealed class Building
     /// <summary>Doing its job: built, on holy ground, and crewed if it needs a crew.</summary>
     public bool Active => Complete && OnGround && !Possessed && (!NeedsCrew || Staffed);
 
-    public bool IsWallLike => Kind is BuildingKind.Wall or BuildingKind.Gate or BuildingKind.StoneWall;
+    public bool IsWallLike => Kind is BuildingKind.Wall or BuildingKind.Gate or BuildingKind.StoneWall or BuildingKind.StoneGate;
+    public bool IsGate => Kind is BuildingKind.Gate or BuildingKind.StoneGate;
 
     /// <summary>What the horde paths to: anything built except walls and gates (which it paths through) and what it already holds.</summary>
     public bool IsDemonTarget => !IsWallLike && !Possessed;

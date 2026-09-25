@@ -94,7 +94,7 @@ public sealed class TechState
         m.Building == kind || m.Group switch
         {
             "towers" => def.Weapon != null,
-            "walls" => kind is BuildingKind.Wall or BuildingKind.Gate or BuildingKind.StoneWall,
+            "walls" => kind is BuildingKind.Wall or BuildingKind.Gate or BuildingKind.StoneWall or BuildingKind.StoneGate,
             "gatherers" => def.Produces != null,
             "food" => def.Produces == Resource.Food,
             _ => false,

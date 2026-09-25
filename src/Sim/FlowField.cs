@@ -67,7 +67,7 @@ public sealed class FlowField
     }
 
     /// <summary>What the horde heads for: everything built except walls and gates, which it paths through.</summary>
-    public static bool IsTarget(BuildingKind kind) => kind is not (BuildingKind.Wall or BuildingKind.Gate);
+    public static bool IsTarget(BuildingKind kind) => kind is not (BuildingKind.Wall or BuildingKind.Gate or BuildingKind.StoneGate);
 
     /// <summary>The demon field: toward every target building, through walls at a cost.</summary>
     public void Build(World world) => Build(world, human: false, 0, 0);

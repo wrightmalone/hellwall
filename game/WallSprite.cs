@@ -26,8 +26,8 @@ public sealed partial class WallSprite : Node2D
 
     public override void _Draw()
     {
-        bool stone = _b.Kind == BuildingKind.StoneWall;
-        bool gate = _b.Kind == BuildingKind.Gate;
+        bool stone = _b.Kind is BuildingKind.StoneWall or BuildingKind.StoneGate;
+        bool gate = _b.IsGate;
         float height = stone ? 26 : gate ? 24 : 18;
         var top = stone ? new Color(0.78f, 0.78f, 0.74f) : new Color(0.62f, 0.45f, 0.28f);
         var right = top.Darkened(0.22f);

@@ -376,7 +376,7 @@ public sealed partial class World
     {
         if (!Terrain.InBounds(x, y) || Blocked(Terrain.Get(x, y)) || _gateTile[Terrain.Index(x, y)]) return false;
         int id = _occupancy[Terrain.Index(x, y)];
-        return id == 0 || _buildingById[id].Kind == BuildingKind.Gate;
+        return id == 0 || _buildingById[id].IsGate;
     }
 
     internal bool IsWallAt(int x, int y)

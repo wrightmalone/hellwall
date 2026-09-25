@@ -139,6 +139,7 @@ public static class Art
         BuildingKind.Wall => [Brown(8)],
         BuildingKind.StoneWall => [Grey(8)],
         BuildingKind.Gate => [Brown(7)],
+        BuildingKind.StoneGate => [Grey(8)],
         BuildingKind.Watchtower => [Grey(36)],
         BuildingKind.Bombard => [Red(25)],
         BuildingKind.LanceTower => [Grey(1), Grey(46)],
@@ -153,7 +154,7 @@ public static class Art
     /// <summary>How wide a building's pieces draw, as a share of its footprint's diamond. Walls fill theirs, so a line of them reads as one wall.</summary>
     public static float Fill(BuildingKind kind) => kind switch
     {
-        BuildingKind.Wall or BuildingKind.StoneWall or BuildingKind.Gate => 1.0f,
+        BuildingKind.Wall or BuildingKind.StoneWall or BuildingKind.Gate or BuildingKind.StoneGate => 1.0f,
         BuildingKind.Farm => 0.45f,
         BuildingKind.Wardstone or BuildingKind.Skyspire or BuildingKind.Censer => 0.8f,
         _ => 0.72f,
