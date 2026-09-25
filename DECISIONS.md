@@ -461,7 +461,7 @@ advanced units, and whatever else I thought worth a swing. Each decision below i
 made alone; flag any you'd change.
 
 **Where things stand.** Everything on your list is in, and the latest build of all of it is
-`out/build/Hellwall-0.12.0-macos.zip` (and `-windows.zip`); 0.9.0 has everything up to
+`out/build/Hellwall-0.12.1-macos.zip` (and `-windows.zip`); 0.9.0 has everything up to
 repair and the Spitter, 0.11.0 everything but the review fixes and the last few menu
 additions. verify.sh passes on the final code. My own
 swings, in the order I'd rate them: fog plus visible sleeping demons (the map finally looks
