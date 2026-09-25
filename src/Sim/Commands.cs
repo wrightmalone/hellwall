@@ -37,6 +37,9 @@ public sealed record SetRally(int BuildingId, int X, int Y) : Command;
 /// <summary>Start researching a tech at a Scriptorium. Paid for up front; refunded if the building is lost.</summary>
 public sealed record Research(int BuildingId, string TechId) : Command;
 
+/// <summary>Take one of the blessings on offer (World.PatronOffer).</summary>
+public sealed record ChoosePatron(string TechId) : Command;
+
 /// <summary>Rebuild a building as what it upgrades to (a House as a Cottage), in place.</summary>
 public sealed record UpgradeBuilding(int BuildingId) : Command;
 

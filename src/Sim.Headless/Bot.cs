@@ -70,6 +70,8 @@ public sealed class Bot
     /// <summary>One decision step; call about once a second.</summary>
     public void Act()
     {
+        // A patron's blessing on offer: take the first (the offer is a seeded draw, so this is a fair pick).
+        if (_world.PatronOffer.Length > 0) Do(new ChoosePatron(_world.PatronOffer[0]));
         foreach (var b in _world.Buildings.Where(b => b.Possessed).ToList())
             Do(new Demolish(b.Id)); // purge at once: every second it stands is another Thrall
 

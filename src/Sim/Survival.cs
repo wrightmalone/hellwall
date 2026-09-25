@@ -4,6 +4,8 @@ namespace Hellwall.Sim;
 public sealed record SurvivalRules
 {
     public float DaySeconds { get; init; } = 60;
+    /// <summary>Colonists at which a patron saint offers a blessing (three to choose from, one each).</summary>
+    public int[] PatronMilestones { get; init; } = [];
 
     /// <summary>The Convergence lands at the end of this day; survive it to win.</summary>
     public int Days { get; init; } = 60;

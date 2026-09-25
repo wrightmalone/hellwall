@@ -159,3 +159,29 @@ public class TechTests
         Assert.Null(world.CheckResearch("fletching"));
     }
 }
+
+public class PatronTests
+{
+    [Fact]
+    public void AMilestoneOffersThreeBlessingsAndOneIsKept()
+    {
+        var rules = Rules.Default.WithSurvival(s => s with { PatronMilestones = [1, 1000] }).WithStartingResources(TestWorlds.Plenty);
+        var world = World.Create(new WorldOptions(7, 256, 0, rules, Survival: true));
+        world.DrainEvents();
+        TestWorlds.Built(world, BuildingKind.House, 132, 126);
+        TestWorlds.RunSeconds(world, 3);
+        var offered = new PatronOffered(0, world.PatronOffer); // made while the House went up
+        Assert.Equal(3, offered.TechIds.Distinct().Count());
+        Assert.All(offered.TechIds, id => Assert.True(world.Rules.Tech(id).Patron));
+        Assert.Equal("that blessing isn't on offer", TestWorlds.Run(world, new ChoosePatron("masonry")).OfType<CommandRejected>().Single().Reason);
+        Assert.Equal("a patron's blessing is chosen, not researched", world.CheckResearch(offered.TechIds[0]));
+        var events = TestWorlds.Run(world, new ChoosePatron(offered.TechIds[1]));
+        Assert.Contains(events, e => e is PatronChosen c && c.TechId == offered.TechIds[1]);
+        Assert.True(world.Tech.Has(offered.TechIds[1]));
+        Assert.Empty(world.PatronOffer);
+        Assert.Equal(1, world.PatronsTaken);
+        Assert.Empty(TestWorlds.RunSeconds(world, 3).OfType<PatronOffered>()); // the next milestone is far off
+        var loaded = World.Load(world.Save(), world.Rules);
+        Assert.Equal(StateHash.Compute(world), StateHash.Compute(loaded));
+    }
+}

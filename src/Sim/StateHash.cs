@@ -129,6 +129,8 @@ public static class StateHash
         foreach (bool fired in world.TriggersFired) h = MixByte(h, fired ? (byte)1 : (byte)0);
         h = Mix(h, (uint)world.TreesFelled);
         h = Mix(h, (uint)world.Stats.History.Count);
+        h = Mix(h, (uint)world.PatronsTaken);
+        foreach (var id in world.PatronOffer) h = MixString(h, id);
         foreach (var ruin in world.Ruins) { h = Mix(h, (uint)ruin.Id); h = MixByte(h, ruin.Looted ? (byte)1 : (byte)0); }
         for (int i = 0; i < world.Vision.Explored.Length; i += 1) if (world.Vision.Explored[i]) h = Mix(h, (uint)i);
         for (int i = 0; i < world.TreeHp.Length; i++)

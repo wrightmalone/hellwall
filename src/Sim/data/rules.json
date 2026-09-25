@@ -60,7 +60,7 @@
   },
 
   "survival": {
-    "daySeconds": 60, "days": 60,
+    "daySeconds": 60, "days": 60, "patronMilestones": [40, 90, 160],
     "firstWaveDay": 6, "waveEveryDays": 3, "telegraphSeconds": 60,
     "firstWaveSize": 30, "waveGrowth": 1.24,
     "wavesPerExtraSide": 5, "maxSides": 3,
@@ -156,6 +156,23 @@
   },
 
   "techs": [
+    { "id": "st-aldric", "name": "Saint Aldric of the Wall", "patron": true, "description": "Walls and gates +50% hit points.",
+      "modifiers": [ { "group": "walls", "stat": "hp", "mul": 1.5 } ] },
+    { "id": "st-brigid", "name": "Saint Brigid of the Harvest", "patron": true, "description": "Farms, Hunters and Fisheries yield 30% more.",
+      "modifiers": [ { "group": "food", "stat": "rate", "mul": 1.3 } ] },
+    { "id": "st-cassian", "name": "Saint Cassian the Archer", "patron": true, "description": "Towers +15% damage and +1 range.",
+      "modifiers": [ { "group": "towers", "stat": "damage", "mul": 1.15 }, { "group": "towers", "stat": "range", "add": 1 } ] },
+    { "id": "st-dunstan", "name": "Saint Dunstan of the Forge", "patron": true, "description": "Mines and Silver Mines yield 50% more.",
+      "modifiers": [ { "building": "Mine", "stat": "rate", "mul": 1.5 }, { "building": "SilverMine", "stat": "rate", "mul": 1.5 } ] },
+    { "id": "st-hild", "name": "Saint Hild the Tither", "patron": true, "description": "Colonists pay 20% more gold.",
+      "modifiers": [ { "stat": "colonistGold", "mul": 1.2 } ] },
+    { "id": "st-wendel", "name": "Saint Wendel the Swift", "patron": true, "description": "Soldiers move 20% faster and train in three quarters of the time.",
+      "modifiers": [ { "group": "units", "stat": "speed", "mul": 1.2 }, { "group": "units", "stat": "trainSeconds", "mul": 0.75 } ] },
+    { "id": "st-ursula", "name": "Saint Ursula of the Light", "patron": true, "description": "Holy ground burns demons standing on it (3 a second), and Wardstones reach 2 tiles further.",
+      "modifiers": [ { "stat": "holyGroundDps", "add": 3 }, { "building": "Wardstone", "stat": "consecrateRadius", "add": 2 } ] },
+    { "id": "st-gregory", "name": "Saint Gregory the Steadfast", "patron": true, "description": "Soldiers +20% hit points.",
+      "modifiers": [ { "group": "units", "stat": "hp", "mul": 1.2 } ] },
+
     { "id": "masonry", "name": "Masonry", "tier": 1, "cost": { "gold": 150, "stone": 60 }, "seconds": 40,
       "description": "Stone walls, three times the hit points of wood; Belfries, whose bells slow demons.",
       "unlocksBuildings": ["StoneWall", "Belfry"] },

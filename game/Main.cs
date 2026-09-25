@@ -165,6 +165,7 @@ public partial class Main : Node2D
         _baseRules = rules; // saves record whether the woods were living, and Load puts that back
         if (setup.Woods || options.ContainsKey("woods")) rules = rules.WithWoods(w => w with { Blocks = true });
         if (options.ContainsKey("reveal")) rules = rules.WithFog(f => f with { Enabled = false });
+        if (options.ContainsKey("patrons-now")) rules = rules.WithSurvival(s => s with { PatronMilestones = [1, .. s.PatronMilestones] }); // screenshots of the picker
         // A survival run takes its packs from rules.json (wilds).
         _world = setup.Mission is { } mission && !scripted
             ? World.Create(mission.Options(rules))

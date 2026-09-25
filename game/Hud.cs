@@ -69,6 +69,7 @@ public partial class Hud : CanvasLayer
         AddChild(Alerts);
         Voice = new TalkingHead();
         AddChild(Voice);
+        AddChild(new PatronPicker { World = World, Send = Send });
         AddChild(Minimap);
         _card = new CommandCard { World = World, State = State, Send = Send, Order = Order };
         AddChild(_card);

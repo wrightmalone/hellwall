@@ -125,6 +125,12 @@ public partial class AlertFeed : VBoxContainer
                 // The line itself is spoken in the talking head; the feed keeps a card to jump to where they're coming from.
                 Push("script-" + m.Index, $"{m.Spawned} demons from the {m.Side.ToString().ToLowerInvariant()}", Gold, EdgeOf(m.Side), 16);
                 break;
+            case PatronOffered:
+                Push("patron", "A patron saint offers a blessing: choose one (top of the screen)", Gold, null, 12);
+                break;
+            case PatronChosen c:
+                Push("patron", $"Blessed: {World.Rules.Tech(c.TechId).Name}", Gold, null, 8);
+                break;
             case RuinLooted l:
                 Push("ruin-" + l.RuinId, $"Ruins looted: {l.Loot}", Gold, new Vector2(l.X, l.Y), 12);
                 break;

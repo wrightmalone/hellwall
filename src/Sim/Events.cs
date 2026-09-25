@@ -46,6 +46,10 @@ public sealed record DemonsKilled(int Tick, int Count) : SimEvent(Tick);
 /// A shot the player's side fired, so the client can draw it. Damage is
 /// resolved instantly; there are no projectiles in the sim.
 /// </summary>
+/// <summary>The colony reached a milestone: choose one of these blessings.</summary>
+public sealed record PatronOffered(int Tick, string[] TechIds) : SimEvent(Tick);
+public sealed record PatronChosen(int Tick, string TechId) : SimEvent(Tick);
+
 public sealed record BuildingUpgraded(int Tick, int BuildingId, BuildingKind From, BuildingKind To) : SimEvent(Tick);
 
 /// <summary>Soldiers reached a cleared ruin and took what was there.</summary>

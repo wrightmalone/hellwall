@@ -625,6 +625,14 @@ numbers are with each item). Things for you to decide are marked **Decide**.
   Cottage can't be placed directly. The bot doesn't upgrade, so the sweeps don't see it.
   A third tier (a Manor?) is one line of data once you want it.
 - **Tooltips** say what each building and soldier is for, as well as its numbers.
+- **Patrons** (the gaps list's "mayors", changed): at 40, 90 and 160 colonists a patron saint
+  offers three blessings, drawn from eight, and you keep one. Walls +50% hp; food +30%;
+  towers +15% damage and +1 range; mines +50%; tithes +20%; soldiers faster and quicker to
+  train; holy ground that burns (3/s) and longer-reaching Wardstones; soldiers +20% hp. Each
+  is a tech marked `patron`, so they're data and use the research modifiers. The game
+  doesn't pause for the choice; the offer waits. The bot takes the first card. Sweep with
+  them: 14/24 (from 11), spread 3-6 per path, average day 60-63. **Decide:** the saints'
+  names and the milestones are placeholders for the story.
 - **Patrol** (Z then click, or the card's button): soldiers attack-move to the point, then back
   to where they stood, for ever, fighting what comes in reach. For guarding a wall line or a
   road to an outpost.

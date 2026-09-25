@@ -108,6 +108,9 @@ public sealed partial class World
     readonly List<Pack> _packs = new();
     readonly List<Hellgate> _gates = new();
     readonly List<Ruin> _ruins = new();
+    /// <summary>The blessings on offer now (empty: none), and how many milestones have been answered.</summary>
+    public string[] PatronOffer { get; internal set; } = [];
+    public int PatronsTaken { get; internal set; }
     public IReadOnlyList<Ruin> Ruins => _ruins;
     internal List<Ruin> RuinList => _ruins;
 
@@ -283,6 +286,7 @@ public sealed partial class World
         RepairSystem.Step(this, dt);
         RuinSystem.Step(this);
         StepUpgrades(dt);
+        PatronSystem.Step(this);
         if (Survival != null && Tick % (int)(Rules.Survival.DaySeconds * Balance.TickHz / 2) == 0)
             Stats.History.Add(new HistorySample(Tick, Colony.Colonists, _units.Count, Horde.Count));
         Abilities.Heal(this, dt);
@@ -606,6 +610,7 @@ public sealed partial class World
             SetRally r => TrySetRally(r),
             Research r => TryResearch(r),
             UpgradeBuilding u => TryUpgrade(u.BuildingId),
+            ChoosePatron p => PatronSystem.Choose(this, p.TechId),
             OrderUnits o => TryOrder(o),
             _ => "unknown command",
         };
@@ -760,6 +765,7 @@ public sealed partial class World
     {
         var tech = Rules.Techs.FirstOrDefault(t => t.Id == id);
         if (tech == null) return "no such tech";
+        if (tech.Patron) return "a patron's blessing is chosen, not researched";
         if (Tech.Has(id)) return "already researched";
         if (Scenario?.Locks(id) == true) return "not in this mission";
         if (_buildings.Any(b => b.Researching == id)) return "already being researched";
@@ -797,6 +803,12 @@ public sealed partial class World
         string id = at.Researching!;
         at.Researching = null;
         at.ResearchProgress = 0;
+        Grant(id);
+    }
+
+    /// <summary>A tech takes effect: from research, or a patron's blessing.</summary>
+    internal void Grant(string id)
+    {
         Tech.Researched.Add(id);
         Tech.Recompute(Rules);
         foreach (var b in _buildings)

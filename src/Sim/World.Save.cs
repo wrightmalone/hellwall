@@ -181,6 +181,9 @@ public sealed partial class World
             foreach (bool fired in TriggersFired) w.Write(fired);
             SaveWoods(w);
             foreach (bool seen in Vision.Explored) w.Write(seen);
+            w.Write(PatronsTaken);
+            w.Write(PatronOffer.Length);
+            foreach (var id in PatronOffer) w.Write(id);
             w.Write(_ruins.Count);
             foreach (var ruin in _ruins)
             {
@@ -389,6 +392,10 @@ public sealed partial class World
         var explored = new bool[world.Vision.Explored.Length];
         for (int i = 0; i < explored.Length; i++) explored[i] = r.ReadBoolean();
         world.Vision.Load(explored);
+        world.PatronsTaken = r.ReadInt32();
+        var offer = new string[r.ReadInt32()];
+        for (int i = 0; i < offer.Length; i++) offer[i] = r.ReadString();
+        world.PatronOffer = offer;
         for (int n = r.ReadInt32(); n > 0; n--)
         {
             var ruin = new Ruin { Id = r.ReadInt32(), X = r.ReadInt32(), Y = r.ReadInt32(), GuardPackId = r.ReadInt32(), Looted = r.ReadBoolean() };

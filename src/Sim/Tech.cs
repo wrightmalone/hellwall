@@ -38,6 +38,8 @@ public sealed record TechDef
     public BuildingKind[] UnlocksBuildings { get; init; } = [];
     public UnitKind[] UnlocksUnits { get; init; } = [];
     public TechModifier[] Modifiers { get; init; } = [];
+    /// <summary>A patron saint's blessing: never researched, only chosen when the colony reaches a milestone (PatronSystem).</summary>
+    public bool Patron { get; init; }
 }
 
 /// <summary>
