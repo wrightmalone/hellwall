@@ -179,18 +179,18 @@ internal static class UnitSystem
     }
 
     const int Window = 12; // tiles each way: a 25x25 search, enough for any way round a building or two
-    const int Side = Window * 2 + 1;
-    static readonly int[] Dist = new int[Side * Side];
-    static readonly int[] Queue = new int[Side * Side];
+    internal const int Side = Window * 2 + 1;
     static readonly (int X, int Y)[] Steps = [(1, 0), (-1, 0), (0, 1), (0, -1), (1, 1), (1, -1), (-1, 1), (-1, -1)];
 
     /// <summary>
     /// The first tile of the shortest way from (fx, fy) to (tx, ty) over ground a soldier can walk,
     /// within the window, or null if there's none there. Breadth-first out from the goal; diagonals
     /// only where both sides are open, so no one cuts a building's corner. Reused buffers: nothing allocated.
+    /// The buffers are the world's own: worlds may step on different threads at once.
     /// </summary>
     static (int X, int Y)? LocalStep(World world, int fx, int fy, int tx, int ty)
     {
+        int[] Dist = world.LocalStepDist, Queue = world.LocalStepQueue;
         int ox = fx - Window, oy = fy - Window;
         int gx = tx - ox, gy = ty - oy;
         if (gx < 0 || gy < 0 || gx >= Side || gy >= Side) return null;

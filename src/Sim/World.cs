@@ -199,6 +199,10 @@ public sealed partial class World
     internal readonly float[] Slow;
     internal readonly List<int> SlowedTiles = new();
 
+    /// <summary>Scratch for UnitSystem.LocalStep's search. Per world, never static: tests run worlds in parallel.</summary>
+    internal readonly int[] LocalStepDist = new int[UnitSystem.Side * UnitSystem.Side];
+    internal readonly int[] LocalStepQueue = new int[UnitSystem.Side * UnitSystem.Side];
+
     public float SlowAt(float x, float y) => Slow[Math.Clamp((int)y, 0, Terrain.Height - 1) * Terrain.Width + Math.Clamp((int)x, 0, Terrain.Width - 1)];
 
     World(WorldOptions options)

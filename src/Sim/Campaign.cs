@@ -188,9 +188,9 @@ public sealed class Campaign
     /// <summary>A mission is open once everything it requires has been won.</summary>
     public bool IsOpen(ScenarioDef s, ICollection<string> won) => s.Requires.All(won.Contains);
 
-    static Campaign? _default;
+    static readonly Lazy<Campaign> _default = new(() => Parse(ReadEmbedded())); // thread-safe, as Rules.Default
 
-    public static Campaign Default => _default ??= Parse(ReadEmbedded());
+    public static Campaign Default => _default.Value;
 
     internal static readonly JsonSerializerOptions Json = new()
     {

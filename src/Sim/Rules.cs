@@ -405,10 +405,10 @@ public sealed class Rules
     public UnitDef this[UnitKind kind] => Units[(int)kind];
     public DemonDef this[DemonKind kind] => Demons[(int)kind];
 
-    static Rules? _default;
+    static readonly Lazy<Rules> _default = new(() => Parse(ReadEmbedded())); // thread-safe: tests build worlds in parallel
 
     /// <summary>The rules shipped in src/Sim/data/rules.json.</summary>
-    public static Rules Default => _default ??= Parse(ReadEmbedded());
+    public static Rules Default => _default.Value;
 
     sealed class File
     {
