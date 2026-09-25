@@ -302,6 +302,10 @@ public sealed record DemonDef
     /// <summary>On death, BroodCount demons of BroodKind crawl out where it fell.</summary>
     public DemonKind BroodKind { get; init; }
     public int BroodCount { get; init; }
+
+    /// <summary>Ranged: from this far it spits SpitDamage at a soldier, or else the nearest building that isn't wall (0: melee only).</summary>
+    public float SpitRange { get; init; }
+    public float SpitDamage { get; init; }
 }
 
 /// <summary>

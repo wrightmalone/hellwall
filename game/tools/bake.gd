@@ -41,6 +41,7 @@ var variants := [
 	["demon-brute", QM + "Big/Orc_Skull.gltf", null, 1.0, ["", ""], 1.15, "Walk"],
 	["demon-howler", QM + "Flying/Ghost_Skull.gltf", null, 1.0, ["", ""], 0.85, "Fast_Flying"],
 	["demon-broodmother", QM + "Big/BlueDemon.gltf", Color(0.5, 0.25, 0.6), 1.0, ["", ""], 1.15, "Walk"],
+	["demon-spitter", QM + "Blob/Alien.gltf", Color(0.55, 0.8, 0.25), 1.0, ["", ""], 0.72, "Walk", 0.5], # bile green: it spits
 ]
 
 var viewport: SubViewport

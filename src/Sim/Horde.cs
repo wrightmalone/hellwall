@@ -16,6 +16,8 @@ public enum DemonKind : byte
     Howler,
     /// <summary>Slow and heavy; bursts into a brood of Imps when killed.</summary>
     Broodmother,
+    /// <summary>Spits over the wall: hits towers, houses and soldiers from a few tiles off. Can't possess.</summary>
+    Spitter,
 }
 
 /// <summary>

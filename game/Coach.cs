@@ -19,7 +19,7 @@ public partial class Coach : PanelContainer
     readonly HashSet<string> _finished = new();
     Tip? _current;
     Label _text = null!;
-    bool _waveAnnounced, _packInTheWay, _corruption;
+    bool _waveAnnounced, _packInTheWay, _corruption, _unexplored, _promoted, _spat;
     double _check;
 
     public static bool Enabled => Settings.Get("hints", true);
@@ -66,6 +66,14 @@ public partial class Coach : PanelContainer
             () => _packInTheWay, () => World.Units.Count >= 6));
         _tips.Add(new("iron", () => $"Soldiers are made of iron. A {K(BuildingKind.Mine)} works the purple ore crystals; the richest lies out in the wilds, behind the packs.",
             () => Count(BuildingKind.Barracks) > 0, () => Count(BuildingKind.Mine) > 0));
+        _tips.Add(new("fog", () => "The dark is unexplored ground: nothing can be built there until something of yours has seen it. Soldiers see furthest; send a few out, carefully. Awake demons only show where you can see.",
+            () => _unexplored, () => World.Units.Count >= 6));
+        _tips.Add(new("veteran", () => "A soldier ranked up. Kills make Veterans, Elites and Champions: each rank hits harder and takes more. Keep them alive.",
+            () => _promoted, () => false));
+        _tips.Add(new("spitter", () => "Spitters (green) stop at the wall and spit over it at towers and soldiers a few tiles back. Kill them on the way in, or keep towers out of their reach.",
+            () => _spat, () => false));
+        _tips.Add(new("silver", () => $"Pale silver veins lie only near the map's edge. A {K(BuildingKind.SilverMine)} there pays for Exorcists, your longest-reaching soldiers. It's a long way out: holy ground has to reach it.",
+            () => World.Day >= 20, () => Count(BuildingKind.SilverMine) > 0));
         _tips.Add(new("corruption", () => "The horde is being corrupted. Each corruption lasts for the rest of the run, and they add up. The top right lists what the horde has become.",
             () => _corruption, () => false));
     }
@@ -78,6 +86,9 @@ public partial class Coach : PanelContainer
             case WaveAnnounced: _waveAnnounced = true; break;
             case CommandRejected r when r.Reason.Contains("demons sleep nearby"): _packInTheWay = true; break;
             case CorruptionAnnounced: _corruption = true; break;
+            case CommandRejected r when r.Reason.Contains("unexplored"): _unexplored = true; break;
+            case UnitPromoted: _promoted = true; break;
+            case DemonSpat: _spat = true; break;
         }
     }
 

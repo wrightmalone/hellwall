@@ -25,6 +25,7 @@ internal static class Combat
             if (h.Cooldown[i] > 0 || h.Hp[i] <= 0) continue;
             var kind = world.Def(h.Kind[i]);
             if (kind.Damage <= 0 && kind.ExplodeDamage <= 0) continue;
+            if (kind.SpitRange > 0 && Spit(world, h, i, kind)) continue;
             if (kind.Flies)
             {
                 // A flier strikes whatever building it's over or beside.
@@ -60,6 +61,48 @@ internal static class Combat
         if (def.ExplodeDamage > 0) h.Hp[i] = 0;
         else h.Cooldown[i] = def.Cooldown;
         if (world.TreeHp[t] <= 0) world.Fell(t);
+    }
+
+    /// <summary>
+    /// A ranged demon's turn: the nearest soldier in range, or else the
+    /// nearest building in range that isn't wall (then a wall, if that's all
+    /// there is). Spit damages; it never possesses. False if nothing's in range.
+    /// </summary>
+    static bool Spit(World world, Horde h, int i, DemonDef def)
+    {
+        float x = h.X[i], y = h.Y[i], r2 = def.SpitRange * def.SpitRange;
+        Unit? soldier = null;
+        float best = r2;
+        foreach (var u in world.UnitList)
+        {
+            float dx = u.X - x, dy = u.Y - y, d2 = dx * dx + dy * dy;
+            if (d2 <= best) { best = d2; soldier = u; }
+        }
+        if (soldier != null)
+        {
+            soldier.Hp -= def.SpitDamage;
+            h.Cooldown[i] = def.Cooldown;
+            world.Emit(new DemonSpat(world.Tick, x, y, soldier.X, soldier.Y));
+            return true;
+        }
+        Building? target = null;
+        float bestBuilding = float.MaxValue;
+        bool bestIsWall = true;
+        foreach (var b in world.BuildingList)
+        {
+            float ex = MathF.Max(MathF.Max(b.X - x, 0), x - (b.X + b.W));
+            float ey = MathF.Max(MathF.Max(b.Y - y, 0), y - (b.Y + b.H));
+            float d2 = ex * ex + ey * ey;
+            if (d2 > r2) continue;
+            bool wall = b.IsWallLike;
+            // Anything behind the wall beats the wall itself; among equals, the nearer.
+            if ((bestIsWall && !wall) || (wall == bestIsWall && d2 < bestBuilding)) { target = b; bestBuilding = d2; bestIsWall = wall; }
+        }
+        if (target == null) return false;
+        target.Hp -= def.SpitDamage;
+        h.Cooldown[i] = def.Cooldown;
+        world.Emit(new DemonSpat(world.Tick, x, y, target.CentreX, target.CentreY));
+        return true;
     }
 
     /// <summary>One demon's attack on one building: a blow, or, for a Bloater, bursting against it.</summary>

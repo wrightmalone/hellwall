@@ -235,6 +235,17 @@ public partial class WorldView : Node2D
                 if (shot.Splash > 0) Iso.Ellipse(this, new Vector2(shot.ToX, shot.ToY), shot.Splash, new Color(1, 0.6f, 0.2f, a), 2);
             }
 
+            // Spit: a green gob on a low arc, with a splash where it lands.
+            foreach (var (spit, age) in state.Spits)
+            {
+                float t = (float)(age / 0.45);
+                var from = Iso.P(spit.FromX, spit.FromY) - new Vector2(0, 14);
+                var to = Iso.P(spit.ToX, spit.ToY) - new Vector2(0, 10);
+                var at = from.Lerp(to, t) - new Vector2(0, 40 * t * (1 - t) * 4 * 0.5f);
+                DrawCircle(at, 3.5f, new Color(0.6f, 0.95f, 0.2f, 0.95f));
+                if (t > 0.85f) Iso.Ellipse(this, new Vector2(spit.ToX, spit.ToY), 0.5f, new Color(0.6f, 0.95f, 0.2f, 0.6f), 2);
+            }
+
             foreach (var (howl, age) in state.Howls)
             {
                 float t = (float)(age / 1.2);

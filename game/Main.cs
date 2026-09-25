@@ -109,7 +109,12 @@ public partial class Main : Node2D
         else ShowMenu(setup);
     }
 
-    void ShowMenu(GameSetup setup) => AddChild(new NewGameMenu { Initial = setup, Start = Begin, OpenCampaign = OpenCampaign, OpenEditor = OpenEditor });
+    void ShowMenu(GameSetup setup) => AddChild(new NewGameMenu
+    {
+        Initial = setup, Start = Begin, OpenCampaign = OpenCampaign, OpenEditor = OpenEditor,
+        Saved = System.IO.File.Exists(SavePath) ? System.IO.File.GetLastWriteTime(SavePath) : null,
+        Continue = () => { Begin(new GameSetup(11, MapKind.Plains, Difficulty.Normal, false)); CallDeferred(nameof(QuickLoad)); },
+    });
 
     void OpenEditor() => AddChild(new MapEditor
     {
@@ -386,6 +391,7 @@ public partial class Main : Node2D
         HandleEvents();
         Age(_state.Shots, delta, ClientState.ShotLife);
         Age(_state.Bursts, delta, 0.4);
+        Age(_state.Spits, delta, 0.45);
         Age(_state.Howls, delta, 1.2);
         Age(_state.Log, delta, 8);
 
@@ -435,6 +441,7 @@ public partial class Main : Node2D
                     break;
                 case WaveLanded w: _state.Say(w.Final ? "The Convergence is here." : $"Wave {w.Number} has arrived"); break;
                 case DemonBurst d: _state.Bursts.Add((d, 0)); break;
+                case DemonSpat sp: _state.Spits.Add((sp, 0)); break;
                 case DemonHowled h: _state.Howls.Add((h, 0)); break;
                 case OutcomeChanged o:
                     _state.Say(o.Outcome == Outcome.Lost ? $"The Keep has fallen on day {_world.Day}." : "Victory.");
@@ -606,6 +613,12 @@ public partial class Main : Node2D
                 _state.SelectedBuilding = null;
                 break;
             case Key.Space: _paused = !_paused; break;
+            case Key.A when key.CtrlPressed:
+                // Every soldier.
+                _state.SelectedUnits.Clear();
+                foreach (var u in _world.Units) _state.SelectedUnits.Add(u.Id);
+                _state.SelectedBuilding = null;
+                break;
             case Key.Tab:
                 _speed = (_speed + 1) % Speeds.Length;
                 Engine.TimeScale = Speeds[_speed];
@@ -661,6 +674,10 @@ public partial class Main : Node2D
             var loaded = World.Load(System.IO.File.ReadAllBytes(SavePath), _baseRules);
             _world = loaded;
             BuildViews();
+            // The horde layer is sized to the map, which a save may change.
+            _horde.QueueFree();
+            _horde = new HordeRenderer(_world.Terrain.Width) { ZIndex = 1 };
+            AddChild(_horde);
             MoveChild(_horde, -1);
             BuildHud();
             _state.SelectedUnits.Clear();
@@ -682,6 +699,9 @@ public partial class Main : Node2D
     }
 
     /// <summary>A click selects what's under the cursor; a drag box-selects soldiers.</summary>
+    int _lastClickUnit;
+    ulong _lastClickAt;
+
     void FinishSelection(bool additive)
     {
         if (_state.DragStart is not { } start) return;
@@ -695,6 +715,16 @@ public partial class Main : Node2D
             var unit = _world.Units.Where(u => Body(u).DistanceTo(end) < 16).OrderBy(u => Body(u).DistanceTo(end)).FirstOrDefault();
             if (unit != null)
             {
+                // A second click on the same soldier soon after: every soldier of that kind on screen.
+                bool twice = _lastClickUnit == unit.Id && Time.GetTicksMsec() - _lastClickAt < 400;
+                _lastClickUnit = unit.Id;
+                _lastClickAt = Time.GetTicksMsec();
+                if (twice)
+                {
+                    var view = new Rect2(_camera.GlobalPosition - GetViewportRect().Size / _camera.Zoom / 2, GetViewportRect().Size / _camera.Zoom);
+                    foreach (var u in _world.Units)
+                        if (u.Kind == unit.Kind && view.HasPoint(Body(u))) _state.SelectedUnits.Add(u.Id);
+                }
                 _state.SelectedUnits.Add(unit.Id);
                 _state.SelectedBuilding = null;
                 return;

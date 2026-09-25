@@ -233,6 +233,11 @@
             "iron": 200
           },
           "speaker": "steward"
+        },
+        {
+          "day": 20,
+          "say": "Scouts report green things among the horde that spit bile over the walls. Keep the towers back from the parapet.",
+          "speaker": "scout"
         }
       ]
     },
@@ -263,6 +268,11 @@
           "spawnCount": 20,
           "spawnSide": "West",
           "speaker": "scout"
+        },
+        {
+          "day": 18,
+          "say": "The old texts speak of silver veins at the edge of the world. Exorcists are made of it, if the holy ground can reach that far.",
+          "speaker": "abbess"
         }
       ]
     },

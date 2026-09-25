@@ -40,6 +40,9 @@ public partial class NewGameMenu : CanvasLayer
 
     /// <summary>Open the map editor instead (null: no button).</summary>
     public Action? OpenEditor;
+    /// <summary>Load the quicksave (shown when Saved is set).</summary>
+    public Action? Continue;
+    public DateTime? Saved;
 
     // Skirmish settings: each list's middle-ish entry is the game as designed.
     static readonly (string Label, int Size)[] Sizes = [("Small (192)", 192), ("Normal (256)", 256), ("Large (320)", 320)];
@@ -87,6 +90,12 @@ public partial class NewGameMenu : CanvasLayer
         columns.AddChild(side);
 
         // --- play ---
+        if (Continue != null && Saved is { } saved)
+        {
+            var resume = UiKit.TextButton($"Continue  (quicksave, {saved:ddd HH:mm})", 18);
+            resume.Pressed += () => { Continue(); QueueFree(); };
+            box.AddChild(resume);
+        }
         var campaign = UiKit.TextButton($"Campaign: {Campaign.Default.Name}", 18);
         campaign.Pressed += () => { OpenCampaign(); QueueFree(); };
         box.AddChild(campaign);

@@ -563,7 +563,31 @@ made alone; flag any you'd change.
   damage and +12% health per rank, the health at once. Gold chevrons over the head, the rank
   in the inspector with kills to the next, and an alert on promotion. Splash counts every
   demon it kills. It makes a surviving army matter, and losing a Champion hurt.
-- **Save and load in the pause menu,** beside F5/F9.
+- **Save and load in the pause menu,** beside F5/F9, and **Continue** on the main menu when
+  there's a quicksave.
+- **Selection:** Ctrl+A selects every soldier; double-clicking a soldier selects every
+  soldier of that kind on screen. Standard RTS habits a playtester will reach for.
+- **Coach tips** for fog (the first "unexplored ground" refusal), promotions, Spitters and
+  silver (from day 20).
+- **Campaign lines** introduce the Spitter (The Pass, day 20) and silver (Wildwood, day 18).
+- **Repair (from the gaps list):** a building that hasn't lost health for 8 s mends 3% of its
+  full health a second, paying 40% of its build cost per full repair as it goes, and waits
+  when the store is short. A green cross shows by the health bar while it mends. The Keep
+  never mends: holding it is the whole game. No button: in a game this size, clicking to
+  repair a hundred walls is busywork. Repair at first (8 s, 3%/s) took the Normal sweep from
+  12/24 to 17/24; with the Spitter at 5% it was 19/24. Final numbers: repair after 12 s at
+  2%/s, Spitters 8% of each wave with 22 damage: **13/24, each path 4-5/8, average day 58-63**,
+  back where Normal was designed to sit.
+- **The Spitter,** a ranged demon (also from the gaps list), to push back: from wave 6, 5% of
+  each wave. It stops at the walls like the rest, and spits 18 damage every 2.2 s at the
+  nearest soldier within 5 tiles, or else whatever building in range isn't wall (numbers below). So walls
+  alone no longer keep towers safe; you kill Spitters before they reach the wall, or build
+  towers a few tiles back. Spit never possesses. Baked from the pack's Alien, bile green.
+- **Score** on the end panel: days x 100 + kills + 150 per research - 5 per building lost,
+  x1.5 for a win, times 0.5/1/1.6/2.5 by difficulty, x0.8 with fog off. The best per mode,
+  map and difficulty is kept. Placeholder weights.
+- **Sounds** (still synthesized placeholders): a chime for a promotion, a creak and thump
+  for a felled tree, a soft blip under a spoken line, a chord for victory.
 
 ## Things I noticed that you should decide
 
