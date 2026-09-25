@@ -107,6 +107,7 @@ public partial class WorldView : Node2D
             if (sprite is BuildingSprite built) built.Show(b.Complete);
             sprite.Modulate = !b.Complete ? new Color(0.85f, 0.85f, 0.9f, 0.9f)
                 : b.Possessed ? new Color(0.75f, 0.4f, 0.95f)
+                : b.Complete && !b.OnGround ? new Color(0.32f, 0.33f, 0.42f) // off holy ground: dark, and cold
                 : !b.Active ? new Color(0.6f, 0.6f, 0.6f)
                 : Colors.White;
         }
@@ -351,7 +352,7 @@ public partial class WorldView : Node2D
                     DrawLine(at - new Vector2(3, 0), at + new Vector2(3, 0), new Color(0.4f, 1, 0.4f), 2);
                     DrawLine(at - new Vector2(0, 3), at + new Vector2(0, 3), new Color(0.4f, 1, 0.4f), 2);
                 }
-                string tag = b.Possessed ? $"POSSESSED x{b.Occupants}" : b.Complete && !b.Active ? (b.OnGround ? "no crew" : "dark") : "";
+                string tag = b.Possessed ? $"POSSESSED x{b.Occupants}" : b.Complete && !b.Active && b.OnGround ? "no crew" : ""; // off holy ground shows as darkness, not a label
                 if (tag.Length > 0) Text(font, front + new Vector2(-24, 18), tag, 11, b.Possessed ? new Color(1, 0.7f, 1) : new Color(1, 0.65f, 0.6f));
             }
 
