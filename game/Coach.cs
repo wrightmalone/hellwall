@@ -74,6 +74,8 @@ public partial class Coach : PanelContainer
             () => _spat, () => false));
         _tips.Add(new("silver", () => $"Pale silver veins lie only near the map's edge. A {K(BuildingKind.SilverMine)} there pays for Exorcists, your longest-reaching soldiers. It's a long way out: holy ground has to reach it.",
             () => World.Day >= 20, () => Count(BuildingKind.SilverMine) > 0));
+        _tips.Add(new("keep", () => "The Keep itself can be raised: select it for a Curtain Wall, then a Citadel. More hit points, holy ground further out, more room and sanctity.",
+            () => World.NextKeepLevel() is { } next && World.Colony.CanAfford(next.Cost), () => World.NextKeepLevel()?.KeepLevel != 2));
         _tips.Add(new("cottage", () => $"Room is running out. Select a House and upgrade it to a {K(BuildingKind.Cottage)}: twice the colonists on the same ground, for stone. It keeps working while the builders are at it.",
             () => Count(BuildingKind.House) >= 6, () => Count(BuildingKind.Cottage) > 0));
         _tips.Add(new("ruins", () => "Ruins (the dark stones, gold on the minimap): old settlements whose people now guard them as Thralls. Clear the guards and walk a soldier in to take what they left.",
