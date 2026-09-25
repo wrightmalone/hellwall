@@ -40,6 +40,8 @@ public sealed class Unit
     /// <summary>Where an idle soldier stands its ground: it fights within LeashRadius of here and comes back. Set when it goes idle.</summary>
     public float AnchorX, AnchorY;
     public bool Anchored;
+    /// <summary>This soldier's own spot in its group's formation at the destination, so a squad fans out instead of all shoving for one tile.</summary>
+    public float SlotX, SlotY;
 
     /// <summary>Kills to reach each rank (Veteran, Elite, Champion).</summary>
     public static readonly int[] RankKills = [8, 25, 60];
@@ -57,6 +59,9 @@ internal static class UnitSystem
 {
     /// <summary>Extra reach, beyond weapon range, at which Idle and AttackMove units close in on a demon.</summary>
     const float AggroExtra = 3f;
+
+    /// <summary>Within this many tiles of its formation spot a soldier leaves the flow field and walks straight to it.</summary>
+    const float SlotApproach = 2.5f;
 
     /// <summary>An idle soldier chases no further than this from where it stopped, then walks back: the army stays where you put it.</summary>
     public const float LeashRadius = 6f;
@@ -212,18 +217,28 @@ internal static class UnitSystem
             }
             else if (u.Order is OrderKind.Move or OrderKind.AttackMove or OrderKind.Patrol && u.Field != null)
             {
-                float ddx = u.DestX + 0.5f - u.X, ddy = u.DestY + 0.5f - u.Y;
-                if (ddx * ddx + ddy * ddy < 0.5f && u.Order == OrderKind.Patrol)
+                float ddx = u.SlotX - u.X, ddy = u.SlotY - u.Y, d2 = ddx * ddx + ddy * ddy;
+                if (d2 < 0.04f && u.Order == OrderKind.Patrol)
                 {
                     // Turn round: the far end becomes the near one.
                     (u.DestX, u.PatrolX) = (u.PatrolX, u.DestX);
                     (u.DestY, u.PatrolY) = (u.PatrolY, u.DestY);
+                    u.SlotX = u.DestX + 0.5f;
+                    u.SlotY = u.DestY + 0.5f;
                     u.Field = world.HumanFieldTo(u.DestX, u.DestY);
                 }
-                else if (ddx * ddx + ddy * ddy < 0.5f)
+                else if (d2 < 0.04f)
                 {
+                    // At its own spot: stand here. (Idle anchors here next tick.)
                     u.Order = OrderKind.Idle;
                     u.Field = null;
+                }
+                else if (d2 < SlotApproach * SlotApproach)
+                {
+                    // Close: straight to its spot in the formation, slowing for the last step so it doesn't overshoot.
+                    float dd = MathF.Sqrt(d2), speed = MathF.Min(u.Def.Speed, dd * 4);
+                    vx = ddx / dd * speed;
+                    vy = ddy / dd * speed;
                 }
                 else
                 {

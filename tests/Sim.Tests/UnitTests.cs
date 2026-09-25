@@ -222,3 +222,27 @@ public class LeashTests
         Assert.True(dx * dx + dy * dy < 1.5f, $"wandered {MathF.Sqrt(dx * dx + dy * dy):0.0} tiles");
     }
 }
+
+public class FormationTests
+{
+    [Fact]
+    public void AGroupSentToOnePointSettlesQuicklyWithoutShuffling()
+    {
+        var world = TestWorlds.Rich(TestWorlds.Dummies());
+        var keep = world.Buildings.Single(b => b.Kind == BuildingKind.Keep);
+        for (int i = 0; i < 12; i++) world.TrySpawnUnit(UnitKind.Militia, keep);
+        var (tx, ty) = TestWorlds.GrassAtDistance(world, 10, 12);
+        TestWorlds.Run(world, new OrderUnits(world.Units.Select(u => u.Id).ToArray(), OrderKind.Move, tx, ty));
+        TestWorlds.RunSeconds(world, 12);
+        Assert.All(world.Units, u => Assert.Equal(OrderKind.Idle, u.Order));
+        // Settled: a further few seconds and nobody has moved.
+        var before = world.Units.Select(u => (u.X, u.Y)).ToList();
+        TestWorlds.RunSeconds(world, 3);
+        var after = world.Units.Select(u => (u.X, u.Y)).ToList();
+        for (int i = 0; i < before.Count; i++)
+        {
+            float dx = after[i].X - before[i].X, dy = after[i].Y - before[i].Y;
+            Assert.True(dx * dx + dy * dy < 0.01f, $"soldier {i} still shuffling");
+        }
+    }
+}

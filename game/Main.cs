@@ -170,7 +170,9 @@ public partial class Main : Node2D
         if (_demoSeconds > 0) rules = rules.WithStartingResources(new Cost { Gold = 5000, Wood = 3000, Stone = 2000, Food = 1000, Iron = 1000 });
         bool scripted = _benchSeconds > 0 || _demoSeconds > 0;
         _baseRules = rules; // saves record whether the woods were living, and Load puts that back
-        if (setup.Woods || options.ContainsKey("woods")) rules = rules.WithWoods(w => w with { Blocks = true });
+        // Living woods is a menu toggle for every kind of run: a skirmish passes it in, a campaign mission reads the setting.
+        bool woods = setup.Woods || options.ContainsKey("woods") || (setup.Mission != null && Settings.Get("sk_woods", false));
+        if (woods) rules = rules.WithWoods(w => w with { Blocks = true });
         if (options.ContainsKey("reveal")) rules = rules.WithFog(f => f with { Enabled = false });
         if (options.ContainsKey("patrons-now")) rules = rules.WithSurvival(s => s with { PatronMilestones = [1, .. s.PatronMilestones] }); // screenshots of the picker
         // A survival run takes its packs from rules.json (wilds).

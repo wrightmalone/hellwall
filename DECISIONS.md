@@ -730,6 +730,18 @@ last lost by at least one).
   path 5-6/8.
 - Saves are format 10 (soldiers now carry where they stand).
 
+**After the second playtest:**
+- **Formations:** a group sent to one point used to aim every soldier at the same tile, so they
+  shoved each other off it and never quite arrived: the shuffle. Now each soldier gets its own
+  spot in a grid 0.8 tiles apart around the target (nearest soldiers take the middle), follows
+  the path until 2.5 tiles out, then walks straight to its spot and stops. A test sends twelve
+  to one point and checks they're all idle and still within 12 s.
+- **Food, halfway back:** 110 to start; Farms 0.0145 per tile, Hunters 0.0095, Fisheries 0.011;
+  colonists eat 0.0215 a second. Sweep 16/24.
+- **Living woods now applies to the campaign too.** The toggle is saved the moment you flip it
+  (it used to be saved only when a skirmish began) and missions read it; the mission panel says
+  "living woods on" when it is. Saves are format 11.
+
 ## Things I noticed that you should decide
 
 - **Scale:** addressed by 12-14 and 21. The Convergence is 9,000 plus whatever

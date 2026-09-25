@@ -73,6 +73,8 @@ public static class StateHash
             h = Mix(h, Bits(u.AnchorX));
             h = Mix(h, Bits(u.AnchorY));
             h = MixByte(h, u.Anchored ? (byte)1 : (byte)0);
+            h = Mix(h, Bits(u.SlotX));
+            h = Mix(h, Bits(u.SlotY));
             h = MixByte(h, (byte)u.Order);
             h = Mix(h, (uint)u.DestX);
             h = Mix(h, (uint)u.DestY);

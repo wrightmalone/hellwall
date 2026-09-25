@@ -899,6 +899,28 @@ public sealed partial class World
         return null;
     }
 
+    /// <summary>
+    /// Up to `count` standing spots around (cx, cy), a little more than a
+    /// soldier's width apart, nearest first, all on ground a soldier can stand on.
+    /// </summary>
+    List<(float X, float Y)> Formation(float cx, float cy, int count)
+    {
+        const float spacing = 0.8f;
+        var spots = new List<(float X, float Y, float D)>();
+        int ring = (int)MathF.Ceiling(MathF.Sqrt(count)) + 2;
+        for (int j = -ring; j <= ring; j++)
+            for (int i = -ring; i <= ring; i++)
+            {
+                float x = cx + i * spacing, y = cy + j * spacing;
+                if (x < 0 || y < 0 || !IsHumanWalkable((int)x, (int)y)) continue;
+                spots.Add((x, y, i * i + j * j + (j * 0.001f + i * 0.0001f))); // tiny bias: equal rings resolve the same way every time
+            }
+        spots.Sort((a, b) => a.D.CompareTo(b.D));
+        var result = new List<(float X, float Y)>(count);
+        for (int n = 0; n < spots.Count && n < count; n++) result.Add((spots[n].X, spots[n].Y));
+        return result;
+    }
+
     string? TryOrder(OrderUnits o)
     {
         if (o.UnitIds.Length == 0) return "no units";
@@ -913,13 +935,24 @@ public sealed partial class World
             field = HumanFieldTo(dx, dy);
         }
         int ordered = 0;
-        foreach (var id in o.UnitIds)
+        var group = new List<Unit>();
+        foreach (var id in o.UnitIds) if (UnitById(id) is { } gu) group.Add(gu);
+        // Each soldier gets its own spot around the target, nearest soldiers to the middle, so a squad
+        // fans out and stops rather than all shoving for one tile. A patrol keeps to its single point.
+        var slots = o.Order is OrderKind.Move or OrderKind.AttackMove ? Formation(dx + 0.5f, dy + 0.5f, group.Count) : null;
+        if (slots != null)
+            group.Sort((a, b) =>
+            {
+                float da = (a.X - dx) * (a.X - dx) + (a.Y - dy) * (a.Y - dy), db = (b.X - dx) * (b.X - dx) + (b.Y - dy) * (b.Y - dy);
+                return da != db ? da.CompareTo(db) : a.Id.CompareTo(b.Id);
+            });
+        for (int n = 0; n < group.Count; n++)
         {
-            var u = UnitById(id);
-            if (u == null) continue;
+            var u = group[n];
             u.Order = o.Order;
             u.DestX = dx;
             u.DestY = dy;
+            (u.SlotX, u.SlotY) = slots != null && n < slots.Count ? slots[n] : (dx + 0.5f, dy + 0.5f);
             u.Field = field;
             u.PatrolX = (int)u.X;
             u.PatrolY = (int)u.Y;

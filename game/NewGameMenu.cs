@@ -150,8 +150,9 @@ public partial class NewGameMenu : CanvasLayer
         _start = Options(_more, "Start with", StartChoices.Select(w => w.Label).ToArray(), 1);
         _fog = new CheckButton { Text = "Fog of war", ButtonPressed = true };
         _more.AddChild(_fog);
-        _woods = new CheckButton { Text = "Living woods (experimental): forest is a wall, woodsmen fell it", ButtonPressed = Initial.Woods };
+        _woods = new CheckButton { Text = "Living woods (experimental, campaign too): forest is a wall", ButtonPressed = Initial.Woods };
         _woods.TooltipText = "No one walks through the trees. Woodcutters send out woodsmen who fell them one by one, so the forest\nshrinks and opens new ways into your town. The horde can hack through trees, slowly.";
+        _woods.Toggled += on => Settings.Set("sk_woods", on); // saved now: the campaign reads it too
         _more.AddChild(_woods);
         foreach (var o in new[] { _difficulty, _map, _mode, _days }) o.ItemSelected += _ => Describe();
         Remembered(true);
