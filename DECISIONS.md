@@ -488,6 +488,83 @@ made alone; flag any you'd change.
 - **Fullscreen is remembered** in settings.cfg and applied at launch; it's on the main menu too.
 - The debug noise key moved from N to F6 (N builds the new Silver Mine).
 
+### Fog of war, and demons you can see all over the map
+
+- **Fog is in the sim (Vision), not just the client,** so saves carry what you've explored
+  and building can require explored ground ("unexplored ground" is a placement refusal).
+  Buildings see a little past their footprint (towers their range plus 3), soldiers 9 tiles
+  (ranged ones their range plus 2), woodsmen 4; the 22 tiles round the Keep start explored.
+  The horde and the bot ignore it: it decides nothing in a fight.
+- **Three levels:** black (never seen), haze (seen, not in sight now), clear. In the haze you
+  see the ground and sleeping demons as you last saw them, but no awake demon: the horde only
+  shows where you're looking now, on the map and the minimap alike.
+- **Sleeping packs are drawn as their demons,** standing in a loose crowd, not as a circle
+  with a number. Each demon's spot is a hash of (pack, index), shared by sim and client, so
+  when a pack wakes the demons rise exactly where you saw them stand. Packs are looser than
+  before (0.45 demons per tile), which is what makes the map read as "demons everywhere".
+  The clear-ground ring is still drawn, faintly, but only while you have a building armed,
+  so it's clear why you can't build there.
+- **A wider crowd would have woken twice as easily** (the wake radius grew with the spread)
+  and cost the bot badly; the spread now counts 40% (`wakeSpread`), which brought the sweep
+  back to 12/24 at Normal, each path 4/8, average day 60-62.
+- **Stragglers (strays) exist but are off by default.** Little groups of 1-4 all over the map.
+  Every amount I tried (250, 150, 100, even 100 kept 40+ tiles out) cost the bot 3-6 wins in 24
+  and 5-10 days on average: they wake to noise one by one and pick off outlying Mines and
+  Woodcutters, which then possess. That may be exactly the pressure you want from a human
+  player's point of view (it's very TAB), so they're a skirmish setting (None/Some/Many).
+  **Decide:** on by default, and rebalance around them?
+
+### Silver, the edge-of-map resource
+
+- **Silver** (a sixth resource) comes from pale veins that exist only in the outer band of the
+  map (past 80% of the way to the edge): at least four veins, spread round the compass. A
+  **Silver Mine** (N) works them like a Mine works ore. It's named for the holy theme; TAB's
+  equivalent is oil.
+- **The Exorcist** (V at a Barracks) is the first unit that needs it: 15 silver (plus gold, food
+  and a little iron). Long range (11), slow (2.2 s), a 1.4-tile burst of holy fire. Baked from
+  the RPG pack's Wizard, silvered. The early campaign missions (first four) lock both.
+- **The bot doesn't go for silver.** Reaching the edge needs a chain of holy ground 100 tiles
+  long; teaching the bot that is a project of its own. So the sweeps don't exercise silver,
+  and its numbers are my guesses. **Decide:** what else should silver buy (a tower? a
+  Scriptorium tier?).
+
+### Talking heads
+
+- **A campaign has speakers** (campaign.json `speakers`: id, name, portrait). Each trigger line
+  names its speaker; the first speaker narrates. Placeholder cast: Steward Maren (the Keep),
+  Scout Ilse (Marksman), Abbess Oda (Templar), Captain Brand (Militia). Names are
+  placeholders for when you write the story.
+- **The box sits top centre,** typed at 45 characters a second in real time (not sped up by
+  Tab), held for a few seconds after, queued, click to skip or dismiss. A mission opens with
+  its narrator reading the briefing. Portraits are the unit and building pictures until
+  there's face art.
+- Mission lines no longer show as gold alert cards; a line that spawns demons still leaves a
+  card to jump to where they're coming from.
+
+### Skirmish and the map editor
+
+- **Skirmish is the single-run menu, grown:** map size (192/256/320), days (30-90), waves
+  (Gentle to Brutal), Hellgates (0-6), packs (Sparse/Normal/Crowded, scaled to map area),
+  stragglers, starting stock, fog, living woods. Left at the defaults it's exactly the old
+  survival run; anything else becomes a scenario of its own that travels inside its saves,
+  so quickload works for skirmishes too.
+- **Map editor** (main menu): start from any generated map (kind, seed, size) or a saved one,
+  paint grass, forest, rock, water, iron or silver with a round brush, save to
+  `user://maps/<name>.json`. Saved maps appear in the skirmish Map list ("Hand-made: ...").
+  The Keep's clearing can't be painted.
+- **What the editor doesn't place:** packs, strays and Hellgates. They're scattered over the
+  painted ground at the start of each run, like on a generated map, with the skirmish
+  settings. Hand-placed packs and gates, a start position other than the centre, and
+  triggers are the obvious next steps; the scenario format has room for them.
+
+### My own swings
+
+- **Veterancy:** a soldier's kills earn Veteran (8), Elite (25) and Champion (60): +15%
+  damage and +12% health per rank, the health at once. Gold chevrons over the head, the rank
+  in the inspector with kills to the next, and an alert on promotion. Splash counts every
+  demon it kills. It makes a surviving army matter, and losing a Champion hurt.
+- **Save and load in the pause menu,** beside F5/F9.
+
 ## Things I noticed that you should decide
 
 - **Scale:** addressed by 12-14 and 21. The Convergence is 9,000 plus whatever

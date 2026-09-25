@@ -184,6 +184,17 @@ To watch the probe's town hold a wave at 4x speed:
 - **Difficulty:** Easy, Normal, Hard or Nightmare. Each scales wave, Convergence, pack and
   Hellgate band sizes, and starting resources, from Normal (which is `rules.json` as written).
   Only the numbers change, never the rules.
+- **Skirmish settings** (right-hand column of the menu): map size, days, waves, Hellgates,
+  packs, stragglers, starting stock, fog of war and living woods. At their defaults it's the
+  standard run; otherwise the run is a scenario of its own, which its saves carry.
+- **Hand-made maps:** the **Map editor** (main menu) paints terrain on any generated start
+  and saves to `user://maps/`. Saved maps join the skirmish Map list. Packs, stragglers and
+  Hellgates are scattered over the painted ground when a run starts.
+- **Fog of war:** the map is dark until something of yours has seen it; you can only build
+  on explored ground. Awake demons show only where you're looking. Sleeping packs stand as
+  crowds of demons where you saw them, and wake where they stand. `--reveal` turns it off.
+- **Living woods** (experimental option): forest is a wall. Woodcutters send woodsmen who fell
+  trees one by one, so the forest shrinks and opens new ways in; the horde hacks through.
 
 ## The campaign
 
@@ -199,6 +210,9 @@ Missions are data, in [src/Sim/data/campaign.json](src/Sim/data/campaign.json). 
 - locked buildings, soldiers and techs;
 - goals: Survive, CloseGates, Population or Slay;
 - the missions it requires.
+
+Missions speak through a **talking head**, top centre: speakers with portraits (campaign.json
+`speakers`), lines typed out and queued, click to skip. Each trigger names its speaker.
 
 A mission is won when every goal is met, and lost if the Keep falls or the
 Convergence breaks with goals still unmet. Progress is kept in `user://campaign.cfg`.
@@ -256,6 +270,10 @@ that plays a loaded world against the original tick for tick.
 Every content number lives in [src/Sim/data/rules.json](src/Sim/data/rules.json).
 
 - **Buildings** cost gold, wood and stone, and take time to build.
+- **Silver** comes only from pale veins near the map's edge, worked by a Silver Mine (N).
+  The Exorcist (long-range holy fire, V at a Barracks) is made of it.
+- **Veterancy:** soldiers rank up with kills (Veteran 8, Elite 25, Champion 60): +15% damage
+  and +12% health a rank, shown as gold chevrons.
 - **Iron** is the army's resource. Every soldier costs iron (Militia 5, Marksman
   10, Crossbowman 15, Templar 20) and a little gold upkeep. A Mine (2x2, 3 crew)
   works ore tiles. There is one small deposit 22 to 28 tiles out and richer
@@ -335,7 +353,8 @@ p99 9.1 ms, sim 4.8 ms/tick.
 | `H` / `Shift+S` | hold / stop |
 | `Ctrl+1`–`9` / `Alt+1`–`9` | set / recall a control group |
 | `Q` `E` `R` with a Barracks selected | train Militia / Marksman / Templar (Crossbowmen by button) |
-| `9`, `=`, `G`, `B`, `U` | Stone Wall, Lance Tower, Gate, Barracks, Scriptorium |
+| `9`, `=`, `G`, `B`, `U`, `N` | Stone Wall, Lance Tower, Gate, Barracks, Scriptorium, Silver Mine |
+| `T` `Y` `F` `V` with a Barracks selected | Crossbowman, Chaplain, Outrider, Exorcist (in its order) |
 | `X` or Delete | demolish the selected building (half refund once built) |
 | F1 | controls overlay |
 | minimap (bottom left) | click or drag to move the camera |
