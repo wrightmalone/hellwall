@@ -40,6 +40,8 @@ public sealed record TechDef
     public TechModifier[] Modifiers { get; init; } = [];
     /// <summary>A patron saint's blessing: never researched, only chosen when the colony reaches a milestone (PatronSystem).</summary>
     public bool Patron { get; init; }
+    /// <summary>A level of the Keep (2, 3...): raised at the Keep itself, not the Scriptorium, each after the last.</summary>
+    public int KeepLevel { get; init; }
 }
 
 /// <summary>
@@ -109,6 +111,8 @@ public sealed class TechState
         "rate" => d with { PerTile = d.PerTile * m.Mul + m.Add },
         "consecrateRadius" => d with { ConsecrateRadius = F(d.ConsecrateRadius, m) },
         "sanctitySupply" => d with { SanctitySupply = F(d.SanctitySupply, m) },
+        "housing" => d with { Housing = (int)Math.Round(d.Housing * m.Mul + m.Add) },
+        "gold" => d with { Gold = d.Gold * m.Mul + m.Add },
         "damage" or "range" or "cooldown" or "splash" when d.Weapon != null => d with { Weapon = Apply(d.Weapon, m) },
         _ => d,
     };

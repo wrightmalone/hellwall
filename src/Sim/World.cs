@@ -766,6 +766,7 @@ public sealed partial class World
         var tech = Rules.Techs.FirstOrDefault(t => t.Id == id);
         if (tech == null) return "no such tech";
         if (tech.Patron) return "a patron's blessing is chosen, not researched";
+        if (tech.KeepLevel > 0) return "raised at the Keep";
         if (Tech.Has(id)) return "already researched";
         if (Scenario?.Locks(id) == true) return "not in this mission";
         if (_buildings.Any(b => b.Researching == id)) return "already being researched";
@@ -776,9 +777,25 @@ public sealed partial class World
         return null;
     }
 
+    /// <summary>The Keep's next level, if there is one to raise: the lowest KeepLevel tech not yet had.</summary>
+    public TechDef? NextKeepLevel() => Rules.Techs.Where(t => t.KeepLevel > 0 && !Tech.Has(t.Id)).OrderBy(t => t.KeepLevel).FirstOrDefault();
+
+    string? TryRaiseKeep(Building keep, string id)
+    {
+        if (keep.Researching != null) return "the Keep is already being raised";
+        if (NextKeepLevel() is not { } next || next.Id != id) return "that isn't the Keep's next level";
+        if (Scenario?.Locks(id) == true) return "not in this mission";
+        if (Colony.Shortfall(next.Cost) is { } shortfall) return shortfall;
+        Colony.Pay(next.Cost);
+        keep.Researching = id;
+        keep.ResearchProgress = 0;
+        return null;
+    }
+
     string? TryResearch(Research r)
     {
         if (!_buildingById.TryGetValue(r.BuildingId, out var b)) return "no such building";
+        if (b.Kind == BuildingKind.Keep) return TryRaiseKeep(b, r.TechId);
         if (!b.Def.Researches) return $"{b.Kind} can't research";
         if (!b.Complete) return "still under construction";
         if (b.Researching != null) return "already researching";

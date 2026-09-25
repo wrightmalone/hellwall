@@ -34,7 +34,13 @@ public partial class Inspector : PanelContainer
         _detail.AutowrapMode = TextServer.AutowrapMode.WordSmart;
         box.AddChild(_detail);
         _upgrade = UiKit.TextButton("Upgrade", 12);
-        _upgrade.Pressed += () => { if (State.SelectedBuilding is { } id) Send(new UpgradeBuilding(id)); };
+        _upgrade.Pressed += () =>
+        {
+            if (State.SelectedBuilding is not { } id) return;
+            // The Keep is raised a level (a tech it works on itself); anything else upgrades in place.
+            if (World.BuildingById(id) is { Kind: BuildingKind.Keep } && World.NextKeepLevel() is { } next) Send(new Research(id, next.Id));
+            else Send(new UpgradeBuilding(id));
+        };
         box.AddChild(_upgrade);
         _demolish = UiKit.TextButton("X  Demolish", 12);
         _demolish.Pressed += () => { if (State.SelectedBuilding is { } id) Send(new Demolish(id)); };
@@ -67,6 +73,23 @@ public partial class Inspector : PanelContainer
             _detail.Text = string.Join("\n", d);
             _demolish.Visible = b.Kind != BuildingKind.Keep;
             _upgrade.Visible = b.Def.UpgradesTo != null && b.Complete && !b.Possessed;
+            if (b.Kind == BuildingKind.Keep)
+            {
+                var next = World.NextKeepLevel();
+                _upgrade.Visible = next != null || b.Researching != null;
+                if (b.Researching is { } raising)
+                {
+                    var tech = World.Rules.Tech(raising);
+                    _upgrade.Disabled = true;
+                    _upgrade.Text = $"Raising: {tech.Name}... {b.ResearchProgress / tech.Seconds:P0}";
+                }
+                else if (next != null)
+                {
+                    _upgrade.Disabled = !World.Colony.CanAfford(next.Cost);
+                    _upgrade.Text = $"Raise the Keep: {next.Name} ({next.Cost})";
+                    _upgrade.TooltipText = $"{next.Name}: {next.Description}\n{next.Seconds:0} s";
+                }
+            }
             if (b.Def.UpgradesTo is { } to)
             {
                 var upDef = World.Def(to);

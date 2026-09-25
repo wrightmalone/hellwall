@@ -159,6 +159,15 @@
   },
 
   "techs": [
+    { "id": "keep-2", "name": "Curtain Wall", "keepLevel": 2, "cost": { "gold": 400, "wood": 100, "stone": 200 }, "seconds": 60,
+      "description": "The Keep, raised: half again its hit points, holy ground 3 tiles further, +20 sanctity, room for 8 more.",
+      "modifiers": [ { "building": "Keep", "stat": "hp", "mul": 1.5 }, { "building": "Keep", "stat": "consecrateRadius", "add": 3 },
+                     { "building": "Keep", "stat": "sanctitySupply", "add": 20 }, { "building": "Keep", "stat": "housing", "add": 8 } ] },
+    { "id": "keep-3", "name": "Citadel", "keepLevel": 3, "cost": { "gold": 800, "stone": 400, "iron": 60 }, "seconds": 90,
+      "description": "The Keep, raised again: half again its hit points, holy ground 3 tiles further, +30 sanctity, and a gold a second more.",
+      "modifiers": [ { "building": "Keep", "stat": "hp", "mul": 1.5 }, { "building": "Keep", "stat": "consecrateRadius", "add": 3 },
+                     { "building": "Keep", "stat": "sanctitySupply", "add": 30 }, { "building": "Keep", "stat": "gold", "add": 1 } ] },
+
     { "id": "st-aldric", "name": "Saint Aldric of the Wall", "patron": true, "description": "Walls and gates +50% hit points.",
       "modifiers": [ { "group": "walls", "stat": "hp", "mul": 1.5 } ] },
     { "id": "st-brigid", "name": "Saint Brigid of the Harvest", "patron": true, "description": "Farms, Hunters and Fisheries yield 30% more.",

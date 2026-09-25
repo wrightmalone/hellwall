@@ -185,3 +185,22 @@ public class PatronTests
         Assert.Equal(StateHash.Compute(world), StateHash.Compute(loaded));
     }
 }
+
+public class KeepLevelTests
+{
+    [Fact]
+    public void TheKeepIsRaisedLevelByLevel()
+    {
+        var world = TestWorlds.Rich();
+        var keep = world.Buildings.Single(b => b.Kind == BuildingKind.Keep);
+        float hp = keep.Def.Hp, radius = keep.Def.ConsecrateRadius;
+        Assert.Equal("raised at the Keep", world.CheckResearch("keep-2"));
+        Assert.Equal("that isn't the Keep's next level", TestWorlds.Run(world, new Research(keep.Id, "keep-3")).OfType<CommandRejected>().Single().Reason);
+        Assert.DoesNotContain(TestWorlds.Run(world, new Research(keep.Id, "keep-2")), e => e is CommandRejected);
+        TestWorlds.RunSeconds(world, world.Rules.Tech("keep-2").Seconds + 1);
+        Assert.True(world.Tech.Has("keep-2"));
+        Assert.Equal(hp * 1.5f, keep.Def.Hp, 1);
+        Assert.Equal(radius + 3, keep.Def.ConsecrateRadius, 1);
+        Assert.Equal("keep-3", world.NextKeepLevel()!.Id);
+    }
+}

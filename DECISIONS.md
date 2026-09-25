@@ -643,6 +643,13 @@ last lost by at least one).
   all wrote "format 8" while its layout grew, so a quicksave carried between those builds
   could crash the load. From 0.11.0 any mismatch or damage is a "can't load" message, and a
   test truncates saves to prove it. Playtesters' old quicksaves won't carry over.
+- **Keep levels** (from the gaps list): select the Keep and raise it. Curtain Wall (400 gold,
+  100 wood, 200 stone, 60 s): +50% hp, holy ground 3 tiles further, +20 sanctity, room for 8.
+  Citadel (800 gold, 400 stone, 60 iron, 90 s): +50% hp again, 3 more tiles, +30 sanctity, +1
+  gold/s. They're techs marked `keepLevel`, worked on at the Keep itself, so they're data like
+  everything else. The Keep's kind never changes (so nothing that looks for "the Keep"
+  breaks). The bot doesn't raise it. The tech-tree plan's "tier-3 research needs a Citadel"
+  would hook in here once you decide the tree.
 - **A stone gate** (from the gaps list), after Masonry: 1,400 hp against a timber gate's 500,
   in the Walls tab and drawn as stone with the gate's arch.
 - **The editor has undo** (Ctrl+Z or the button): every stroke or placement, 40 deep.
