@@ -4,6 +4,14 @@ Status: draft for you to choose from. "TAB" is They Are Billions as I remember
 it. Details are from memory, so check anything that decides a design before
 leaning on it; the claims here are about kinds of systems, not exact numbers.
 
+**Done since (2026-09-24, unattended; details in DECISIONS.md "The long session"):**
+housing tiers (House, Cottage, Manor), fishing (the Fishery), mayors as patron saints, Keep
+upgrades (Curtain Wall, Citadel), repair, the stone gate, fog of war, veterancy, patrol, ruins
+(the "villages"), a ranged demon (the Spitter), custom survival settings with a score, the
+weekly challenge, synthesized music, fuller tooltips, and a noise view. **Still open:** storage
+caps, a market, a wider tower roster, an advanced production building, special units, death
+animations, ironman. The tech tree is still waiting on your answers in `tech-tree.md`.
+
 Each row gives my recommendation:
 - **Port**: it's core to why TAB works.
 - **Change**: we have the idea, but ours should differ.
