@@ -131,8 +131,13 @@ public partial class Main : Node2D
     void ShowMenu(GameSetup setup) => AddChild(new NewGameMenu
     {
         Initial = setup, Start = Begin, OpenCampaign = OpenCampaign, OpenEditor = OpenEditor,
-        Saved = System.IO.File.Exists(SavePath) ? System.IO.File.GetLastWriteTime(SavePath) : null,
-        Continue = () => { Begin(new GameSetup(11, MapKind.Plains, Difficulty.Normal, false)); CallDeferred(nameof(QuickLoad)); },
+        Saved = NewestSlot() is { } newest ? SlotSummary(newest) : null,
+        Continue = () =>
+        {
+            _continueSlot = NewestSlot() ?? 0;
+            Begin(new GameSetup(11, MapKind.Plains, Difficulty.Normal, false));
+            CallDeferred(nameof(ContinueLoad));
+        },
     });
 
     void OpenEditor() => AddChild(new MapEditor
@@ -324,8 +329,15 @@ public partial class Main : Node2D
         bool menu = _pauseMenu != null && _paused && _world.Tick == tick;
         await Escape();
         bool resumed = _pauseMenu == null && !_paused;
-        bool pass = armed && ordered && kept && cleared && menu && resumed;
-        GD.Print(pass ? "hellwall-selftest: PASS controls" : $"hellwall-selftest: FAIL controls (units {_world.Units.Count}, armed {armed}, ordered {ordered}, selection kept and disarmed {kept}, esc cleared {cleared}, menu paused {menu}, resumed {resumed})");
+        // A save and a load through the same path the menus use, in slot 9 (no menu shows it, so no player's save is touched).
+        _world.FlushCommands();
+        string hash = StateHash.Hex(_world);
+        SaveTo(9);
+        LoadFrom(9);
+        bool reloaded = StateHash.Hex(_world) == hash;
+        foreach (var f in new[] { SlotPath(9), SlotPath(9) + ".txt" }) System.IO.File.Delete(f);
+        bool pass = armed && ordered && kept && cleared && menu && resumed && reloaded;
+        GD.Print(pass ? "hellwall-selftest: PASS controls" : $"hellwall-selftest: FAIL controls (units {_world.Units.Count}, armed {armed}, ordered {ordered}, selection kept and disarmed {kept}, esc cleared {cleared}, menu paused {menu}, resumed {resumed}, save and load {reloaded})");
         GetTree().Quit();
     }
 
@@ -517,9 +529,9 @@ public partial class Main : Node2D
         _state.Armed = null;
         _pauseMenu = new PauseMenu
         {
-            Resume = ClosePauseMenu, QuitToMenu = NewRun, Save = QuickSave, Controls = () => _hud.ToggleHelp(),
-            Load = () => { ClosePauseMenu(); QuickLoad(); },
-            Saved = System.IO.File.Exists(SavePath) ? System.IO.File.GetLastWriteTime(SavePath) : null,
+            Resume = ClosePauseMenu, QuitToMenu = NewRun, Controls = () => _hud.ToggleHelp(),
+            SaveSlot = SaveTo,
+            LoadSlot = slot => { ClosePauseMenu(); LoadFrom(slot); },
         };
         AddChild(_pauseMenu);
     }
@@ -705,23 +717,48 @@ public partial class Main : Node2D
         }
     }
 
-    void QuickSave()
+    /// <summary>Slot 0 is the quicksave (F5/F9); 1-3 are the pause menu's named slots.</summary>
+    public static string SlotPath(int slot) => slot == 0 ? SavePath : ProjectSettings.GlobalizePath($"user://slot{slot}.hwsave");
+
+    /// <summary>What a slot holds, in a line: written beside the save so the menu needn't load it to say.</summary>
+    public static string? SlotSummary(int slot)
+    {
+        string path = SlotPath(slot);
+        if (!System.IO.File.Exists(path)) return null;
+        string about = System.IO.File.Exists(path + ".txt") ? System.IO.File.ReadAllText(path + ".txt") : "a saved run";
+        return $"{about}  ({System.IO.File.GetLastWriteTime(path):ddd HH:mm})";
+    }
+
+    /// <summary>The most recently written of all the saves, for the main menu's Continue.</summary>
+    public static int? NewestSlot() => Enumerable.Range(0, 4).Where(s => System.IO.File.Exists(SlotPath(s)))
+        .OrderByDescending(s => System.IO.File.GetLastWriteTime(SlotPath(s))).Select(s => (int?)s).FirstOrDefault();
+
+    void QuickSave() => SaveTo(0);
+    void QuickLoad() => LoadFrom(0);
+
+    int _continueSlot;
+    void ContinueLoad() => LoadFrom(_continueSlot);
+
+    void SaveTo(int slot)
     {
         _world.FlushCommands();
-        System.IO.File.WriteAllBytes(SavePath, _world.Save());
+        System.IO.File.WriteAllBytes(SlotPath(slot), _world.Save());
+        string mode = _world.Scenario?.Name ?? (_world.Survival is { Endless: true } ? "Endless" : "Survival");
+        System.IO.File.WriteAllText(SlotPath(slot) + ".txt", $"{mode} · {_world.Map} · {_world.Rules.Difficulty} · day {_world.Day}");
         _state.Say($"Saved (day {_world.Day})");
     }
 
-    void QuickLoad()
+    void LoadFrom(int slot)
     {
-        if (!System.IO.File.Exists(SavePath))
+        string path = SlotPath(slot);
+        if (!System.IO.File.Exists(path))
         {
-            _state.Say("No quicksave yet: F5 to save");
+            _state.Say(slot == 0 ? "No quicksave yet: F5 to save" : "That slot is empty");
             return;
         }
         try
         {
-            var loaded = World.Load(System.IO.File.ReadAllBytes(SavePath), _baseRules);
+            var loaded = World.Load(System.IO.File.ReadAllBytes(path), _baseRules);
             _world = loaded;
             TheMusic.World = _world;
             BuildViews();

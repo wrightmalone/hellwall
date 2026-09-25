@@ -593,8 +593,9 @@ last lost by at least one).
   damage and +12% health per rank, the health at once. Gold chevrons over the head, the rank
   in the inspector with kills to the next, and an alert on promotion. Splash counts every
   demon it kills. It makes a surviving army matter, and losing a Champion hurt.
-- **Save and load in the pause menu,** beside F5/F9, and **Continue** on the main menu when
-  there's a quicksave.
+- **Saves:** the pause menu has the quicksave (F5/F9) and three slots, each showing what it
+  holds (mode, map, difficulty, day, when). **Continue** on the main menu loads the newest.
+  The controls self-test saves and loads through the same path (in a hidden slot).
 - **Selection:** Ctrl+A selects every soldier; double-clicking a soldier selects every
   soldier of that kind on screen. Standard RTS habits a playtester will reach for.
 - **Coach tips** for fog (the first "unexplored ground" refusal), promotions, Spitters and

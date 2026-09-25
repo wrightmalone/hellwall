@@ -12,9 +12,8 @@ public partial class PauseMenu : CanvasLayer
 {
     public Action Resume = null!;
     public Action QuitToMenu = null!;
-    public Action Save = null!, Load = null!, Controls = null!;
-    /// <summary>When the quicksave was written, or null for none.</summary>
-    public DateTime? Saved;
+    public Action Controls = null!;
+    public Action<int> SaveSlot = null!, LoadSlot = null!;
 
     public override void _Ready()
     {
@@ -27,7 +26,7 @@ public partial class PauseMenu : CanvasLayer
         centre.SetAnchorsPreset(Control.LayoutPreset.FullRect);
         AddChild(centre);
         var panel = UiKit.PanelBox(UiKit.Gold);
-        panel.CustomMinimumSize = new Vector2(340, 0);
+        panel.CustomMinimumSize = new Vector2(440, 0);
         centre.AddChild(panel);
         var box = new VBoxContainer();
         box.AddThemeConstantOverride("separation", 10);
@@ -44,20 +43,34 @@ public partial class PauseMenu : CanvasLayer
         controls.Pressed += () => { Resume(); Controls(); };
         box.AddChild(controls);
 
-        var saves = new HBoxContainer();
-        saves.AddThemeConstantOverride("separation", 8);
-        var save = UiKit.TextButton("Save  (F5)", 14);
-        save.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
-        var load = UiKit.TextButton("Load  (F9)", 14);
-        load.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
-        load.Disabled = Saved == null;
-        var when = UiKit.Label(Saved is { } t ? $"Quicksave from {t:HH:mm}" : "No quicksave yet", 12, UiKit.Muted);
-        save.Pressed += () => { Save(); when.Text = $"Saved at {DateTime.Now:HH:mm}"; load.Disabled = false; };
-        load.Pressed += () => Load();
-        saves.AddChild(save);
-        saves.AddChild(load);
-        box.AddChild(saves);
-        box.AddChild(when);
+        // The quicksave (F5/F9) and three slots: what each holds, and save or load.
+        for (int slot = 0; slot < 4; slot++)
+        {
+            int n = slot;
+            var line = new HBoxContainer();
+            line.AddThemeConstantOverride("separation", 6);
+            string? what = Main.SlotSummary(n);
+            var label = UiKit.Label($"{(n == 0 ? "Quick" : $"Slot {n}")}: {what ?? "empty"}", 12, what == null ? UiKit.Muted : UiKit.Text);
+            label.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
+            label.ClipText = true;
+            label.CustomMinimumSize = new Vector2(260, 0);
+            var save = UiKit.TextButton(n == 0 ? "Save F5" : "Save", 12);
+            var load = UiKit.TextButton(n == 0 ? "Load F9" : "Load", 12);
+            load.Disabled = what == null;
+            save.Pressed += () =>
+            {
+                SaveSlot(n);
+                string? now = Main.SlotSummary(n);
+                label.Text = $"{(n == 0 ? "Quick" : $"Slot {n}")}: {now}";
+                label.AddThemeColorOverride("font_color", UiKit.Text);
+                load.Disabled = false;
+            };
+            load.Pressed += () => LoadSlot(n);
+            line.AddChild(label);
+            line.AddChild(save);
+            line.AddChild(load);
+            box.AddChild(line);
+        }
 
         box.AddChild(new HSeparator());
 

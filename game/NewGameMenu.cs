@@ -42,7 +42,8 @@ public partial class NewGameMenu : CanvasLayer
     public Action? OpenEditor;
     /// <summary>Load the quicksave (shown when Saved is set).</summary>
     public Action? Continue;
-    public DateTime? Saved;
+    /// <summary>What the newest save holds, or null for none.</summary>
+    public string? Saved;
 
     // Skirmish settings: each list's middle-ish entry is the game as designed.
     static readonly (string Label, int Size)[] Sizes = [("Small (192)", 192), ("Normal (256)", 256), ("Large (320)", 320)];
@@ -96,7 +97,7 @@ public partial class NewGameMenu : CanvasLayer
         // --- play ---
         if (Continue != null && Saved is { } saved)
         {
-            var resume = UiKit.TextButton($"Continue  (quicksave, {saved:ddd HH:mm})", 18);
+            var resume = UiKit.TextButton($"Continue: {saved}", 16);
             resume.Pressed += () => { Continue(); QueueFree(); };
             box.AddChild(resume);
         }
