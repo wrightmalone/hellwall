@@ -49,6 +49,12 @@ public sealed record TriggerDef
     public string Speaker { get; init; } = "";
 }
 
+/// <summary>A sleeping pack put down by hand: its centre tile, its size and kind.</summary>
+public sealed record PlacedPack(int X, int Y, int Count, DemonKind Kind = DemonKind.Imp);
+
+/// <summary>A Hellgate put down by hand: its top-left tile (a gate is Hellgate.Size square).</summary>
+public sealed record PlacedGate(int X, int Y);
+
 /// <summary>A voice of the campaign: a name and a portrait (a unit or building kind's picture, until there's art for faces).</summary>
 public sealed record SpeakerDef
 {
@@ -93,6 +99,10 @@ public sealed record ScenarioDef
     public string Tiles { get; init; } = "";
     /// <summary>Endless: no Convergence, no win; the score is the day (skirmish only).</summary>
     public bool Endless { get; init; }
+    /// <summary>Hand-placed sleeping packs (a map editor's), besides any scattered at random (Packs).</summary>
+    public PlacedPack[] PlacedPacks { get; init; } = [];
+    /// <summary>Hand-placed Hellgates: when there are any, they're the map's gates and none are placed at random.</summary>
+    public PlacedGate[] PlacedGates { get; init; } = [];
 
     /// <summary>Not available in this mission: the campaign opens the game up as it goes.</summary>
     public BuildingKind[] LockedBuildings { get; init; } = [];

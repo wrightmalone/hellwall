@@ -212,7 +212,8 @@ public partial class NewGameMenu : CanvasLayer
             Waves = WaveChoices[_waves.Selected].Scale,
             Convergence = WaveChoices[_waves.Selected].Scale,
             Hellgates = GateChoices[_gates.Selected],
-            Packs = (int)Math.Round(rules.Wilds.Packs * WildsChoices[_wilds.Selected].Scale * area),
+            // A hand-made map that wants only its own packs keeps it that way.
+            Packs = handMade?.Packs == 0 ? 0 : (int)Math.Round(rules.Wilds.Packs * WildsChoices[_wilds.Selected].Scale * area),
             Strays = (int)Math.Round(StrayChoices[_strays.Selected].Count * area),
             Start = rules.StartingResources.Scale(StartChoices[_start.Selected].Scale),
             Fog = _fog.ButtonPressed,

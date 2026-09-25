@@ -11,8 +11,10 @@ namespace Hellwall.Game;
 /// chosen as for any skirmish. Packs, strays and Hellgates are placed on the
 /// painted ground when a run starts, the same way as on a generated map.
 ///
-/// Controls: left-drag paints; right- or middle-drag, WASD or the screen edges
-/// pan; the wheel zooms; [ and ] size the brush; 1-6 pick the tile.
+/// Tools: Paint (left-drag), Packs and Gates (click to place; placed gates
+/// replace the random ones), Erase (click a pack or gate). Right- or
+/// middle-drag, WASD or the screen edges pan; the wheel zooms; [ and ] size
+/// the brush; 1-6 pick the tile.
 /// </summary>
 public partial class MapEditor : Node2D
 {
@@ -31,6 +33,16 @@ public partial class MapEditor : Node2D
     Minimap? _minimap;
     Control _minimapHolder = null!;
     Overlay _overlay = null!;
+
+    enum Tool { Paint, Packs, Gates, Erase }
+    Tool _tool = Tool.Paint;
+    static readonly int[] PackSizes = [8, 20, 40, 80, 150];
+    int _packSize = 40;
+    DemonKind _packKind = DemonKind.Imp;
+    readonly List<PlacedPack> _packs = new();
+    readonly List<PlacedGate> _gates = new();
+    CheckButton _randomPacks = null!;
+    readonly List<Button> _toolButtons = new();
 
     Tile _brush = Tile.Forest;
     int _brushSize = 2;
@@ -62,6 +74,11 @@ public partial class MapEditor : Node2D
 
     void Load(ScenarioDef def)
     {
+        _packs.Clear();
+        _packs.AddRange(def.PlacedPacks);
+        _gates.Clear();
+        _gates.AddRange(def.PlacedGates);
+        if (_randomPacks != null) _randomPacks.ButtonPressed = def.Packs != 0;
         _terrain?.QueueFree();
         _sorted?.QueueFree();
         _minimap?.QueueFree();
@@ -105,6 +122,9 @@ public partial class MapEditor : Node2D
             Map = (MapKind)_kind.Selected,
             MapSize = _world.Terrain.Width,
             Tiles = ScenarioDef.EncodeTiles(_world.Terrain.Tiles),
+            PlacedPacks = [.. _packs],
+            PlacedGates = [.. _gates],
+            Packs = _randomPacks.ButtonPressed ? -1 : 0,
         };
     }
 
@@ -133,8 +153,8 @@ public partial class MapEditor : Node2D
         switch (@event)
         {
             case InputEventMouseButton { ButtonIndex: MouseButton.Left } mb:
-                _painting = mb.Pressed;
-                if (mb.Pressed) Paint(GetGlobalMousePosition());
+                _painting = mb.Pressed && _tool == Tool.Paint;
+                if (mb.Pressed) Click(GetGlobalMousePosition());
                 break;
             case InputEventMouseButton { ButtonIndex: MouseButton.Right or MouseButton.Middle } mb:
                 _dragging = mb.Pressed;
@@ -161,6 +181,68 @@ public partial class MapEditor : Node2D
                 else if (key.Keycode == Key.Escape) Leave();
                 break;
         }
+    }
+
+    void Click(Vector2 at)
+    {
+        var t = Iso.Tile(at);
+        int x = (int)t.X, y = (int)t.Y, n = _world.Terrain.Width, c = n / 2;
+        if (!_world.Terrain.InBounds(x, y)) return;
+        bool nearKeep = (x - c) * (x - c) + (y - c) * (y - c) < 20 * 20;
+        switch (_tool)
+        {
+            case Tool.Paint: Paint(at); break;
+            case Tool.Packs:
+                if (nearKeep) { _status.Text = "Not within 20 tiles of the Keep"; break; }
+                _packs.Add(new PlacedPack(x, y, _packSize, _packKind));
+                _status.Text = $"{_packs.Count} packs placed";
+                break;
+            case Tool.Gates:
+                if (nearKeep) { _status.Text = "Not within 20 tiles of the Keep"; break; }
+                _gates.Add(new PlacedGate(Math.Clamp(x - 1, 0, n - Hellgate.Size), Math.Clamp(y - 1, 0, n - Hellgate.Size)));
+                _status.Text = $"{_gates.Count} Hellgates placed (placed gates replace the random ones)";
+                break;
+            case Tool.Erase:
+                int pack = _packs.FindIndex(p => (p.X - x) * (p.X - x) + (p.Y - y) * (p.Y - y) <= 16);
+                if (pack >= 0) { _packs.RemoveAt(pack); break; }
+                int gate = _gates.FindIndex(g => Math.Abs(g.X + 1 - x) <= 2 && Math.Abs(g.Y + 1 - y) <= 2);
+                if (gate >= 0) _gates.RemoveAt(gate);
+                break;
+        }
+    }
+
+    /// <summary>
+    /// --selftest=editor: paint a lake and place a pack and a gate through the
+    /// editor's own code, save, read the file back, and start a run on it.
+    /// scripts/verify.sh looks for the PASS line.
+    /// </summary>
+    public async void SelfTest()
+    {
+        await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
+        int c = _world.Terrain.Width / 2;
+        _name.Text = "Selftest map";
+        SetBrush(3); // water
+        SetBrushSize(4);
+        Click(Iso.P(c + 40.5f, c + 0.5f));
+        SetTool(1);
+        Click(Iso.P(c - 40.5f, c + 0.5f));
+        SetTool(2);
+        Click(Iso.P(c + 0.5f, c + 50.5f));
+        Save();
+        var saved = MapFiles.All().FirstOrDefault(m => m.Id == "selftest-map");
+        bool water = saved?.DecodeTiles() is { } tiles && tiles[c * _world.Terrain.Width + c + 40] == Tile.Water;
+        bool pack = saved?.PlacedPacks.Length == 1, gate = saved?.PlacedGates.Length == 1;
+        var world = saved == null ? null : World.Create((saved with { Id = "map-selftest" }).Options(Rules.Default));
+        bool plays = world != null && world.Terrain.Get(c + 40, c) == Tile.Water && world.Gates.Count == 1 && world.Packs.Any(p => p.X == c - 41);
+        try { System.IO.File.Delete(System.IO.Path.Combine(MapFiles.Folder, "selftest-map.json")); } catch (System.IO.IOException) { }
+        GD.Print(water && pack && gate && plays ? "hellwall-selftest: PASS editor" : $"hellwall-selftest: FAIL editor (saved {saved != null}, water {water}, pack {pack}, gate {gate}, plays {plays})");
+        GetTree().Quit();
+    }
+
+    void SetTool(int i)
+    {
+        _tool = (Tool)i;
+        for (int b = 0; b < _toolButtons.Count; b++) _toolButtons[b].AddThemeColorOverride("font_color", b == i ? UiKit.Gold : UiKit.Text);
     }
 
     void Zoom(float factor)
@@ -250,6 +332,32 @@ public partial class MapEditor : Node2D
         box.AddChild(_open);
         RefreshSaved();
 
+        var tools = new HBoxContainer();
+        foreach (var (name, i) in new[] { ("Paint", 0), ("Packs", 1), ("Gates", 2), ("Erase", 3) })
+        {
+            var b = UiKit.TextButton(name, 13);
+            b.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
+            b.Pressed += () => SetTool(i);
+            tools.AddChild(b);
+            _toolButtons.Add(b);
+        }
+        box.AddChild(tools);
+        var packRow = new HBoxContainer();
+        packRow.AddChild(UiKit.Label("Pack", 13, UiKit.Muted));
+        var packSize = new OptionButton();
+        foreach (var p in PackSizes) packSize.AddItem($"{p} demons");
+        packSize.Selected = Array.IndexOf(PackSizes, _packSize);
+        packSize.ItemSelected += i => _packSize = PackSizes[i];
+        packRow.AddChild(packSize);
+        var packKind = new OptionButton();
+        packKind.AddItem("Imps");
+        packKind.AddItem("Hounds");
+        packKind.ItemSelected += i => _packKind = i == 0 ? DemonKind.Imp : DemonKind.Hound;
+        packRow.AddChild(packKind);
+        box.AddChild(packRow);
+        _randomPacks = new CheckButton { Text = "Also scatter packs at random", ButtonPressed = true };
+        box.AddChild(_randomPacks);
+
         box.AddChild(UiKit.Label("Paint  (1-6, [ ] brush size)", 13, UiKit.Muted));
         var grid = new GridContainer { Columns = 3 };
         for (int i = 0; i < Brushes.Length; i++)
@@ -289,6 +397,7 @@ public partial class MapEditor : Node2D
         layer.Ready += () => { };
         SetBrush(1);
         SetBrushSize(2);
+        SetTool(0);
     }
 
     void SetBrush(int i)
@@ -333,6 +442,18 @@ public partial class MapEditor : Node2D
             Iso.Ellipse(this, new Vector2((int)t.X + 0.5f, (int)t.Y + 0.5f), e._brushSize + 0.6f, new Color(1, 1, 1, 0.8f), 2);
             int c = e._world.Terrain.Width / 2;
             Iso.Ellipse(this, new Vector2(c + 0.5f, c + 0.5f), Balance.KeepClearRadius, new Color(0.94f, 0.76f, 0.36f, 0.6f), 2);
+            var font = ThemeDB.FallbackFont;
+            foreach (var p in e._packs)
+            {
+                var at = new Vector2(p.X + 0.5f, p.Y + 0.5f);
+                float r = MathF.Sqrt(p.Count / (MathF.PI * 0.45f)) + 0.5f;
+                var tint = p.Kind == DemonKind.Hound ? new Color(1f, 0.55f, 0.15f) : new Color(0.9f, 0.15f, 0.12f);
+                Iso.Ellipse(this, at, r, new Color(tint, 0.25f), filled: true);
+                Iso.Ellipse(this, at, r, tint, 2);
+                DrawString(font, Iso.P(at) + new Vector2(-10, 6), p.Count.ToString(), fontSize: 18, modulate: Colors.White);
+            }
+            foreach (var g in e._gates)
+                DrawColoredPolygon(Iso.Diamond(g.X, g.Y, Hellgate.Size, Hellgate.Size), new Color(1, 0.1f, 0.5f, 0.7f));
         }
     }
 }

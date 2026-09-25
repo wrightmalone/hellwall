@@ -227,6 +227,10 @@ public sealed partial class World
         }
         world.ScatterPacks(options.DormantPacks > 0 ? options.DormantPacks : options.Survival ? world.Rules.Wilds.Packs : 0);
         if (options.Survival && options.DormantPacks == 0) world.ScatterStrays(world.Rules.Wilds.Strays);
+        if (options.Scenario is { } s)
+            foreach (var p in s.PlacedPacks)
+                if (world.Terrain.InBounds(p.X, p.Y) && p.Count > 0)
+                    world._packs.Add(new Pack { Id = world._nextId++, X = p.X, Y = p.Y, Count = p.Count, Kind = p.Kind });
         return world;
     }
 
@@ -962,6 +966,18 @@ public sealed partial class World
     void PlaceGates()
     {
         var rules = Rules.Hellgates;
+        if (Scenario is { PlacedGates.Length: > 0 } s)
+        {
+            foreach (var p in s.PlacedGates)
+            {
+                if (p.X < 0 || p.Y < 0 || p.X + Hellgate.Size > Terrain.Width || p.Y + Hellgate.Size > Terrain.Height) continue;
+                var placed = new Hellgate { Id = _nextId++, X = p.X, Y = p.Y, Hp = rules.Hp, SpawnTimer = Rng.NextInt((int)rules.SpawnSeconds) };
+                _gates.Add(placed);
+                StampGate(placed, true);
+            }
+            _flowDirty = true;
+            return;
+        }
         int centre = Terrain.Width / 2;
         int min2 = rules.MinDistance * rules.MinDistance;
         for (int n = 0, attempts = 0; n < rules.Count && attempts < rules.Count * 400; attempts++)

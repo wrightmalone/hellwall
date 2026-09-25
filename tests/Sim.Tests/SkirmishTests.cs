@@ -55,3 +55,25 @@ public class SkirmishTests
         Assert.Equal(StateHash.Compute(world), StateHash.Compute(loaded));
     }
 }
+
+public class PlacedTests
+{
+    [Fact]
+    public void HandPlacedPacksAndGatesAreWhereThePainterPutThem()
+    {
+        var map = new ScenarioDef
+        {
+            Id = "placed", MapSize = 192, Seed = 5, Packs = 0, Strays = 0,
+            PlacedPacks = [new PlacedPack(40, 40, 30), new PlacedPack(150, 60, 12, DemonKind.Hound)],
+            PlacedGates = [new PlacedGate(20, 150)],
+        };
+        var world = World.Create(map.Options(Rules.Default));
+        Assert.Equal(2, world.Packs.Count);
+        Assert.Contains(world.Packs, p => p is { X: 40, Y: 40, Count: 30, Kind: DemonKind.Imp });
+        Assert.Contains(world.Packs, p => p is { X: 150, Y: 60, Count: 12, Kind: DemonKind.Hound });
+        var gate = Assert.Single(world.Gates);
+        Assert.Equal((20, 150), (gate.X, gate.Y));
+        var loaded = World.Load(world.Save(), Rules.Default);
+        Assert.Equal(StateHash.Compute(world), StateHash.Compute(loaded));
+    }
+}

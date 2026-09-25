@@ -104,7 +104,11 @@ public partial class Main : Node2D
             _campaignNext = false;
             OpenCampaign();
         }
-        else if (o.ContainsKey("editor")) OpenEditor();
+        else if (o.ContainsKey("editor") || o.GetValueOrDefault("selftest") == "editor")
+        {
+            OpenEditor();
+            if (o.GetValueOrDefault("selftest") == "editor") GetChildren().OfType<MapEditor>().Last().CallDeferred(nameof(MapEditor.SelfTest));
+        }
         else if ((flagged || DisplayServer.GetName() == "headless") && !o.ContainsKey("menu") && !_menuNext) Begin(setup);
         else ShowMenu(setup);
     }

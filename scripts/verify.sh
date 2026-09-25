@@ -81,6 +81,8 @@ if [[ $RUN_GODOT == 1 ]]; then
   # The attack-move controls, through Godot's own input.
   "$GODOT" --headless --path game -- --selftest=controls >out/godot-selftest.log 2>&1 || true
   grep -q 'hellwall-selftest: PASS controls' out/godot-selftest.log || { cat out/godot-selftest.log; echo "FAIL: controls self-test"; exit 1; }
+  "$GODOT" --headless --path game -- --selftest=editor >out/godot-editor.log 2>&1 || true
+  grep -q 'hellwall-selftest: PASS editor' out/godot-editor.log || { cat out/godot-editor.log; echo "FAIL: map editor self-test"; exit 1; }
   # The new-game menu, which a headless boot otherwise skips.
   "$GODOT" --headless --path game --quit-after 60 -- --menu >out/godot-menu.log 2>&1 \
     || { cat out/godot-menu.log; echo "FAIL: godot boot to the menu"; exit 1; }
