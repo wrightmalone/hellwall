@@ -13,6 +13,7 @@ public partial class PauseMenu : CanvasLayer
     public Action Resume = null!;
     public Action QuitToMenu = null!;
     public Action Controls = null!;
+    public string BestiaryText = "";
     public Action<int> SaveSlot = null!, LoadSlot = null!;
 
     public override void _Ready()
@@ -42,6 +43,17 @@ public partial class PauseMenu : CanvasLayer
         var controls = UiKit.TextButton("Controls  (F1)", 14);
         controls.Pressed += () => { Resume(); Controls(); };
         box.AddChild(controls);
+        var bestiary = UiKit.TextButton("Bestiary", 14);
+        bestiary.Pressed += () =>
+        {
+            var dialog = new AcceptDialog { Title = "Bestiary", DialogText = BestiaryText, OkButtonText = "Close", MinSize = new Vector2I(820, 0) };
+            dialog.GetLabel().AutowrapMode = TextServer.AutowrapMode.WordSmart;
+            AddChild(dialog);
+            dialog.PopupCentered();
+            dialog.Confirmed += dialog.QueueFree;
+            dialog.Canceled += dialog.QueueFree;
+        };
+        box.AddChild(bestiary);
 
         // The quicksave (F5/F9) and three slots: what each holds, and save or load.
         for (int slot = 0; slot < 4; slot++)

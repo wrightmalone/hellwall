@@ -676,6 +676,8 @@ last lost by at least one).
 - **Noise view** (F4): the noise grid over the ground, orange as it builds and red where it's
   loud enough to wake a sleeping pack. The gaps list suggested making noise visible; this is
   the cheap version (a toggle, not always on).
+- **For playtesters:** a "What's new in this build" button on the main menu, a Bestiary in the
+  pause menu (every demon's numbers and how to deal with it), Credits, and a Controls button.
 - **The threat card names what's coming:** "with Hounds, Gargoyles, Spitters" for the next
   wave, from the wave mix, so you know whether to build Skyspires before the fliers arrive.
 - **A red cast over the world while a wave is announced** (deeper for the Convergence), fading

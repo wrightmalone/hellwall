@@ -34,6 +34,28 @@ public static class Blurbs
         _ => "",
     };
 
+    public static string Of(DemonKind kind) => kind switch
+    {
+        DemonKind.Imp => "the horde's bulk: weak alone, a flood in number",
+        DemonKind.Hound => "fast and frail; first to the wall",
+        DemonKind.Thrall => "a colonist or soldier the horde has taken; what a possessed building spills out",
+        DemonKind.Gargoyle => "flies straight over walls to the nearest building: Skyspires and ranged soldiers",
+        DemonKind.Bloater => "slow and swollen; bursts against a building or when killed, battering all around: kill it far out",
+        DemonKind.Brute => "siege: very tough, hits buildings hard; Lance Towers",
+        DemonKind.Howler => "howls as it comes, waking every sleeping pack it passes",
+        DemonKind.Broodmother => "bursts into a brood of Imps when killed",
+        DemonKind.Spitter => "stops at the wall and spits over it at towers and soldiers: kill it on the way in",
+        _ => "",
+    };
+
+    /// <summary>Every demon, its numbers and what it does, for the pause menu's bestiary.</summary>
+    public static string Bestiary(World world) => string.Join("\n", Enum.GetValues<DemonKind>().Select(k =>
+    {
+        var d = world.Def(k);
+        string attack = d.SpitRange > 0 ? $"spits {d.SpitDamage:0} at {d.SpitRange:0} tiles" : d.ExplodeDamage > 0 ? $"bursts for {d.ExplodeDamage:0}" : $"{d.Damage:0} a blow";
+        return $"{k}: {d.Hp:0} hp, speed {d.Speed:0.#}, {attack}. {Of(k)}.";
+    }));
+
     public static string Of(UnitKind kind) => kind switch
     {
         UnitKind.Militia => "cheap and quick to raise; the backbone",

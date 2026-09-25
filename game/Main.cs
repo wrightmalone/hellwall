@@ -530,7 +530,7 @@ public partial class Main : Node2D
         _state.Armed = null;
         _pauseMenu = new PauseMenu
         {
-            Resume = ClosePauseMenu, QuitToMenu = NewRun, Controls = () => _hud.ToggleHelp(),
+            Resume = ClosePauseMenu, QuitToMenu = NewRun, Controls = () => _hud.ToggleHelp(), BestiaryText = Blurbs.Bestiary(_world),
             SaveSlot = SaveTo,
             LoadSlot = slot => { ClosePauseMenu(); LoadFrom(slot); },
         };
