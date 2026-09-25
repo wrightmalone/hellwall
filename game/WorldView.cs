@@ -250,6 +250,33 @@ public partial class WorldView : Node2D
         }
     }
 
+    /// <summary>What's under the cursor out in the wilds: an awake demon in sight, a sleeping pack once seen, or a ruin.</summary>
+    static string? HoverText(World world, Vector2 at)
+    {
+        var h = world.Horde;
+        int best = -1;
+        float bestD = 0.8f * 0.8f;
+        for (int i = 0; i < h.Count; i++)
+        {
+            float dx = h.X[i] - at.X, dy = h.Y[i] - at.Y, d = dx * dx + dy * dy;
+            if (d < bestD && world.Vision.IsVisible(h.X[i], h.Y[i])) { bestD = d; best = i; }
+        }
+        if (best >= 0) return h.Kind[best].ToString();
+        float density = world.Rules.Wilds.SleepDensity;
+        foreach (var p in world.Packs)
+        {
+            if (p.Awake || !world.Vision.IsExplored(p.X, p.Y)) continue;
+            float r = p.Spread(density), dx = p.X + 0.5f - at.X, dy = p.Y + 0.5f - at.Y;
+            if (dx * dx + dy * dy <= r * r) return $"Sleeping: {p.Count} {p.Kind}{(p.Count == 1 ? "" : "s")}";
+        }
+        foreach (var ruin in world.Ruins)
+        {
+            float dx = ruin.X + 0.5f - at.X, dy = ruin.Y + 0.5f - at.Y;
+            if (dx * dx + dy * dy <= 6 && world.Vision.IsExplored(ruin.X, ruin.Y)) return ruin.Looted ? "Ruins (looted)" : $"Ruins: {ruin.Loot}";
+        }
+        return null;
+    }
+
     /// <summary>Above everything: what state things are in, and what the player is doing.</summary>
     sealed partial class Overlay : Node2D
     {
@@ -285,6 +312,8 @@ public partial class WorldView : Node2D
             // What's under the cursor, by name: the art is placeholder and not every building is obvious.
             if (state.Armed == null && world.BuildingById(world.BuildingIdAt(state.HoveredTile.X, state.HoveredTile.Y)) is { } hovered)
                 Text(font, state.MouseWorld + new Vector2(14, -6), hovered.Kind.ToString(), 14, Colors.White);
+            else if (state.Armed == null && !state.AttackMoveArmed && HoverText(world, Iso.Tile(state.MouseWorld)) is { } what)
+                Text(font, state.MouseWorld + new Vector2(14, -6), what, 14, new Color(1, 0.7f, 0.65f));
 
             foreach (var (shot, age) in state.Shots)
             {
