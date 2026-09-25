@@ -149,6 +149,15 @@ To watch the probe's town hold a wave at 4x speed:
 /Applications/Godot_mono.app/Contents/MacOS/Godot --path game -- --demo
 ```
 
+Other game flags (after `--`), mostly for screenshots and checks: `--editor` (the map
+editor), `--mission=<id>`, `--campaign`, `--woods`, `--reveal` (no fog), `--look=x,y[,zoom]`
+or `--look=ruin`, `--skip=<seconds>`, `--ui-scale=1.3`, `--pausemenu`, `--patrons-now`,
+`--noise`, `--select-keep`, `--dump-music=<dir>`, `--screenshot=<path>`,
+`--selftest=controls` and `--selftest=editor` (both run by verify.sh).
+
+The balance tools take the same switches: `WOODS=1`, `MAP=lakes`, `DIFFICULTY=hard` and
+`EXTRA='--strays=100 --no-fog --tree-hp=150'` for `scripts/sweep.sh`.
+
 ## Modes, maps and difficulty
 
 - **Survival:** 60 days, then the Convergence. Survive it to win.
