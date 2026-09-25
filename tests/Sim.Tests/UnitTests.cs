@@ -246,3 +246,27 @@ public class FormationTests
         }
     }
 }
+
+public class HuntTests
+{
+    [Fact]
+    public void ADemonShotFromAfarComesForTheShooterNotTheKeep()
+    {
+        // The Marksman stands north of the demon; the Keep is west. Shot, it must go north.
+        var rules = Rules.Default.WithStartingResources(TestWorlds.Plenty).WithDemon(DemonKind.Brute, d => d with { Hp = 100000 });
+        var world = World.Create(new WorldOptions(7, Balance.DefaultMapSize, 0, rules));
+        world.DrainEvents();
+        var keep = world.Buildings.Single(b => b.Kind == BuildingKind.Keep);
+        world.TrySpawnUnit(UnitKind.Marksman, keep);
+        var m = world.Units.Last();
+        var (sx, sy) = TestWorlds.GrassAtDistance(world, 26, 28);
+        TestWorlds.Run(world, new OrderUnits([m.Id], OrderKind.Move, sx, sy - 8));
+        TestWorlds.RunSeconds(world, 20);
+        TestWorlds.Run(world, new OrderUnits([m.Id], OrderKind.Hold, 0, 0));
+        TestWorlds.Run(world, new SpawnDemons(DemonKind.Brute, sx, sy, 1));
+        float y0 = world.Horde.Y[0];
+        TestWorlds.RunSeconds(world, 6);
+        float my = m.Y;
+        Assert.True(world.Horde.Y[0] < y0 - 1.5f, $"the demon went from y {y0:0.0} to {world.Horde.Y[0]:0.0}; the Marksman is at y {my:0.0} ({world.Horde.Count} demons)");
+    }
+}

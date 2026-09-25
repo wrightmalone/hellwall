@@ -742,6 +742,25 @@ last lost by at least one).
   (it used to be saved only when a skirmish began) and missions read it; the mission panel says
   "living woods on" when it is. Saves are format 11.
 
+**After "the map feels empty" and "they aggro to my base instead of my soldiers":**
+- **Hunting.** Demons only chased soldiers within 4 tiles, so a pack your soldiers woke from
+  further off, or a demon a Marksman shot at 9 tiles, fell back on the flow field, and the
+  flow field leads to the colony. Now a woken demon, and any demon a soldier's shot hits,
+  *hunts* for 25 s: it goes for the nearest soldier within 14 tiles, remembers where it last
+  saw one, and only then turns for the colony. What the army stirs up comes for the army.
+  A test shoots a demon from 8 tiles with the Keep the other way, and it comes north.
+- **The wilds are covered.** Packs are laid on a jittered grid over the whole map past 20 tiles
+  (360 of them on a 256 map, from 160 scattered at random), small near home (about 5) and
+  larger out to the corners (about 40). Further out they carry elites: Thralls and Spitters
+  past 35% of the way to the edge, then Howlers and Bloaters, and near the edge Brutes,
+  Broodmothers, Gargoyles. An elite is a share of its pack, so pack counts stay exact for the
+  skirmish settings and missions. Hovering says "Sleeping: 38 Imps and 2 Brutes".
+- **Balance:** 480 packs with elites from a quarter of the way out was too much (9/24, runs
+  ending around day 50); 360 with elites from 35% is 16/24, average day 60 on every path.
+  **Decide:** if you want it denser still, `wilds.packs` in rules.json is the dial, and the
+  bot says the waves would then need to come down to match.
+- Saves are format 13.
+
 ## Things I noticed that you should decide
 
 - **Scale:** addressed by 12-14 and 21. The Convergence is 9,000 plus whatever

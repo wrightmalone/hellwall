@@ -91,6 +91,9 @@ public static class StateHash
             h = MixByte(h, (byte)horde.Kind[i]);
             h = Mix(h, Bits(horde.Hp[i]));
             h = Mix(h, Bits(horde.Cooldown[i]));
+            h = Mix(h, Bits(horde.Hunt[i]));
+            h = Mix(h, Bits(horde.HuntX[i]));
+            h = Mix(h, Bits(horde.HuntY[i]));
         }
 
         h = Mix(h, (uint)world.Packs.Count);
@@ -103,6 +106,8 @@ public static class StateHash
             h = MixByte(h, (byte)p.Kind);
             h = MixByte(h, p.Awake ? (byte)1 : (byte)0);
             h = MixByte(h, p.Stray ? (byte)1 : (byte)0);
+            h = MixByte(h, (byte)p.EliteKind);
+            h = Mix(h, (uint)p.EliteCount);
         }
 
         foreach (var level in world.Noise.Level) h = Mix(h, Bits(level));

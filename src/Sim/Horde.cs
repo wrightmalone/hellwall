@@ -53,6 +53,17 @@ public sealed class Horde
     public float[] Cooldown;
 
     /// <summary>
+    /// Hunting: seconds left in which this demon goes for any soldier within
+    /// HuntRadius (not just ChaseRadius), and failing one, for the spot it
+    /// was disturbed at (HuntX/HuntY), before it turns for the colony. Set
+    /// when its pack wakes and when a soldier's shot hits it, so what the
+    /// army stirs up comes for the army.
+    /// </summary>
+    public float[] Hunt;
+    public float[] HuntX;
+    public float[] HuntY;
+
+    /// <summary>
     /// Scratch, rebuilt every tick: the nearest soldier within chase radius
     /// (ChaseD2 is float.MaxValue when none). Derived, so not hashed.
     /// </summary>
@@ -71,6 +82,9 @@ public sealed class Horde
         Kind = new DemonKind[capacity];
         Hp = new float[capacity];
         Cooldown = new float[capacity];
+        Hunt = new float[capacity];
+        HuntX = new float[capacity];
+        HuntY = new float[capacity];
         ChaseX = new float[capacity];
         ChaseY = new float[capacity];
         ChaseD2 = new float[capacity];
@@ -86,6 +100,9 @@ public sealed class Horde
         Kind[i] = kind;
         Hp[i] = hp;
         Cooldown[i] = 0;
+        Hunt[i] = 0;
+        HuntX[i] = x;
+        HuntY[i] = y;
         ChaseD2[i] = float.MaxValue;
     }
 
@@ -107,6 +124,9 @@ public sealed class Horde
                 Kind[write] = Kind[read];
                 Hp[write] = Hp[read];
                 Cooldown[write] = Cooldown[read];
+                Hunt[write] = Hunt[read];
+                HuntX[write] = HuntX[read];
+                HuntY[write] = HuntY[read];
             }
             write++;
         }
@@ -126,6 +146,9 @@ public sealed class Horde
         Array.Resize(ref Kind, capacity);
         Array.Resize(ref Hp, capacity);
         Array.Resize(ref Cooldown, capacity);
+        Array.Resize(ref Hunt, capacity);
+        Array.Resize(ref HuntX, capacity);
+        Array.Resize(ref HuntY, capacity);
         Array.Resize(ref ChaseX, capacity);
         Array.Resize(ref ChaseY, capacity);
         Array.Resize(ref ChaseD2, capacity);
@@ -140,6 +163,11 @@ public sealed class Horde
 /// </summary>
 internal static class HordeSystem
 {
+    /// <summary>A hunting demon (Horde.Hunt) goes for the nearest soldier this close.</summary>
+    public const float HuntRadius = 14f;
+    /// <summary>How long a woken or shot demon hunts before it turns for the colony.</summary>
+    public const float HuntSeconds = 25f;
+
     /// <summary>Move the horde. The caller has already built the spatial hash and marked chase targets.</summary>
     public static void Move(World world)
     {
@@ -188,6 +216,30 @@ internal static class HordeSystem
             else if (h.ChaseD2[i] < float.MaxValue)
             {
                 vx = vy = 0; // in its face: stand and fight
+            }
+            else if (h.Hunt[i] > 0)
+            {
+                // Stirred up: after the nearest soldier in HuntRadius, or else to where it was disturbed.
+                h.Hunt[i] -= dt;
+                float tx = h.HuntX[i], ty = h.HuntY[i], best = HuntRadius * HuntRadius;
+                bool soldier = false;
+                foreach (var u in world.UnitList)
+                {
+                    float udx = u.X - x, udy = u.Y - y, ud2 = udx * udx + udy * udy;
+                    if (ud2 < best) { best = ud2; tx = u.X; ty = u.Y; soldier = true; }
+                }
+                float hdx = tx - x, hdy = ty - y, hd = MathF.Sqrt(hdx * hdx + hdy * hdy);
+                if (soldier) { h.HuntX[i] = tx; h.HuntY[i] = ty; } // remember where it last saw one
+                if (hd > 0.5f)
+                {
+                    vx = hdx / hd * speed;
+                    vy = hdy / hd * speed;
+                }
+                else
+                {
+                    vx = vy = 0;
+                    if (!soldier) h.Hunt[i] = MathF.Min(h.Hunt[i], 2); // nobody here: give up soon
+                }
             }
             else
             {

@@ -15,6 +15,11 @@ public sealed class Pack
     public bool Awake;
     /// <summary>A straggler group: a handful, anywhere on the map, keeping only a small ring clear.</summary>
     public bool Stray;
+    /// <summary>Stronger demons among the pack (the first EliteCount of its Count): further out, worse company.</summary>
+    public DemonKind EliteKind;
+    public int EliteCount;
+
+    public DemonKind KindOf(int i) => i < EliteCount ? EliteKind : Kind;
 
     /// <summary>The radius of the loose crowd the pack stands in.</summary>
     public float Spread(float density) => MathF.Sqrt(Count / (MathF.PI * density)) + 0.5f;

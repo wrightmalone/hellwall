@@ -92,7 +92,7 @@ public partial class HordeRenderer : Node2D
             {
                 var (x, y, facing) = p.Spot(i, density);
                 if (!world.Vision.IsExplored((int)x, (int)y) || !world.IsWalkable((int)x, (int)y)) continue;
-                _sleepers.Add(((int)p.Kind, x, y, facing));
+                _sleepers.Add(((int)p.KindOf(i), x, y, facing));
             }
         }
     }

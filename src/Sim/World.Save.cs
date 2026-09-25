@@ -17,7 +17,7 @@ namespace Hellwall.Sim;
 public sealed partial class World
 {
     const uint Magic = 0x56535748; // "HWSV"
-    const int FormatVersion = 11;
+    const int FormatVersion = 13;
 
     public byte[] Save()
     {
@@ -137,6 +137,9 @@ public sealed partial class World
                 w.Write((byte)h.Kind[i]);
                 w.Write(h.Hp[i]);
                 w.Write(h.Cooldown[i]);
+                w.Write(h.Hunt[i]);
+                w.Write(h.HuntX[i]);
+                w.Write(h.HuntY[i]);
             }
 
             w.Write(_packs.Count);
@@ -149,6 +152,8 @@ public sealed partial class World
                 w.Write((byte)p.Kind);
                 w.Write(p.Awake);
                 w.Write(p.Stray);
+                w.Write((byte)p.EliteKind);
+                w.Write(p.EliteCount);
             }
 
             foreach (var level in Noise.Level) w.Write(level);
@@ -360,11 +365,14 @@ public sealed partial class World
             h.VX[i] = vx;
             h.VY[i] = vy;
             h.Cooldown[i] = r.ReadSingle();
+            h.Hunt[i] = r.ReadSingle();
+            h.HuntX[i] = r.ReadSingle();
+            h.HuntY[i] = r.ReadSingle();
         }
 
         int packs = r.ReadInt32();
         for (int n = 0; n < packs; n++)
-            world._packs.Add(new Pack { Id = r.ReadInt32(), X = r.ReadInt32(), Y = r.ReadInt32(), Count = r.ReadInt32(), Kind = (DemonKind)r.ReadByte(), Awake = r.ReadBoolean(), Stray = r.ReadBoolean() });
+            world._packs.Add(new Pack { Id = r.ReadInt32(), X = r.ReadInt32(), Y = r.ReadInt32(), Count = r.ReadInt32(), Kind = (DemonKind)r.ReadByte(), Awake = r.ReadBoolean(), Stray = r.ReadBoolean(), EliteKind = (DemonKind)r.ReadByte(), EliteCount = r.ReadInt32() });
 
         var noise = world.Noise.Level;
         for (int i = 0; i < noise.Length; i++) noise[i] = r.ReadSingle();

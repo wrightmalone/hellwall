@@ -175,6 +175,7 @@ internal static class Combat
                         float dx = h.X[j] - tx, dy = h.Y[j] - ty;
                         if (dx * dx + dy * dy > s2 || h.Hp[j] <= 0) continue;
                         h.Hp[j] -= damage;
+                        if (fromUnit) Provoke(h, j, fx, fy);
                         if (h.Hp[j] <= 0) killed++;
                     }
                 }
@@ -184,12 +185,21 @@ internal static class Combat
             if (h.Hp[target] > 0)
             {
                 h.Hp[target] -= damage;
+                if (fromUnit) Provoke(h, target, fx, fy);
                 if (h.Hp[target] <= 0) killed++;
             }
         }
         if (weapon.Noise > 0) world.Noise.Emit(fx, fy, weapon.Noise, Balance.CombatNoiseIntensity);
         world.Emit(new ShotFired(world.Tick, fx, fy, tx, ty, weapon.Splash, fromUnit));
         return killed;
+    }
+
+    /// <summary>A soldier's shot: the demon comes for the soldier, wherever it was going.</summary>
+    static void Provoke(Horde h, int i, float fromX, float fromY)
+    {
+        h.Hunt[i] = HordeSystem.HuntSeconds;
+        h.HuntX[i] = fromX;
+        h.HuntY[i] = fromY;
     }
 
     /// <summary>The nearest live demon within range of a point, or -1. Ties go to the lower slot.</summary>

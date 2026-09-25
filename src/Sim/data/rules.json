@@ -37,7 +37,7 @@
   ],
 
   "wilds": {
-    "packs": 160, "minDistance": 20, "spacing": 8, "nearCount": 12, "farCount": 80,
+    "packs": 360, "minDistance": 20, "spacing": 8, "nearCount": 5, "farCount": 40,
     "houndChance": 0.15, "clearRadius": 10, "wakeRadius": 7,
     "sleepDensity": 0.45, "strays": 0, "strayMax": 4, "strayMinDistance": 40, "wakeSpread": 0.4,
     "ruins": 5, "ruinGuards": 45, "ruinMinDistance": 40, "ruinMaxDistance": 95,

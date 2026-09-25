@@ -1083,14 +1083,17 @@ public sealed partial class World
     /// <summary>A pack wakes where it slept: each demon at its spot (or a nearby walkable one, if a building has gone up there).</summary>
     int SpawnPack(Pack pack)
     {
-        float density = Rules.Wilds.SleepDensity, hp = Def(pack.Kind).Hp;
+        float density = Rules.Wilds.SleepDensity;
         int spawned = 0;
         for (int i = 0; i < pack.Count; i++)
             for (int k = 0; k < 4; k++)
             {
                 var (x, y, _) = pack.Spot(i + k * pack.Count, density);
                 if (x < 0 || y < 0 || !IsWalkable((int)x, (int)y)) continue;
-                Horde.Add(pack.Kind, x, y, hp);
+                var kind = pack.KindOf(i);
+                Horde.Add(kind, x, y, Def(kind).Hp);
+                // Just woken: it hunts round about before it goes for the colony.
+                Horde.Hunt[Horde.Count - 1] = HordeSystem.HuntSeconds;
                 spawned++;
                 break;
             }
@@ -1200,11 +1203,6 @@ public sealed partial class World
         _events.Add(new HellgateClosed(Tick, gate.Id, gate.X, gate.Y));
     }
 
-    /// <summary>
-    /// Spread sleeping packs over the map: none inside MinDistance, none
-    /// closer together than Spacing, each on ground that can reach the
-    /// colony, and sized by distance from the Keep: small near home, large far out.
-    /// </summary>
     /// <summary>Stragglers: a few demons at a time, all over the map past MinDistance, a little apart from everything else asleep.</summary>
     void ScatterStrays(int count)
     {
@@ -1226,28 +1224,78 @@ public sealed partial class World
         }
     }
 
+    /// <summary>
+    /// Cover the wilds with sleeping packs, TAB-style: a jittered grid over
+    /// the whole map past MinDistance, as fine as `count` packs need, of
+    /// which `count` are kept (a seeded shuffle, so the spread stays even).
+    /// Packs grow with distance, and the further out, the likelier they
+    /// carry elites: Thralls and Spitters in the middle band, Brutes,
+    /// Bloaters, Broodmothers and Gargoyles near the edge.
+    /// </summary>
     void ScatterPacks(int count)
     {
+        if (count <= 0) return;
         var wilds = Rules.Wilds;
         int centre = Terrain.Width / 2;
         int minD2 = wilds.MinDistance * wilds.MinDistance;
-        int spacing2 = wilds.Spacing * wilds.Spacing;
         float farthest = MathF.Sqrt(2) * centre;
-        for (int n = 0, attempts = 0; n < count && attempts < count * 300; attempts++)
+        float area = Terrain.Width * Terrain.Height - MathF.PI * minD2;
+        float cell = MathF.Max(3, MathF.Sqrt(area / count) * 0.85f); // a little finer than needed: water and rock drop some
+        var spots = new List<(int X, int Y)>();
+        // Too few places (a lake map, a small count)? A finer grid, until there are enough.
+        for (int pass = 0; pass < 5 && spots.Count < count; pass++, cell = MathF.Max(3, cell * 0.75f))
         {
-            int x = Rng.NextInt(Terrain.Width);
-            int y = Rng.NextInt(Terrain.Height);
-            int dx = x - centre, dy = y - centre;
-            if (dx * dx + dy * dy < minD2) continue;
-            if (!IsWalkable(x, y) || Flow.DistAt(x, y) == FlowField.Unreachable) continue;
-            if (_packs.Any(p => (p.X - x) * (p.X - x) + (p.Y - y) * (p.Y - y) < spacing2)) continue;
-            if (GuardsHomeIron(x, y)) continue;
-            var kind = Rng.Chance(wilds.HoundChance) ? DemonKind.Hound : DemonKind.Imp;
-            float far = Math.Clamp((MathF.Sqrt(dx * dx + dy * dy) - wilds.MinDistance) / (farthest - wilds.MinDistance), 0, 1);
-            int size = (int)(wilds.NearCount + (wilds.FarCount - wilds.NearCount) * far * (0.7 + 0.6 * Rng.NextDouble()));
-            _packs.Add(new Pack { Id = _nextId++, X = x, Y = y, Count = Math.Max(1, size), Kind = kind });
-            n++;
+            spots.Clear();
+            for (float gy = cell / 2; gy < Terrain.Height; gy += cell)
+                for (float gx = cell / 2; gx < Terrain.Width; gx += cell)
+                {
+                    int x = (int)(gx + (Rng.NextDouble() - 0.5) * cell * 0.6), y = (int)(gy + (Rng.NextDouble() - 0.5) * cell * 0.6);
+                    if (!Terrain.InBounds(x, y)) continue;
+                    int dx = x - centre, dy = y - centre;
+                    if (dx * dx + dy * dy < minD2) continue;
+                    if (!IsWalkable(x, y) || Flow.DistAt(x, y) == FlowField.Unreachable) continue;
+                    if (GuardsHomeIron(x, y)) continue;
+                    spots.Add((x, y));
+                }
         }
+        for (int i = spots.Count - 1; i > 0; i--)
+        {
+            int j = Rng.NextInt(i + 1);
+            (spots[i], spots[j]) = (spots[j], spots[i]);
+        }
+        for (int n = 0; n < spots.Count && n < count; n++)
+        {
+            var (x, y) = spots[n];
+            int dx = x - centre, dy = y - centre;
+            float far = Math.Clamp((MathF.Sqrt(dx * dx + dy * dy) - wilds.MinDistance) / (farthest - wilds.MinDistance), 0, 1);
+            int size = Math.Max(1, (int)(wilds.NearCount + (wilds.FarCount - wilds.NearCount) * MathF.Pow(far, 1.2f) * (0.7 + 0.6 * Rng.NextDouble())));
+            var pack = new Pack { Id = _nextId++, X = x, Y = y, Count = size, Kind = Rng.Chance(wilds.HoundChance) ? DemonKind.Hound : DemonKind.Imp };
+            if (Elite(far) is { } elite)
+            {
+                pack.EliteKind = elite.Kind;
+                pack.EliteCount = Math.Min(size, Math.Max(1, (int)MathF.Round(size * elite.Share)));
+            }
+            _packs.Add(pack);
+        }
+    }
+
+    static readonly (float From, float Chance, (DemonKind Kind, float Share)[] Kinds)[] EliteBands =
+    [
+        (0.75f, 0.9f, [(DemonKind.Brute, 0.05f), (DemonKind.Broodmother, 0.04f), (DemonKind.Bloater, 0.08f), (DemonKind.Gargoyle, 0.12f), (DemonKind.Spitter, 0.12f)]),
+        (0.55f, 0.7f, [(DemonKind.Spitter, 0.1f), (DemonKind.Howler, 0.05f), (DemonKind.Bloater, 0.06f), (DemonKind.Thrall, 0.25f)]),
+        (0.35f, 0.4f, [(DemonKind.Thrall, 0.2f), (DemonKind.Spitter, 0.08f)]),
+    ];
+
+    /// <summary>Who else sleeps in a pack this far out (0 near home, 1 at the corners), if anyone: a seeded draw.</summary>
+    (DemonKind Kind, float Share)? Elite(float far)
+    {
+        foreach (var (from, chance, kinds) in EliteBands)
+        {
+            if (far < from) continue;
+            if (!Rng.Chance(chance)) return null;
+            return kinds[Rng.NextInt(kinds.Length)];
+        }
+        return null;
     }
 
     /// <summary>

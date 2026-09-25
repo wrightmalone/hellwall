@@ -274,7 +274,12 @@ public partial class WorldView : Node2D
         {
             if (p.Awake || !world.Vision.IsExplored(p.X, p.Y)) continue;
             float r = p.Spread(density), dx = p.X + 0.5f - at.X, dy = p.Y + 0.5f - at.Y;
-            if (dx * dx + dy * dy <= r * r) return $"Sleeping: {p.Count} {p.Kind}{(p.Count == 1 ? "" : "s")}";
+            if (dx * dx + dy * dy <= r * r)
+            {
+                int plain = p.Count - p.EliteCount;
+                string main = $"{plain} {p.Kind}{(plain == 1 ? "" : "s")}";
+                return p.EliteCount > 0 ? $"Sleeping: {main} and {p.EliteCount} {p.EliteKind}{(p.EliteCount == 1 ? "" : "s")}" : $"Sleeping: {main}";
+            }
         }
         foreach (var ruin in world.Ruins)
         {
