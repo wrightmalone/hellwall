@@ -130,7 +130,7 @@ public partial class Main : Node2D
 
     void ShowMenu(GameSetup setup) => AddChild(new NewGameMenu
     {
-        Initial = setup, Start = Begin, OpenCampaign = OpenCampaign, OpenEditor = OpenEditor,
+        Initial = setup, Start = Begin, OpenCampaign = OpenCampaign, OpenEditor = OpenEditor, ShowNews = _options.ContainsKey("whatsnew"),
         Saved = NewestSlot() is { } newest ? SlotSummary(newest) : null,
         Continue = () =>
         {

@@ -42,6 +42,8 @@ public partial class NewGameMenu : CanvasLayer
     public Action? OpenEditor;
     /// <summary>Load the quicksave (shown when Saved is set).</summary>
     public Action? Continue;
+    /// <summary>Open What's new at once (screenshots).</summary>
+    public bool ShowNews;
     /// <summary>What the newest save holds, or null for none.</summary>
     public string? Saved;
 
@@ -188,6 +190,7 @@ public partial class NewGameMenu : CanvasLayer
         var credits = UiKit.TextButton("Credits", 13);
         credits.Pressed += ShowCredits;
         side.AddChild(credits);
+        if (ShowNews) CallDeferred(nameof(OpenNews));
         var quit = UiKit.TextButton("Exit game", 13);
         quit.Pressed += () => GetTree().Quit();
         side.AddChild(quit);
@@ -297,6 +300,7 @@ public partial class NewGameMenu : CanvasLayer
         "Skirmish settings, a weekly challenge, a map editor, a ninth mission, music, and an end-of-run chart.";
 
     void ShowCredits() => Dialog("Credits", CreditsText);
+    void OpenNews() => Dialog("What's new", WhatsNew);
 
     void Dialog(string title, string text)
     {
