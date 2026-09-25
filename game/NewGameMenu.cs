@@ -182,6 +182,9 @@ public partial class NewGameMenu : CanvasLayer
         var hints = new CheckButton { Text = "Hints for a first run", ButtonPressed = Coach.Enabled };
         hints.Toggled += on => Settings.Set("hints", on);
         side.AddChild(hints);
+        var news = UiKit.TextButton("What's new in this build", 13);
+        news.Pressed += () => Dialog("What's new", WhatsNew);
+        side.AddChild(news);
         var credits = UiKit.TextButton("Credits", 13);
         credits.Pressed += ShowCredits;
         side.AddChild(credits);
@@ -280,9 +283,24 @@ public partial class NewGameMenu : CanvasLayer
         "Sound and music: synthesized in code, placeholders.\n\n" +
         "Built with Godot (godotengine.org) and .NET.";
 
-    void ShowCredits()
+    /// <summary>For playtesters: what changed since the last build they had. Kept short; DECISIONS.md has the why.</summary>
+    const string WhatsNew =
+        "Fog of war: the map is dark until you've seen it, and you build only on explored ground.\n" +
+        "Sleeping demons stand where they'll wake; hover a crowd to see how many. Ruins guarded by Thralls hold loot.\n" +
+        "Spitters (green) spit over the walls at towers and soldiers. Kill them on the way in.\n" +
+        "Silver lies only near the map's edge: a Silver Mine (N) pays for Exorcists (V at a Barracks).\n" +
+        "Soldiers rank up with kills. Buildings mend themselves when left alone, for a fee.\n" +
+        "Upgrade Houses to Cottages and Manors; raise the Keep itself (select it). Stone gates after Masonry.\n" +
+        "Patron saints offer a blessing at 40, 90 and 160 colonists. Fishery (O) for food from water.\n" +
+        "Z then click: patrol. Ctrl+A: every soldier. Home: back to the Keep. F4: noise view.\n" +
+        "Esc: the pause menu, with save slots, volume, music, fullscreen and interface size.\n" +
+        "Skirmish settings, a weekly challenge, a map editor, a ninth mission, music, and an end-of-run chart.";
+
+    void ShowCredits() => Dialog("Credits", CreditsText);
+
+    void Dialog(string title, string text)
     {
-        var dialog = new AcceptDialog { Title = "Credits", DialogText = CreditsText, OkButtonText = "Close" };
+        var dialog = new AcceptDialog { Title = title, DialogText = text, OkButtonText = "Close" };
         AddChild(dialog);
         dialog.PopupCentered();
         dialog.Confirmed += dialog.QueueFree;
