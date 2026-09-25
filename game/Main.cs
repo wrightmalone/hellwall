@@ -62,6 +62,8 @@ public partial class Main : Node2D
     Hud _hud = null!;
     Minimap _minimap = null!;
     FogView? _fogView;
+    /// <summary>The world's light: a faint blood-red cast while a wave is on its way.</summary>
+    CanvasModulate _tint = null!;
     double _accumulator;
     bool _paused;
     string? _screenshotPath;
@@ -177,6 +179,8 @@ public partial class Main : Node2D
 
         _sound = new Sound();
         AddChild(_sound);
+        _tint = new CanvasModulate { Color = Colors.White };
+        AddChild(_tint);
         TheMusic.World = _world;
 
         _camera = new Camera2D { Position = Iso.P(_world.Terrain.Width / 2f, _world.Terrain.Height / 2f), Zoom = Vector2.One * 1.1f / Display.UiScale };
@@ -430,6 +434,9 @@ public partial class Main : Node2D
         _horde.Sync(_world, _state.Alpha, delta);
         _view.Refresh();
         PanCamera(delta);
+        var coming = _world.Survival?.Next;
+        var light = coming is { Announced: true } ? (coming.Final ? new Color(1, 0.78f, 0.74f) : new Color(1, 0.9f, 0.87f)) : Colors.White;
+        _tint.Color = _tint.Color.Lerp(light, (float)Math.Min(1, delta * 0.8));
         UpdateMouseMode();
         if (_state.AttackMoveArmed && _state.SelectedUnits.Count == 0) DisarmAttackMove();
         UpdateDebugLine();
@@ -661,6 +668,10 @@ public partial class Main : Node2D
                 break;
             case Key.F1: _hud.ToggleHelp(); break;
             case Key.F3: _hud.ShowDebug = !_hud.ShowDebug; break;
+            case Key.Backspace or Key.Home:
+                // Home: back to the Keep.
+                if (_world.Buildings.FirstOrDefault(b => b.Kind == BuildingKind.Keep) is { } home) _camera.Position = Iso.P(home.CentreX, home.CentreY);
+                break;
             case Key.F4:
                 _state.ShowNoise = !_state.ShowNoise;
                 _state.Say(_state.ShowNoise ? "Noise view: orange where the colony is loud; red wakes sleeping packs" : "Noise view off");

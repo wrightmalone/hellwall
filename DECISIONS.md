@@ -675,6 +675,9 @@ last lost by at least one).
 - **Noise view** (F4): the noise grid over the ground, orange as it builds and red where it's
   loud enough to wake a sleeping pack. The gaps list suggested making noise visible; this is
   the cheap version (a toggle, not always on).
+- **A red cast over the world while a wave is announced** (deeper for the Convergence), fading
+  back after it lands: you feel it coming without reading the card. Home or Backspace jumps
+  the camera to the Keep.
 - **Hovering the wilds** names what's there: an awake demon's kind, a sleeping pack's size
   and kind ("Sleeping: 40 Imps", the number the old circles showed), or a ruin's loot.
 - **The campaign map is an old map now,** not a brown board: land, sea, forest and contoured
