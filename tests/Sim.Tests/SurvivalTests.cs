@@ -7,7 +7,7 @@ public class SurvivalTests
     /// <summary>A three-minute run: 10 s days, a wave every day from day 2, Convergence at the end of day 18.</summary>
     static Rules Quick(int convergence = 40, int waveSize = 4, double growth = 1.1) => Rules.Default.WithSurvival(s => s with
     {
-        DaySeconds = 10, Days = 18, FirstWaveDay = 2, WaveEveryDays = 1, TelegraphSeconds = 5,
+        DaySeconds = 10, Days = 18, FirstWaveDay = 2, WaveEveryDays = 1, TelegraphSeconds = 5, ConvergenceWarnSeconds = 5,
         FirstWaveSize = waveSize, WaveGrowth = growth, ConvergenceSize = convergence,
     });
 

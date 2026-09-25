@@ -241,11 +241,12 @@ public partial class Hud : CanvasLayer
         {
             if (!wave.Announced || wave.Landed) continue;
             string eta = UiKit.Clock((wave.LandsAtTick - World.Tick) / (double)Balance.TickHz);
-            foreach (var side in wave.Sides)
+            for (int i = 0; i < wave.Sides.Length; i++)
             {
+                var side = wave.Sides[i];
                 var label = _edgeWarnings[side];
                 label.Visible = true;
-                int share = wave.Size / wave.Sides.Length;
+                int share = wave.ShareOf(i, s.Rules);
                 // In the isometric view each map side lies along a screen diagonal.
                 label.Text = side switch
                 {

@@ -170,9 +170,11 @@ public partial class Main : Node2D
         if (_demoSeconds > 0) rules = rules.WithStartingResources(new Cost { Gold = 5000, Wood = 3000, Stone = 2000, Food = 1000, Iron = 1000 });
         bool scripted = _benchSeconds > 0 || _demoSeconds > 0;
         _baseRules = rules; // saves record whether the woods were living, and Load puts that back
-        // Living woods is a menu toggle for every kind of run: a skirmish passes it in, a campaign mission reads the setting.
-        bool woods = setup.Woods || options.ContainsKey("woods") || (setup.Mission != null && Settings.Get("sk_woods", false));
-        if (woods) rules = rules.WithWoods(w => w with { Blocks = true });
+        // Living woods is a setting every kind of run reads (on unless turned off), --woods / --no-woods over it.
+        bool woods = options.ContainsKey("woods") || (!options.ContainsKey("no-woods") && Settings.Get("sk_living_woods", true));
+        if (woods != rules.Woods.Blocks) rules = rules.WithWoods(w => w with { Blocks = woods });
+        // Miners likewise, but on unless turned off: every kind of run reads the setting.
+        if (options.ContainsKey("no-mining") || (!options.ContainsKey("mining") && !Settings.Get("sk_mining", true))) rules = rules.WithMining(m => m with { Enabled = false });
         if (options.ContainsKey("reveal")) rules = rules.WithFog(f => f with { Enabled = false });
         if (options.ContainsKey("patrons-now")) rules = rules.WithSurvival(s => s with { PatronMilestones = [1, .. s.PatronMilestones] }); // screenshots of the picker
         // A survival run takes its packs from rules.json (wilds).
@@ -216,10 +218,12 @@ public partial class Main : Node2D
             {
                 if (_bot != null && _world.Tick % Balance.TickHz == 0) _bot.Act();
                 _world.Step();
+                _state.Farmers.Step(_world, (float)TickSeconds);
                 var events = _world.DrainEvents();
                 _bot?.See(events);
                 foreach (var e in events)
                     if (e is TreeFelled f) _terrainView!.PaintCell(f.X, f.Y);
+                    else if (e is DepositWorn worn) _terrainView!.PaintCell(worn.X, worn.Y);
             }
             HandleEvents();
         }
@@ -247,7 +251,7 @@ public partial class Main : Node2D
     void BuildHud()
     {
         _hud?.QueueFree();
-        _minimap = new Minimap { World = _world, Camera = _camera, MoveCamera = p => _camera.Position = p, IgnoreInput = () => Dragging };
+        _minimap = new Minimap { World = _world, Camera = _camera, MoveCamera = p => _camera.Position = p, IgnoreInput = () => Dragging, Columns = _state.Columns };
         _hud = new Hud
         {
             World = _world, State = _state, Send = Send, Minimap = _minimap, NewRun = NewRun,
@@ -475,6 +479,7 @@ public partial class Main : Node2D
         _state.HoveredTile = Iso.TileAt(_state.MouseWorld);
 
         _horde.Sync(_world, _state.Alpha, delta);
+        if (!_paused) _state.Farmers.Step(_world, (float)delta);
         if (_pendingGroup is { } pending) { _pendingGroup = null; SelectGroupForScreenshot(pending); }
         _view.Refresh();
         PanCamera(delta);
@@ -496,7 +501,7 @@ public partial class Main : Node2D
 
     /// <summary>Living woods: warns before the woodsmen cut a way in for the horde.</summary>
     readonly ForestWatch _forest = new();
-    double _forestClock;
+    double _forestClock, _columnClock;
 
     void HandleEvents()
     {
@@ -506,6 +511,12 @@ public partial class Main : Node2D
             _forestClock = 0;
             _forest.Step(_world, _hud.Alerts);
             _state.EndangeredTrees = _forest.Endangered;
+        }
+        _columnClock += GetProcessDeltaTime();
+        if (_columnClock > 0.2)
+        {
+            _columnClock = 0;
+            HordeColumns.Measure(_world, _state.Columns);
         }
         _minimapClock += GetProcessDeltaTime();
         if (_minimapStale && _minimapClock > 0.5)
@@ -544,6 +555,11 @@ public partial class Main : Node2D
                 case TreeFelled f:
                     _forest.Felled(f, _world.Terrain.Width, _hud.Alerts);
                     _terrainView!.PaintCell(f.X, f.Y);
+                    _minimapStale = true;
+                    break;
+                case DepositWorn d:
+                    _forest.Worn(d, _world.Terrain.Width, _hud.Alerts);
+                    _terrainView!.PaintCell(d.X, d.Y);
                     _minimapStale = true;
                     break;
             }

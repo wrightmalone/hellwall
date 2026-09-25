@@ -92,6 +92,9 @@ public partial class Minimap : Control
         AcceptEvent();
     }
 
+    /// <summary>The marching wave columns (ClientState.Columns), if the game shows them.</summary>
+    public List<(int Column, Vector2 Centre, int Count)>? Columns;
+
     public override void _Draw()
     {
         var world = World;
@@ -125,6 +128,17 @@ public partial class Minimap : Control
             if (g.Alive && world.Vision.IsExplored(g.X + 1, g.Y + 1)) DrawColoredPolygon([M(g.X, g.Y), M(g.X + 3, g.Y), M(g.X + 3, g.Y + 3), M(g.X, g.Y + 3)], new Color(1, 0.1f, 0.5f));
         foreach (var u in world.Units)
             DrawRect(new Rect2(M(u.X, u.Y) - Vector2.One, new Vector2(2, 2)), new Color(0.5f, 0.9f, 1));
+
+        // Each wave column on the march: a pulsing ring on its centre, seen through fog like its marker on the map.
+        if (Columns != null)
+        {
+            float pulse = 0.6f + 0.4f * Mathf.Sin((float)Time.GetTicksMsec() / 220f);
+            foreach (var (_, centre, _) in Columns)
+            {
+                DrawCircle(M(centre.X, centre.Y), 3.5f, new Color(0.35f, 0.04f, 0.03f));
+                DrawArc(M(centre.X, centre.Y), 3.5f, 0, Mathf.Tau, 16, new Color(1, 0.3f, 0.2f, pulse), 1.5f);
+            }
+        }
 
         // Where waves are coming from: a red arrow on the middle of each announced side.
         if (world.Survival is { } sv)

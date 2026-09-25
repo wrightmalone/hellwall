@@ -111,8 +111,10 @@ public static class RunProbe
         args_perf = args.ContainsKey("perf");
         ReadDifficulty(args);
         bool ok = true;
+        // --plans=fortress,pyre: only those (a sweep runs each game in its own process, all at once).
+        var plans = args.TryGetValue("plans", out var only) ? only.Split(',') : Bot.Plans.Keys.ToArray();
         foreach (var seed in seeds)
-            foreach (var plan in Bot.Plans.Keys)
+            foreach (var plan in plans)
             {
                 var r = Play(seed, Bot.Style.Full, trace, plan: plan);
                 Console.WriteLine(r);
@@ -138,11 +140,24 @@ public static class RunProbe
         if (args.TryGetValue("difficulty", out var d)) args_difficulty = Enum.Parse<Difficulty>(d, ignoreCase: true);
         if (args.TryGetValue("map", out var m)) args_map = Enum.Parse<MapKind>(m, ignoreCase: true);
         args_woods = args.ContainsKey("woods");
+        args_noWoods = args.ContainsKey("no-woods");
         if (args.TryGetValue("tree-hp", out var hp)) args_treeHp = float.Parse(hp, CultureInfo.InvariantCulture);
         if (args.TryGetValue("tree-cost", out var cost)) args_treeCost = int.Parse(cost, CultureInfo.InvariantCulture);
         if (args.TryGetValue("strays", out var strays)) args_strays = int.Parse(strays, CultureInfo.InvariantCulture);
         args_noFog = args.ContainsKey("no-fog");
+        args_noMining = args.ContainsKey("no-mining");
+        if (args.TryGetValue("wave-scale", out var waves)) args_waveScale = double.Parse(waves, CultureInfo.InvariantCulture);
+        if (args.TryGetValue("convergence-scale", out var conv)) args_convergenceScale = double.Parse(conv, CultureInfo.InvariantCulture);
+        if (args.TryGetValue("lean", out var lean)) args_lean = double.Parse(lean, CultureInfo.InvariantCulture);
+        if (args.TryGetValue("rock-hp", out var rockHp)) args_rockHp = float.Parse(rockHp, CultureInfo.InvariantCulture);
+        if (args.TryGetValue("ore-hp", out var oreHp)) args_oreHp = float.Parse(oreHp, CultureInfo.InvariantCulture);
     }
+
+    /// <summary>--no-mining, --rock-hp, --ore-hp: A/B and tune the miners.</summary>
+    static bool args_noMining;
+    /// <summary>--wave-scale: every wave and the Convergence this much bigger (balance sweeps).</summary>
+    static double args_waveScale = 1, args_convergenceScale = 1, args_lean = -1;
+    static float args_rockHp = -1, args_oreHp = -1;
 
     /// <summary>--strays=N and --no-fog: A/B the wilds and fog of war.</summary>
     static int args_strays = -1;
@@ -153,7 +168,7 @@ public static class RunProbe
     static int args_treeCost = -1;
 
     /// <summary>--woods: forest blocks, woodsmen fell it (WoodsRules.Blocks), whatever rules.json says.</summary>
-    static bool args_woods;
+    static bool args_woods, args_noWoods;
 
     public static Result Play(uint seed, Bot.Style style, bool trace, double snapshotAt = -1, string plan = "fortress", Rules? rules = null, int endlessDays = 0, Action<World>? onEnd = null, ScenarioDef? scenario = null)
     {
@@ -161,10 +176,17 @@ public static class RunProbe
         bool endless = endlessDays > 0;
         rules ??= Rules.Default;
         if (args_woods) rules = rules.WithWoods(w => w with { Blocks = true });
+        if (args_noWoods) rules = rules.WithWoods(w => w with { Blocks = false });
         if (args_treeHp > 0) rules = rules.WithWoods(w => w with { TreeHp = args_treeHp });
         if (args_treeCost > 0) rules = rules.WithWoods(w => w with { TreeCost = args_treeCost });
         if (args_strays >= 0) rules = rules.WithWilds(w => w with { Strays = args_strays });
         if (args_noFog) rules = rules.WithFog(f => f with { Enabled = false });
+        if (args_noMining) rules = rules.WithMining(m => m with { Enabled = false });
+        if (args_convergenceScale != 1) rules = rules.WithSurvival(s => s with { ConvergenceSize = (int)Math.Round(s.ConvergenceSize * args_convergenceScale) });
+        if (args_lean >= 0) rules = rules.WithSurvival(s => s with { ConvergenceLean = args_lean });
+        if (args_waveScale != 1) rules = rules.WithSurvival(s => s with { FirstWaveSize = (int)Math.Round(s.FirstWaveSize * args_waveScale), ConvergenceSize = (int)Math.Round(s.ConvergenceSize * args_waveScale) });
+        if (args_rockHp > 0) rules = rules.WithMining(m => m with { RockHp = args_rockHp });
+        if (args_oreHp > 0) rules = rules.WithMining(m => m with { OreHp = args_oreHp });
         var world = scenario != null
             ? World.Create(scenario.Options(rules ?? Rules.Default))
             : World.Create(new WorldOptions(seed, 256, 0, rules ?? Rules.Default, Survival: true, Difficulty: args_difficulty, Endless: endless, Map: args_map));
@@ -223,6 +245,6 @@ public static class RunProbe
             $"colonists {c.WorkersUsed}/{c.Colonists} sanct {c.SanctityDemand:0}/{c.SanctitySupply:0}  " +
             $"house {Count(BuildingKind.House)} farm {Count(BuildingKind.Farm)} hunt {Count(BuildingKind.Hunter)} wood {Count(BuildingKind.Woodcutter)} quar {Count(BuildingKind.Quarry)} mine {Count(BuildingKind.Mine)} shrine {Count(BuildingKind.Shrine)} ward {Count(BuildingKind.Wardstone)} " +
             $"wall {Count(BuildingKind.Wall)} tower {Count(BuildingKind.Watchtower)} bomb {Count(BuildingKind.Bombard)} units {w.Units.Count}  demons {w.Horde.Count} (asleep {w.Packs.Where(p => !p.Awake).Sum(p => p.Count)} in {w.Packs.Count(p => !p.Awake)} packs)  keep {w.Buildings.FirstOrDefault(b => b.Kind == BuildingKind.Keep)?.Hp ?? 0:0}") +
-            (w.ForestBlocks ? $"  woodsmen {w.Woodsmen.Count} felled {w.TreesFelled}" : ""));
+            (w.ForestBlocks || w.Mining ? $"  crews {w.Woodsmen.Count} felled {w.TreesFelled} worn {w.DepositsWorn}" : ""));
     }
 }

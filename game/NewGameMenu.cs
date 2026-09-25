@@ -19,6 +19,7 @@ public partial class NewGameMenu : CanvasLayer
 
     OptionButton _mode = null!, _difficulty = null!, _map = null!;
     CheckButton _woods = null!;
+    CheckButton _mining = null!;
     LineEdit _seed = null!;
     Label _about = null!;
 
@@ -150,10 +151,14 @@ public partial class NewGameMenu : CanvasLayer
         _start = Options(_more, "Start with", StartChoices.Select(w => w.Label).ToArray(), 1);
         _fog = new CheckButton { Text = "Fog of war", ButtonPressed = true };
         _more.AddChild(_fog);
-        _woods = new CheckButton { Text = "Living woods (experimental, campaign too): forest is a wall", ButtonPressed = Initial.Woods };
+        _woods = new CheckButton { Text = "Living woods (campaign too): forest is a wall", ButtonPressed = Settings.Get("sk_living_woods", true) };
         _woods.TooltipText = "No one walks through the trees. Woodcutters send out woodsmen who fell them one by one, so the forest\nshrinks and opens new ways into your town. The horde can hack through trees, slowly.";
-        _woods.Toggled += on => Settings.Set("sk_woods", on); // saved now: the campaign reads it too
+        _woods.Toggled += on => Settings.Set("sk_living_woods", on); // saved now: the campaign reads it too
         _more.AddChild(_woods);
+        _mining = new CheckButton { Text = "Miners (campaign too): rock and iron run out", ButtonPressed = Settings.Get("sk_mining", true) };
+        _mining.TooltipText = "Quarries and Mines send out miners who wear the rock and ore away, slowly (iron slowest).\nA worked-out one has to be replaced further out, and worn-away rock is a new way in.\nOff: they gather from the ground around them forever.";
+        _mining.Toggled += on => Settings.Set("sk_mining", on);
+        _more.AddChild(_mining);
         foreach (var o in new[] { _difficulty, _map, _mode, _days }) o.ItemSelected += _ => Describe();
         Remembered(true);
         Describe();
@@ -223,12 +228,12 @@ public partial class NewGameMenu : CanvasLayer
         if (restore)
         {
             _fog.ButtonPressed = Settings.Get("sk_fog", true);
-            _woods.ButtonPressed = Initial.Woods || Settings.Get("sk_woods", false);
+            _woods.ButtonPressed = Settings.Get("sk_living_woods", true);
         }
         else
         {
             Settings.Set("sk_fog", _fog.ButtonPressed);
-            Settings.Set("sk_woods", _woods.ButtonPressed);
+            Settings.Set("sk_living_woods", _woods.ButtonPressed);
         }
     }
 

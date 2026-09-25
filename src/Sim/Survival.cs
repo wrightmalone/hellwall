@@ -30,6 +30,14 @@ public sealed record SurvivalRules
     public int ConvergenceSize { get; init; } = 4000;
 
     /// <summary>
+    /// The share of the Convergence that comes from its main side (the rest split over the
+    /// others), and how long ahead that's known: a chokepoint to prepare, not a flood from
+    /// everywhere. 0: an even split.
+    /// </summary>
+    public double ConvergenceLean { get; init; }
+    public float ConvergenceWarnSeconds { get; init; } = 60;
+
+    /// <summary>
     /// After the Convergence lands, the run is won when no demon is left, or
     /// when the Keep still stands this long after: the Convergence has broken
     /// on the walls. (A few stragglers stuck out on the map shouldn't hold a
@@ -80,7 +88,17 @@ public sealed class PlannedWave
     public bool Announced;
     public bool Landed;
 
-    public int AnnounceTick(SurvivalRules rules) => LandsAtTick - (int)(rules.TelegraphSeconds * Balance.TickHz);
+    public int AnnounceTick(SurvivalRules rules) => LandsAtTick - (int)((Final ? Math.Max(rules.TelegraphSeconds, rules.ConvergenceWarnSeconds) : rules.TelegraphSeconds) * Balance.TickHz);
+
+    /// <summary>How many come from Sides[i]: the Convergence leans on its main side (Sides[0]), any other wave splits evenly.</summary>
+    public int ShareOf(int i, SurvivalRules rules)
+    {
+        int n = Sides.Length;
+        double lean = Final && n > 1 ? rules.ConvergenceLean : 0;
+        if (lean <= 0) return Size / n + (i < Size % n ? 1 : 0);
+        int main = (int)Math.Round(Size * lean), rest = Size - main;
+        return i == 0 ? main : rest / (n - 1) + (i - 1 < rest % (n - 1) ? 1 : 0);
+    }
 }
 
 /// <summary>
@@ -164,7 +182,7 @@ internal static class SurvivalSystem
             if (wave.Landed) continue;
             if (!wave.Announced && world.Tick >= wave.AnnounceTick(s.Rules))
             {
-                wave.Sides = wave.Final || wave.Surge ? Enum.GetValues<Side>() : DrawSides(world, SidesFor(s.Rules, wave.Number));
+                wave.Sides = wave.Final ? MainSideFirst(world) : wave.Surge ? Enum.GetValues<Side>() : DrawSides(world, SidesFor(s.Rules, wave.Number));
                 // Corruptions that swell the tide apply from the announcement, so the size shown is the size that comes.
                 wave.Size = (int)Math.Round(wave.Size * CorruptionSystem.WaveMultiplier(world));
                 wave.Announced = true;
@@ -192,6 +210,15 @@ internal static class SurvivalSystem
     static int SidesFor(SurvivalRules rules, int number) =>
         Math.Min(rules.MaxSides, 1 + (number - 1) / Math.Max(1, rules.WavesPerExtraSide));
 
+    /// <summary>Every side, the one most of them come from first.</summary>
+    static Side[] MainSideFirst(World world)
+    {
+        var sides = Enum.GetValues<Side>().ToList();
+        var main = sides[world.Rng.NextInt(sides.Count)];
+        sides.Remove(main);
+        return [main, .. sides];
+    }
+
     static Side[] DrawSides(World world, int count)
     {
         var sides = Enum.GetValues<Side>().ToList();
@@ -211,7 +238,8 @@ internal static class SurvivalSystem
         int spawned = 0;
         for (int i = 0; i < wave.Sides.Length; i++)
         {
-            int share = wave.Size / wave.Sides.Length + (i < wave.Size % wave.Sides.Length ? 1 : 0);
+            int share = wave.ShareOf(i, world.Survival!.Rules);
+            world.SpawnColumn = Horde.ColumnOf(wave.Number, wave.Sides[i]);
             int imps = share;
             foreach (var m in mix)
             {
@@ -222,6 +250,7 @@ internal static class SurvivalSystem
             }
             spawned += world.SpawnAtEdge(wave.Sides[i], DemonKind.Imp, imps);
         }
+        world.SpawnColumn = 0;
         return spawned;
     }
 }

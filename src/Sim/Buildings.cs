@@ -62,6 +62,8 @@ public sealed class Building
     public bool Staffed;
     /// <summary>Put on hold by the player: takes no crew (they go to other work), does nothing; its woodsmen stay home.</summary>
     public bool Paused;
+    /// <summary>A crew building (woodsmen, miners) whose crew found nothing left to work within reach: worked out.</summary>
+    public bool Exhausted;
 
     /// <summary>Gatherers: resource per second at full sanctity, from the tiles it has claimed.</summary>
     public double Rate;

@@ -131,13 +131,31 @@ public partial class WorldView : Node2D
         int step = (int)(Time.GetTicksMsec() / 100); // walk frames at 10 a second
         foreach (var u in World.Units)
             Figure(seen, step, u.Id, Art.Unit(u.Kind), Art.UnitScale, u.X, u.Y, u.PrevX, u.PrevY, null);
-        // Woodsmen: their own figure (forest green), a size smaller; chopping, he faces the tree and swings, over and over.
+        // Woodsmen (forest green) and miners (stone grey): their own figures, a size smaller; working, he faces the tree or rock and swings, over and over.
         var w = World.Terrain.Width;
         foreach (var m in World.Woodsmen)
         {
             bool chopping = m.State == WoodsmanState.Chopping && m.Tree >= 0;
-            Figure(seen, step, m.Id, chopping ? "res://art/baked/unit-woodsman-chop.png" : "res://art/baked/unit-woodsman.png", Art.UnitScale * 0.8f, m.X, m.Y, m.PrevX, m.PrevY,
+            bool miner = World.BuildingById(m.HomeId) is { Def.Miners: true };
+            string sheet = miner
+                ? chopping ? "res://art/baked/unit-miner-dig.png" : "res://art/baked/unit-miner.png"
+                : chopping ? "res://art/baked/unit-woodsman-chop.png" : "res://art/baked/unit-woodsman.png";
+            Figure(seen, step, m.Id, sheet, Art.UnitScale * 0.8f, m.X, m.Y, m.PrevX, m.PrevY,
                 chopping ? new Vector2(m.Tree % w + 0.5f - m.X, m.Tree / w + 0.5f - m.Y) : null);
+        }
+        // Farmers: straw-coloured, out on the fields; at work they face the tile and stoop, water or reap.
+        foreach (var h in State.Farmers.All)
+        {
+            string sheet = h.Doing switch
+            {
+                Farmers.Work.Plant => "res://art/baked/unit-farmer-plant.png",
+                Farmers.Work.Water => "res://art/baked/unit-farmer-water.png",
+                Farmers.Work.Reap => "res://art/baked/unit-farmer-reap.png",
+                _ => "res://art/baked/unit-farmer.png",
+            };
+            bool working = h.Doing is Farmers.Work.Plant or Farmers.Work.Water or Farmers.Work.Reap;
+            Figure(seen, step, h.Id, sheet, Art.UnitScale * 0.8f, h.X, h.Y, h.PrevX, h.PrevY,
+                working ? new Vector2(h.Tile % w + 0.5f - h.X, h.Tile / w + 0.5f - h.Y) : null);
         }
         foreach (var id in _units.Keys.Where(id => !seen.Contains(id)).ToList())
         {
@@ -257,6 +275,26 @@ public partial class WorldView : Node2D
                 var feet = new Vector2(Mathf.Lerp(u.PrevX, u.X, View.State.Alpha), Mathf.Lerp(u.PrevY, u.Y, View.State.Alpha));
                 Iso.Ellipse(this, feet, 0.32f, new Color(0, 0, 0, 0.35f), filled: true);
                 Iso.Ellipse(this, feet, 0.34f, new Color(0.35f, 0.7f, 1f, 0.95f), 2);
+            }
+
+            // Crops on the Farms' fields: furrows once sown, green shoots once watered, gold when ripe.
+            int tw = world.Terrain.Width;
+            foreach (var (tile, stage) in View.State.Farmers.Crops)
+            {
+                float cx = tile % tw, cy = tile / tw;
+                Iso.Ellipse(this, new Vector2(cx + 0.5f, cy + 0.5f), 0.42f, new Color(0.36f, 0.25f, 0.13f, 0.75f), filled: true);
+                for (int k = 0; k < 5; k++)
+                {
+                    uint hash = (uint)(tile * 2654435761u + k * 40503u);
+                    var at = Iso.P(cx + 0.22f + (hash % 97) / 97f * 0.56f, cy + 0.22f + (hash / 97 % 89) / 89f * 0.56f);
+                    if (stage == 1) DrawCircle(at, 1.3f, new Color(0.22f, 0.14f, 0.07f));
+                    else if (stage == 2) DrawLine(at, at + new Vector2(0.5f, -4), new Color(0.45f, 0.8f, 0.3f), 1.6f);
+                    else
+                    {
+                        DrawLine(at, at + new Vector2(0.8f, -8), new Color(0.78f, 0.66f, 0.25f), 1.6f);
+                        DrawCircle(at + new Vector2(0.8f, -8.5f), 1.6f, new Color(0.93f, 0.8f, 0.35f));
+                    }
+                }
             }
 
             // Where demons fell: dark splashes that fade.
@@ -386,6 +424,22 @@ public partial class WorldView : Node2D
                 Iso.Ellipse(this, new Vector2(tree % tw + 0.5f, tree / tw + 0.5f), 0.7f, new Color(1, 0.7f, 0.25f, pulse), 2.5f);
             }
 
+            DrawColumns(state, font);
+
+            // A farmer watering: drops falling from the can onto the tile.
+            foreach (var h in state.Farmers.All)
+            {
+                if (h.Doing != Farmers.Work.Water || h.Tile < 0) continue;
+                int fw = world.Terrain.Width;
+                var to = Iso.P(h.Tile % fw + 0.5f, h.Tile / fw + 0.5f);
+                var from = Iso.P(h.X, h.Y) - new Vector2(0, 14);
+                for (int k = 0; k < 4; k++)
+                {
+                    float t = ((float)Time.GetTicksMsec() / 600f + k * 0.25f) % 1f;
+                    DrawCircle(from.Lerp(to, t) - new Vector2(0, 10 * t * (1 - t)), 1.4f, new Color(0.5f, 0.75f, 1f, 0.9f));
+                }
+            }
+
             foreach (var (px, py, attack, age) in state.OrderPings)
             {
                 float t = (float)(age / 0.5);
@@ -494,6 +548,54 @@ public partial class WorldView : Node2D
         {
             DrawRect(new Rect2(at, new Vector2(width, 3)), new Color(0, 0, 0, 0.7f));
             DrawRect(new Rect2(at, new Vector2(width * Mathf.Clamp(fraction, 0, 1), 3)), colour);
+        }
+
+        /// <summary>
+        /// A horned head over the centre of each wave column marching in, with how many are in it, so you can
+        /// see where they're coming from and meet them. Off screen, it waits at the screen's edge, pointing.
+        /// Drawn at a constant size on screen, whatever the zoom; seen through fog (the Keep's scouts cry it).
+        /// </summary>
+        void DrawColumns(ClientState state, Font font)
+        {
+            if (state.Columns.Count == 0) return;
+            var toWorld = GetCanvasTransform().AffineInverse();
+            var screen = GetViewportRect();
+            float scale = toWorld.X.Length(); // world pixels per screen pixel
+            var inset = new Vector2(46, 46);
+            var lo = toWorld * (screen.Position + inset + new Vector2(0, 30)); // clear of the top bar
+            var hi = toWorld * (screen.End - inset - new Vector2(0, 150)); // and of the build card
+            float pulse = 0.8f + 0.2f * Mathf.Sin((float)Time.GetTicksMsec() / 220f);
+            foreach (var (_, centre, count) in state.Columns)
+            {
+                var at = Iso.P(centre) - new Vector2(0, 40 * scale);
+                var pinned = new Vector2(Mathf.Clamp(at.X, lo.X, hi.X), Mathf.Clamp(at.Y, lo.Y, hi.Y));
+                bool off = pinned != at;
+                float r = 14 * scale;
+                var red = new Color(0.95f, 0.22f, 0.15f);
+                if (off)
+                {
+                    // An arrowhead from the pinned badge toward where the column really is.
+                    var dir = (at - pinned).Normalized();
+                    var tip = pinned + dir * (r + 14 * scale);
+                    var side = new Vector2(-dir.Y, dir.X) * 7 * scale;
+                    DrawColoredPolygon([tip, pinned + dir * (r + 3 * scale) + side, pinned + dir * (r + 3 * scale) - side], red);
+                }
+                // Horns, then the head over them, then two ember eyes.
+                var hornL = new[] { pinned + new Vector2(-r * 0.8f, -r * 0.3f), pinned + new Vector2(-r * 1.25f, -r * 1.45f), pinned + new Vector2(-r * 0.25f, -r * 0.75f) };
+                var hornR = new[] { pinned + new Vector2(r * 0.8f, -r * 0.3f), pinned + new Vector2(r * 1.25f, -r * 1.45f), pinned + new Vector2(r * 0.25f, -r * 0.75f) };
+                DrawColoredPolygon(hornL, new Color(0.9f, 0.85f, 0.75f));
+                DrawColoredPolygon(hornR, new Color(0.9f, 0.85f, 0.75f));
+                DrawCircle(pinned, r + 2 * scale, new Color(0, 0, 0, 0.6f));
+                DrawCircle(pinned, r, new Color(0.35f, 0.04f, 0.03f));
+                DrawArc(pinned, r, 0, Mathf.Tau, 24, new Color(red, pulse), 2 * scale);
+                DrawCircle(pinned + new Vector2(-r * 0.38f, -r * 0.1f), r * 0.17f, new Color(1, 0.75f, 0.2f, pulse));
+                DrawCircle(pinned + new Vector2(r * 0.38f, -r * 0.1f), r * 0.17f, new Color(1, 0.75f, 0.2f, pulse));
+                DrawLine(pinned + new Vector2(-r * 0.35f, r * 0.45f), pinned + new Vector2(r * 0.35f, r * 0.45f), new Color(1, 0.75f, 0.2f, 0.8f), 1.5f * scale);
+                string label = count.ToString();
+                int size = (int)Mathf.Round(15 * scale);
+                var width = font.GetStringSize(label, fontSize: size).X;
+                Text(font, pinned + new Vector2(-width / 2, r + 17 * scale), label, size, new Color(1, 0.8f, 0.75f));
+            }
         }
 
         void Text(Font font, Vector2 at, string text, int size, Color colour)

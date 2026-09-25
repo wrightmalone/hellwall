@@ -55,6 +55,10 @@ public sealed class ClientState
     public readonly List<(float X, float Y, bool Attack, double Age)> OrderPings = new();
     /// <summary>Living woods: trees whose felling would open a way in (ForestWatch), ringed in amber.</summary>
     public IReadOnlyCollection<int> EndangeredTrees = Array.Empty<int>();
+    /// <summary>The people working the Farms' fields (for the eye only).</summary>
+    public readonly Farmers Farmers = new();
+    /// <summary>Each marching wave column's centre (tiles) and head-count, for its marker.</summary>
+    public readonly List<(int Column, Godot.Vector2 Centre, int Count)> Columns = new();
     public readonly List<(DemonHowled Howl, double Age)> Howls = new();
     public readonly List<(string Text, double Age)> Log = new();
 

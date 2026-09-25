@@ -5,7 +5,8 @@ public enum WoodsmanState : byte { Home, Out, Chopping, Back }
 /// <summary>
 /// One of a Woodcutter's crew, out in the world: walks a short path from
 /// the lodge's door to a tree at the forest's edge, chops it, and carries the
-/// wood home. Few (three a lodge), so plain objects like soldiers.
+/// wood home. Few (three a lodge), so plain objects like soldiers. A Quarry's
+/// or a Mine's miners are the same, working rock or ore instead of trees.
 /// </summary>
 public sealed class Woodsman
 {
@@ -16,7 +17,7 @@ public sealed class Woodsman
     /// <summary>Tiles from the door (index 0) to where he stands to chop.</summary>
     public int[] Path = [];
     public int Step;
-    /// <summary>The tree being felled, a tile index, or -1.</summary>
+    /// <summary>The tree being felled (or rock or ore being mined), a tile index, or -1.</summary>
     public int Tree = -1;
     public float Carry;
     public float Wait;
@@ -29,14 +30,15 @@ public static class WoodsSystem
 
     public static void Step(World world, float dt)
     {
-        if (!world.Rules.Woods.Blocks) return;
+        if (!world.ForestBlocks && !world.Mining) return;
         var woods = world.Rules.Woods;
+        var mining = world.Rules.Mining;
         var men = world.WoodsmanList;
 
-        // Crew out of every working lodge; the crew of a lodge that's gone goes with it.
+        // Crew out of every working lodge, quarry and mine; the crew of one that's gone goes with it.
         foreach (var b in world.BuildingList)
         {
-            if (!b.Def.Woodsmen || !b.Complete) continue;
+            if (!world.HasCrew(b.Def) || !b.Complete) continue;
             int have = 0;
             foreach (var m in men) if (m.HomeId == b.Id) have++;
             for (; have < b.Def.Workers; have++)
@@ -71,23 +73,39 @@ public static class WoodsSystem
                 case WoodsmanState.Home:
                     m.Wait -= dt;
                     if (m.Wait > 0 || !home.Active) break;
-                    if (FindTree(world, home, m)) m.State = WoodsmanState.Out;
-                    else m.Wait = 5;
+                    if (FindTree(world, home, m))
+                    {
+                        m.State = WoodsmanState.Out;
+                        home.Exhausted = false;
+                    }
+                    else
+                    {
+                        m.Wait = 5;
+                        home.Exhausted = !AnyAtWork(men, home.Id); // worked out only when none of the crew has anything left
+                    }
                     break;
                 case WoodsmanState.Out:
                     if (Walk(world, m, forward: true, woods.Speed * dt)) m.State = WoodsmanState.Chopping;
                     break;
                 case WoodsmanState.Chopping:
-                    if (m.Tree < 0 || world.Terrain.Tiles[m.Tree] != Tile.Forest) { GoHome(world, m); break; }
-                    float hp = woods.ChopDps * dt * world.Colony.Power;
+                {
+                    var works = m.Tree < 0 ? Tile.Grass : world.Terrain.Tiles[m.Tree];
+                    if (m.Tree < 0 || !Works(home.Def, works)) { GoHome(world, m); break; }
+                    bool tree = works == Tile.Forest;
+                    float hp = (tree ? woods.ChopDps : mining.MineDps) * dt * world.Colony.Power;
                     world.TreeHp[m.Tree] -= hp;
-                    m.Carry += hp * woods.WoodPerHp;
-                    if (world.TreeHp[m.Tree] <= 0) world.Fell(m.Tree);
-                    if (world.Terrain.Tiles[m.Tree] != Tile.Forest || m.Carry >= woods.Carry) GoHome(world, m);
+                    m.Carry += hp * (works switch { Tile.Forest => woods.WoodPerHp, Tile.Rock => mining.StonePerHp, _ => mining.IronPerHp });
+                    if (world.TreeHp[m.Tree] <= 0)
+                    {
+                        if (tree) world.Fell(m.Tree);
+                        else world.WearAway(m.Tree);
+                    }
+                    if (world.Terrain.Tiles[m.Tree] != works || m.Carry >= woods.Carry) GoHome(world, m);
                     break;
+                }
                 case WoodsmanState.Back:
                     if (!Walk(world, m, forward: false, woods.Speed * dt)) break;
-                    world.Colony.Stock[(int)Resource.Wood] += m.Carry;
+                    world.Colony.Stock[(int)(home.Def.Produces ?? Resource.Wood)] += m.Carry;
                     home.WoodWindow += m.Carry;
                     m.Carry = 0;
                     m.State = WoodsmanState.Home;
@@ -95,6 +113,12 @@ public static class WoodsSystem
                     break;
             }
         }
+    }
+
+    static bool AnyAtWork(List<Woodsman> men, int home)
+    {
+        foreach (var o in men) if (o.HomeId == home && o.Tree >= 0) return true;
+        return false;
     }
 
     static void GoHome(World world, Woodsman m)
@@ -140,14 +164,21 @@ public static class WoodsSystem
         return forward ? m.Step >= m.Path.Length - 1 : m.Step <= 0;
     }
 
+    /// <summary>A tile this building's crew work: its lodge's trees, its quarry's rock, its mine's ore.</summary>
+    static bool Works(BuildingDef def, Tile tile) => tile != Tile.Grass && Array.IndexOf(def.Gathers, tile) >= 0;
+
     static readonly (int, int)[] Neighbours = [(1, 0), (-1, 0), (0, 1), (0, -1)];
 
-    /// <summary>Where a woodsman may walk: open ground, and the colony's own walls, which he crosses by postern and ladder (a walled town still fells the woods outside).</summary>
+    /// <summary>
+    /// Where a woodsman or miner may walk: open ground, and the colony's own buildings, which he
+    /// crosses by postern, ladder and back door (a walled or tightly built town still works the
+    /// ground outside). Not a possessed one.
+    /// </summary>
     static bool Passable(World world, int x, int y)
     {
         if (world.IsHumanWalkable(x, y)) return true;
         int id = world.BuildingIdAt(x, y);
-        return id != 0 && world.BuildingById(id) is { IsWallLike: true, Possessed: false };
+        return id != 0 && world.BuildingById(id) is { Possessed: false };
     }
 
     /// <summary>
@@ -174,7 +205,7 @@ public static class WoodsSystem
                 int nx = x + ox, ny = y + oy;
                 if (!t.InBounds(nx, ny)) continue;
                 int n = t.Index(nx, ny);
-                if (t.Tiles[n] == Tile.Forest && world.TreeClaim[n] == 0)
+                if (Works(home.Def, t.Tiles[n]) && world.TreeClaim[n] == 0 && world.BuildingIdAt(nx, ny) == 0)
                 {
                     var path = new List<int>();
                     for (int c = tile; c != -1; c = from[c]) path.Add(c);
@@ -195,14 +226,15 @@ public static class WoodsSystem
         return false;
     }
 
-    static bool Open(Terrain t, int x, int y) => t.InBounds(x, y) && t.Get(x, y) is Tile.Grass or Tile.Ore or Tile.Silver;
+    static bool Open(Terrain t, int x, int y, bool forestOpen) => t.InBounds(x, y) && (t.Get(x, y) is Tile.Grass or Tile.Ore or Tile.Silver || (forestOpen && t.Get(x, y) == Tile.Forest));
 
     /// <summary>
-    /// Would felling the tree at (x, y) cut a new way through the forest: does it keep apart two
-    /// stretches of open ground on its sides that don't otherwise meet within `window` tiles?
-    /// Terrain only (buildings don't count). For the client's warning; allocates, so not per tick.
+    /// Would felling the tree (or wearing away the rock) at (x, y) cut a new way through: does it keep
+    /// apart two stretches of open ground on its sides that don't otherwise meet within `window` tiles?
+    /// Terrain only (buildings don't count); forestOpen when the woods don't block. For the client's
+    /// warning; allocates, so not per tick.
     /// </summary>
-    public static bool OpensAGap(Terrain t, int x, int y, int window = 6)
+    public static bool OpensAGap(Terrain t, int x, int y, int window = 6, bool forestOpen = false)
     {
         int side = window * 2 + 1;
         var label = new int[side * side];
@@ -213,7 +245,7 @@ public static class WoodsSystem
             {
                 if (ox == 0 && oy == 0) continue;
                 int nx = x + ox, ny = y + oy;
-                if (!Open(t, nx, ny)) continue;
+                if (!Open(t, nx, ny, forestOpen)) continue;
                 int lx = nx - x + window, ly = ny - y + window;
                 int here = label[ly * side + lx];
                 if (here == 0)
@@ -229,7 +261,7 @@ public static class WoodsSystem
                         {
                             int qx = cx + sx, qy = cy + sy;
                             if (qx < 0 || qy < 0 || qx >= side || qy >= side || label[qy * side + qx] != 0) continue;
-                            if ((qx == window && qy == window) || !Open(t, x - window + qx, y - window + qy)) continue;
+                            if ((qx == window && qy == window) || !Open(t, x - window + qx, y - window + qy, forestOpen)) continue;
                             label[qy * side + qx] = here;
                             queue.Enqueue((qx, qy));
                         }

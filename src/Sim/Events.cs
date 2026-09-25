@@ -72,6 +72,8 @@ public sealed record CorruptionTook(int Tick, string Id, string Name) : SimEvent
 
 /// <summary>A tree came down (felled by woodsmen or hacked through by the horde): the tile is open ground now.</summary>
 public sealed record TreeFelled(int Tick, int X, int Y) : SimEvent(Tick);
+/// <summary>Miners took the last of a rock or ore tile; it is open ground now.</summary>
+public sealed record DepositWorn(int Tick, int X, int Y, Tile Was) : SimEvent(Tick);
 
 /// <summary>A mission trigger fired: its message, and how many demons it brought (from Side).</summary>
 public sealed record ScenarioMessage(int Tick, int Index, string Text, int Spawned, Side Side, string Speaker = "") : SimEvent(Tick);

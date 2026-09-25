@@ -44,7 +44,7 @@ public partial class Inspector : PanelContainer
         };
         box.AddChild(_upgrade);
         _hold = UiKit.TextButton("Put on hold", 12);
-        _hold.TooltipText = "Stand the crew down: they go to other work, and a Woodcutter's woodsmen stay home.\nNothing is produced until it's back at work.";
+        _hold.TooltipText = "Stand the crew down: they go to other work, and its woodsmen or miners stay home.\nNothing is produced until it's back at work.";
         _hold.Pressed += () =>
         {
             if (Group() is { Count: > 1 } group)
@@ -152,8 +152,9 @@ public partial class Inspector : PanelContainer
                 !b.OnGround ? "Dark: not on holy ground" :
                 b.Paused ? "On hold (its crew are at other work)" :
                 b.NeedsCrew && !b.Staffed ? $"Idle: needs {b.Def.Workers} workers" :
+                b.Exhausted && World.HasCrew(b.Def) ? $"Worked out: no {(b.Kind == BuildingKind.Woodcutter ? "trees" : b.Kind == BuildingKind.Mine ? "ore" : "rock")} left in reach. Build another further out" :
                 "Working";
-            _status.AddThemeColorOverride("font_color", b.Paused ? UiKit.Muted : b.Possessed || !b.OnGround || (b.NeedsCrew && !b.Staffed) ? UiKit.Threat : UiKit.Text);
+            _status.AddThemeColorOverride("font_color", b.Paused ? UiKit.Muted : b.Possessed || !b.OnGround || (b.NeedsCrew && !b.Staffed) || (b.Exhausted && World.HasCrew(b.Def)) ? UiKit.Threat : UiKit.Text);
             var d = new List<string>();
             if (b.Def.Produces is { } r && b.Complete) d.Add($"{b.Rate * World.Colony.Power:0.00} {r.ToString().ToLowerInvariant()} a second");
             if (b.Def.Weapon is { } w) d.Add($"range {w.Range:0.#}, {w.Damage:0} damage every {w.Cooldown:0.##} s");

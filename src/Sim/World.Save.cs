@@ -17,7 +17,7 @@ namespace Hellwall.Sim;
 public sealed partial class World
 {
     const uint Magic = 0x56535748; // "HWSV"
-    const int FormatVersion = 14;
+    const int FormatVersion = 15;
 
     public byte[] Save()
     {
@@ -40,6 +40,7 @@ public sealed partial class World
             w.Write(inline);
             if (inline) w.Write(Scenario!.ToJson());
             w.Write(Rules.Woods.Blocks); // a run option (living woods), so the save carries it
+            w.Write(Rules.Mining.Enabled); // likewise miners
 
             w.Write(Tick);
             w.Write((byte)Outcome);
@@ -93,6 +94,7 @@ public sealed partial class World
                 w.Write(b.Upgrading);
                 w.Write(b.UpgradeProgress);
                 w.Write(b.Paused);
+                w.Write(b.Exhausted);
                 w.Write(b.Possessed);
                 w.Write(b.Occupants);
                 w.Write(b.PossessTimer);
@@ -139,6 +141,7 @@ public sealed partial class World
                 w.Write(h.Hp[i]);
                 w.Write(h.Cooldown[i]);
                 w.Write(h.Hunt[i]);
+                w.Write(h.Column[i]);
                 w.Write(h.HuntX[i]);
                 w.Write(h.HuntY[i]);
             }
@@ -209,9 +212,10 @@ public sealed partial class World
     void SaveWoods(BinaryWriter w)
     {
         w.Write(TreesFelled);
+        w.Write(DepositsWorn);
         var hurt = new List<int>();
         for (int i = 0; i < TreeHp.Length; i++)
-            if (Terrain.Tiles[i] == Tile.Forest && TreeHp[i] != Rules.Woods.TreeHp) hurt.Add(i);
+            if (TreeHp[i] != FullHp(Terrain.Tiles[i])) hurt.Add(i);
         w.Write(hurt.Count);
         foreach (int i in hurt) { w.Write(i); w.Write(TreeHp[i]); }
         w.Write(_woodsmen.Count);
@@ -229,7 +233,8 @@ public sealed partial class World
     void LoadWoods(BinaryReader r)
     {
         TreesFelled = r.ReadInt32();
-        for (int i = 0; i < TreeHp.Length; i++) TreeHp[i] = Terrain.Tiles[i] == Tile.Forest ? Rules.Woods.TreeHp : 0;
+        DepositsWorn = r.ReadInt32();
+        for (int i = 0; i < TreeHp.Length; i++) TreeHp[i] = FullHp(Terrain.Tiles[i]);
         for (int n = r.ReadInt32(); n > 0; n--) { int i = r.ReadInt32(); TreeHp[i] = r.ReadSingle(); }
         Array.Clear(TreeClaim);
         _woodsmen.Clear();
@@ -273,8 +278,11 @@ public sealed partial class World
         bool inline = r.ReadBoolean();
         var scenario = inline ? ScenarioDef.FromJson(r.ReadString())
             : scenarioId.Length == 0 ? null : Campaign.Default.Find(scenarioId) ?? throw new FormatException($"this save is from a mission this build doesn't have ('{scenarioId}')");
+        // The run options first, then the mission's own rules: the order the game made them in, which the rules hash depends on.
+        bool woods = r.ReadBoolean(), mining = r.ReadBoolean();
+        if (woods != rules.Woods.Blocks) rules = rules.WithWoods(w => w with { Blocks = woods });
+        if (mining != rules.Mining.Enabled) rules = rules.WithMining(m => m with { Enabled = mining });
         if (scenario != null) rules = scenario.RulesFrom(rules);
-        if (r.ReadBoolean() && !rules.Woods.Blocks) rules = rules.WithWoods(w => w with { Blocks = true });
         if (rulesHash != rules.ForDifficulty(difficulty).Hash) throw new FormatException("this save was made under different rules");
 
         var world = new World(new WorldOptions(seed, size, 0, rules, survival, difficulty, endless, map, scenario));
@@ -329,6 +337,7 @@ public sealed partial class World
             b.Upgrading = r.ReadBoolean();
             b.UpgradeProgress = r.ReadSingle();
             b.Paused = r.ReadBoolean();
+            b.Exhausted = r.ReadBoolean();
             b.Possessed = r.ReadBoolean();
             b.Occupants = r.ReadInt32();
             b.PossessTimer = r.ReadSingle();
@@ -368,6 +377,7 @@ public sealed partial class World
             h.VY[i] = vy;
             h.Cooldown[i] = r.ReadSingle();
             h.Hunt[i] = r.ReadSingle();
+            h.Column[i] = r.ReadInt32();
             h.HuntX[i] = r.ReadSingle();
             h.HuntY[i] = r.ReadSingle();
         }

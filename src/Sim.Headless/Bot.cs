@@ -81,6 +81,13 @@ public sealed class Bot
         double net(Resource r) => Colony.NetPerSecond[(int)r];
         bool anyIdle = _world.Buildings.Any(b => b.Complete && b.OnGround && b.NeedsCrew && !b.Staffed && !b.Possessed);
 
+        // A Quarry or Mine with nothing left in reach only ties up its crew: take it down, and the want below builds a new one on fresh ground.
+        if (_world.Buildings.FirstOrDefault(b => b.Exhausted && b.Def.Miners && b.Complete && !b.Possessed) is { } spent)
+        {
+            Do(new Demolish(spent.Id));
+            return;
+        }
+
         // 1. People first: an idle building is wasted, and nothing crewed gets built without hands for it.
         if ((anyIdle || free < 3) && !Underway(BuildingKind.House))
             if (Place(BuildingKind.House, NearKeep)) return;
@@ -220,7 +227,7 @@ public sealed class Bot
         bool fed = Colony.NetPerSecond[(int)Resource.Food] > 0.05 && Colony[Resource.Food] > 100;
         // All in for the end: once the Convergence is near, spend everything, fed or not.
         var survival = _world.Survival;
-        if (survival != null && (_world.Day >= survival.Rules.Days - 5 || survival.Waves[^1].Announced)) fed = true;
+        if (survival != null && (_world.Day >= survival.Rules.Days - 5 || survival.Waves[^1].LandsAtTick - _world.Tick <= Math.Min(10, survival.Rules.Days / 6.0) * survival.Rules.DaySeconds * Balance.TickHz)) fed = true;
         if (warned && fed && Colony[Resource.Gold] > 800) wantTowers = int.MaxValue;
         var towerKind = Seconds > 900 && Count(BuildingKind.Bombard) * 3 < Count(BuildingKind.Watchtower) ? BuildingKind.Bombard : BuildingKind.Watchtower;
         if (towerKind == BuildingKind.Watchtower && _world.Tech.Has("ballistics") && Count(BuildingKind.LanceTower) * 2 < Count(BuildingKind.Watchtower))
@@ -372,9 +379,16 @@ public sealed class Bot
             var (tx, ty) = InsideRing(_incoming[0]);
             tiles = tiles.OrderBy(t => Math.Abs(t.X - tx) + Math.Abs(t.Y - ty));
         }
-        // Every tenth tile of the ring is a Gate: soldiers have to get out to clear the wilds.
+        // Every tenth tile of the ring is a Gate, where there's open ground on both sides of it: soldiers
+        // have to get out to clear the wilds, and a gate onto the trees (which block them) is only a wall.
         foreach (var (x, y) in tiles.Take(budget).ToList())
-            Do(new PlaceBuilding((x + y) % 10 == 0 && _world.CheckPlacement(BuildingKind.Gate, x, y) == null ? BuildingKind.Gate : wall, x, y));
+            Do(new PlaceBuilding((x + y) % 10 == 0 && OpensBothWays(x, y) && _world.CheckPlacement(BuildingKind.Gate, x, y) == null ? BuildingKind.Gate : wall, x, y));
+    }
+
+    bool OpensBothWays(int x, int y)
+    {
+        bool Open(int tx, int ty) => _world.Terrain.InBounds(tx, ty) && Terrain.IsWalkable(_world.Terrain.Get(tx, ty)) && !(_world.ForestBlocks && _world.Terrain.Get(tx, ty) == Tile.Forest) && _world.BuildingIdAt(tx, ty) == 0;
+        return (Open(x - 1, y) && Open(x + 1, y)) || (Open(x, y - 1) && Open(x, y + 1));
     }
 
     List<(int X, int Y, bool Hole)>? _perimeterCache;

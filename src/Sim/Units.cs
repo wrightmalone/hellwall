@@ -246,6 +246,14 @@ internal static class UnitSystem
             u.PrevX = u.X;
             u.PrevY = u.Y;
             u.Cooldown = Math.Max(0, u.Cooldown - dt);
+            // A building went up where he stood (or anything else put him inside one): he steps out
+            // to the nearest open ground rather than being sealed in for good.
+            if (world.BuildingById(world.BuildingIdAt((int)u.X, (int)u.Y)) is { IsGate: false } && world.StandingSpotNear((int)u.X, (int)u.Y) is { } outside)
+            {
+                u.X = u.PrevX = outside.X + 0.5f;
+                u.Y = u.PrevY = outside.Y + 0.5f;
+                u.Anchored = false;
+            }
 
             var weapon = u.Def.Weapon;
             if (u.Order == OrderKind.Idle && !u.Anchored) { u.AnchorX = u.X; u.AnchorY = u.Y; u.Anchored = true; }

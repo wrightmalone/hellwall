@@ -50,8 +50,11 @@
     "enabled": true, "startReveal": 22, "unitSight": 9, "buildingSight": 5, "towerExtra": 3, "woodsmanSight": 4
   },
 
+  "mining": {
+    "enabled": true, "rockHp": 360, "oreHp": 720, "mineDps": 1, "stonePerHp": 0.16, "ironPerHp": 0.13
+  },
   "woods": {
-    "blocks": false, "treeHp": 120, "treeCost": 6, "chopDps": 2.2, "woodPerHp": 0.25, "carry": 10, "speed": 2.2, "reach": 14
+    "blocks": true, "treeHp": 120, "treeCost": 30, "chopDps": 2.2, "woodPerHp": 0.25, "carry": 10, "speed": 2.2, "reach": 14
   },
 
   "hellgates": {
@@ -62,9 +65,9 @@
   "survival": {
     "daySeconds": 60, "days": 60, "patronMilestones": [40, 90, 160],
     "firstWaveDay": 6, "waveEveryDays": 3, "telegraphSeconds": 60,
-    "firstWaveSize": 30, "waveGrowth": 1.24,
-    "wavesPerExtraSide": 5, "maxSides": 3,
-    "convergenceSize": 7000,
+    "firstWaveSize": 39, "waveGrowth": 1.24,
+    "wavesPerExtraSide": 5, "maxSides": 2,
+    "convergenceSize": 14500, "convergenceLean": 0.6, "convergenceWarnSeconds": 600,
     "endlessMaxWave": 5000, "surgeEveryWaves": 6, "surgeScale": 2.5,
     "firstCorruptionDay": 12, "corruptionEveryDays": 8, "corruptionWarnSeconds": 60, "endlessGateTierDays": 20,
     "mix": [
@@ -92,7 +95,7 @@
                     "produces": "Wood", "perTile": 0.035, "gatherRadius": 4, "gathers": ["Forest"], "woodsmen": true },
     "Quarry":     { "size": [2, 2], "hp": 300,  "buildSeconds": 10, "cost": { "gold": 50, "wood": 10 },
                     "workers": 3, "sanctityUse": 2,
-                    "produces": "Stone", "perTile": 0.025, "gatherRadius": 4, "gathers": ["Rock"] },
+                    "produces": "Stone", "perTile": 0.025, "gatherRadius": 4, "gathers": ["Rock"], "miners": true },
     "Hunter":     { "size": [2, 2], "hp": 200,  "buildSeconds": 6,  "cost": { "gold": 30, "wood": 5 },
                     "workers": 2, "sanctityUse": 1,
                     "produces": "Food", "perTile": 0.0095, "gatherRadius": 6, "gathers": ["Forest"] },
@@ -110,7 +113,7 @@
                     "workers": 3, "sanctityUse": 3, "researches": true },
     "Mine":       { "size": [2, 2], "hp": 300,  "buildSeconds": 10, "cost": { "gold": 60, "wood": 20 },
                     "workers": 3, "sanctityUse": 2,
-                    "produces": "Iron", "perTile": 0.04, "gatherRadius": 4, "gathers": ["Ore"] },
+                    "produces": "Iron", "perTile": 0.04, "gatherRadius": 4, "gathers": ["Ore"], "miners": true },
     "SilverMine": { "size": [2, 2], "hp": 300, "buildSeconds": 12, "cost": { "gold": 80, "wood": 30, "stone": 20 },
                     "workers": 3, "sanctityUse": 2,
                     "produces": "Silver", "perTile": 0.03, "gatherRadius": 4, "gathers": ["Silver"] },

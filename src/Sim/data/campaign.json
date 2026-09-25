@@ -34,8 +34,8 @@
       "map": "Plains",
       "difficulty": "Easy",
       "days": 15,
-      "waves": 0.6,
-      "convergence": 0.12,
+      "waves": 0.46,
+      "convergence": 0.035,
       "hellgates": 0,
       "packs": 60,
       "lockedBuildings": [
@@ -90,8 +90,8 @@
       "map": "Highlands",
       "difficulty": "Easy",
       "days": 20,
-      "waves": 0.8,
-      "convergence": 0.2,
+      "waves": 0.62,
+      "convergence": 0.097,
       "hellgates": 0,
       "packs": 100,
       "lockedBuildings": [
@@ -136,8 +136,8 @@
       "map": "Plains",
       "difficulty": "Normal",
       "days": 30,
-      "waves": 0.9,
-      "convergence": 0.35,
+      "waves": 0.69,
+      "convergence": 0.169,
       "hellgates": 2,
       "objectives": [
         {
@@ -179,8 +179,8 @@
       "map": "Lakes",
       "difficulty": "Normal",
       "days": 30,
-      "waves": 0.9,
-      "convergence": 0.4,
+      "waves": 0.69,
+      "convergence": 0.193,
       "objectives": [
         {
           "kind": "Survive"
@@ -216,7 +216,8 @@
       "map": "Highlands",
       "difficulty": "Normal",
       "days": 40,
-      "convergence": 0.6,
+      "waves": 0.77,
+      "convergence": 0.29,
       "objectives": [
         {
           "kind": "Survive"
@@ -256,7 +257,8 @@
       "map": "Wildwood",
       "difficulty": "Normal",
       "days": 45,
-      "convergence": 0.8,
+      "waves": 0.77,
+      "convergence": 0.386,
       "objectives": [
         {
           "kind": "Survive"
@@ -291,8 +293,8 @@
       "map": "Plains",
       "difficulty": "Normal",
       "days": 35,
-      "waves": 0.9,
-      "convergence": 0.8,
+      "waves": 0.69,
+      "convergence": 0.386,
       "hellgates": 2,
       "ruins": 6,
       "objectives": [
@@ -341,6 +343,8 @@
       "map": "Plains",
       "difficulty": "Normal",
       "days": 60,
+      "waves": 0.77,
+      "convergence": 0.483,
       "objectives": [
         {
           "kind": "Survive"
@@ -389,8 +393,8 @@
         }
       ],
       "ruins": 0,
-      "waves": 1.4,
-      "convergence": 1.4
+      "waves": 1.08,
+      "convergence": 0.676
     }
   ]
 }

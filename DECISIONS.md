@@ -821,6 +821,115 @@ last lost by at least one).
   while chopping, its dagger strike looped (the model has no axe, and at this size the swing
   reads as chopping).
 
+## Miners, the horde marker, forests as walls, farmers (your list after 0.17.2)
+
+- **Quarries and Mines send out miners** (stone-grey figures with an overhead swing), like the
+  woodsmen: walk out, work a rock or ore tile, carry the stone or iron home. Each tile has hit
+  points: rock 360, ore 720 (a tree is 120), and a miner takes 1 off a second, so one miner
+  wears a rock away in about 6 minutes and an ore tile in 12. Worn away, it's grass: a rock
+  outcrop gets eaten from its edges in, and a deposit shrinks until it's gone.
+- **What a tile yields** is tuned so a Quarry or Mine earns about what it did gathering from a
+  radius (0.16 stone and 0.13 iron per hit point: ~58 stone a rock, ~94 iron an ore tile). The
+  first numbers (about twice that) made the bot's economy much richer than before, which is the
+  opposite of pressure.
+- **Worked out**: when none of a crew can find anything within reach, the building says
+  "Worked out: no ore left in reach. Build another further out" (in red) and an alert says so
+  once. That's the push outwards: iron's deposits are small, so a Mine lasts roughly half a
+  game, and the next is further from the Keep. The bot demolishes a worked-out one and builds
+  anew, which it needed to be taught.
+- **Worn-away rock is a new way in**, so the forest-gap warning covers rock too: "Miners are
+  about to break a way through the rock", an amber ring, then "The rock is broken through".
+- **Crews cross the colony's own buildings** now, not just walls (by back door, as it were).
+  In a tightly built town a Quarry's door opened into a pocket boxed in by Houses, its miners
+  found nothing and it was worked out with 250 rock tiles beside it.
+- **On by default, with a switch**: new-game "Miners (campaign too)", `--no-mining`. Saves
+  carry it. Sweep, mining on vs off (8 seeds x 3 paths): Plains 19/24 vs 15/24, Lakes 9/24 vs
+  11/24, Highlands 20/24 vs 21/24. About neutral: the pressure comes as the game goes on, not as a
+  harder start.
+  **Decide:** whether rock should last longer (it barely runs out, as rock fields are big) or
+  iron shorter; `mining.rockHp` / `oreHp` in rules.json, or `--rock-hp=` / `--ore-hp=` on a sweep.
+  Silver Mines still gather from a radius: silver's the rare edge-of-map one, and you only
+  named rock and iron.
+- **The horde marker**: each wave's column, once it lands, gets a horned demon's head with its
+  head-count, over the middle of the column, following it in. Off screen it waits at the edge
+  of the screen with an arrow pointing to it, so you can see which way to send soldiers; on the
+  minimap it's a pulsing ring. It shows through fog (you'd hear them coming) and goes when fewer
+  than five are left. Each side of a wave is its own column (the sim now tags every demon that
+  lands with its wave and side; the wilds' demons aren't tagged).
+- **Forests are walls, by default now** (living woods was an experiment you'd been playing
+  with): no one walks through the trees, woodsmen fell them, and a tree costs the horde's route
+  what a wall does (30; it was 6, cheap enough that they'd rather hack straight through). So
+  they go round to a gap, and where there's none, like your strip of trees between two walls,
+  they break through the trees no sooner than the wall beside them. A tree still has 120 hit
+  points to a wooden wall's 400, so once they commit to one it goes quicker. The "Living
+  woods" switch in the new-game menu turns it off (`--no-woods`). Hellgates no longer stand
+  in the trees (a closed one left an unwalkable forest behind).
+- **That made it much easier**: the bot's wins went Plains 19 to 21/24, Lakes 9 to 20, Highlands
+  20 to 23, Wildwood 11 to 23. Forest is free wall that funnels the horde. Bigger waves alone
+  hardly helped (1.6x: Plains 17, Lakes 17, Wildwood 19), so, as we said, the pressure comes back
+  concentrated instead:
+  - **Waves come from at most two sides** (it was three), each side's share bigger.
+  - **The Convergence leans on one side**: 60% of it from a main side, the rest split over the
+    other three, and it's announced ten minutes ahead ("THE CONVERGENCE in 10:00: 7000, most from
+    the south. Harden that side"), with its count per side on the edge labels. You know where
+    the big push comes from; the question is whether you prepared that wall.
+  - **And more of them**: waves 1.3x (the first is 39), the Convergence about twice what it was
+    (14,500). The shape alone left the bot winning 18-20 of 24; its size barely mattered either
+    (at 2.2x on Wildwood the bot killed 16,000 and its Keep took no damage), because forests make
+    it a killing ground at the chokepoints, which is the game you described. What's lost now is
+    mostly lost mid-game. Plains 17/24 at these numbers.
+  **Decide:** the bot holds a chokepoint better than a person will at first, so this may feel
+  harder than the numbers say. If the Convergence is a walkover for you, `convergenceSize` and
+  `convergenceLean` are the dials (`--convergence-scale=`, `--lean=` on a sweep).
+  **Decide:** a map built on this, like They Are Billions' bridge: a river or ravine across the
+  map with one or two crossings, the horde always from the far side. A new map kind and a
+  campaign mission; I haven't started it.
+- **What solid forest broke, and the fixes**:
+  - Campaign missions scale their waves off the base sizes, so raising those made every mission
+    harder untouched (both opening missions were lost). Each mission's multipliers are scaled
+    back so its waves and Convergence are the size they were.
+  - Hellgates and ruins are placed only where soldiers can walk from the Keep, and not by a way
+    round more than about 1.6 times the straight line (one Gatekeepers gate was 283 steps away
+    behind the woods, 132 as the crow flies).
+  - **A building put up where a soldier stands no longer seals him in**: he steps out to the
+    nearest open ground. The bot had been building Houses on top of its own garrison; before,
+    walkable forest next to such a pocket let him out. You could have hit it too.
+  - **An order into the trees lands on your side of them**: a click is aimed at the nearest
+    ground your soldiers can actually walk to, not a clearing boxed in by forest (they used to
+    stand still).
+  - The bot went "all in for the end" as soon as the Convergence was announced, which is now ten
+    minutes early; it waits for the last five days, as before.
+  - Fixing that exposed an exploit the bot had been living on: its soldiers sealed inside a
+    House couldn't be reached but could still shoot out, like towers no demon can touch. Without
+    it the bot lost the first mission, so its Convergence is gentler (about 500, was 850).
+  - The bot's wall ring only makes a tile a Gate where there's open ground on both sides of it
+    (a gate onto the trees is just a wall), and it goes all in for the end in the last sixth
+    of a run (ten days of sixty).
+- **Pyre is the strongest path now** (8/8 on Plains, legion 5, fortress 4: the gate allows a
+  spread of 4, and this is right at it). Forest chokepoints are where holy ground and towers
+  shine; the army path suffers most from walls it can't walk through. **Decide:** whether to
+  help the army (soldiers cutting paths through trees, say) or let chokepoints favour towers.
+- **Known gap: the bot can't close Hellgates now** (Gatekeepers, and the Hellwall's gates, lost
+  by every bot path; the campaign gate still holds, openers won and the finale lost). Its wall
+  ring was written for walkable forest and puts its gates where the trees outside block them,
+  so its raiders stand in pockets. It's the bot's town-planning, not the game's: you have the
+  lane warning. **Decide:** whether that's worth teaching the bot now (it's how the sweeps test
+  gate-closing), or after you've played the missions yourself.
+- **Faster balance checks**: the sweep runs every game in its own process, as many at once as
+  there are cores (a full sweep, 8 seeds x 3 paths: about 3 minutes a map, was 6).
+  `QUICK=1 scripts/sweep.sh` plays 4 seeds (about 1.5 minutes; noisy, for direction), and
+  `scripts/ab.sh '<flags>' plains lakes` runs a quick sweep with and without some flags per map
+  and prints them side by side. `scripts/verify.sh --fast` (about a minute) skips the full-run
+  gates. Iterate with those; a full sweep and verify before a commit or build.
+- **Farmers**: a Farm's crew (four, straw-coloured) walk out over its field, stoop to sow a
+  tile, come back and water it (drops from the can), and reap it with a sweep when it's
+  ripe; the crops show on the ground as furrows, green shoots, then gold. For the eye only, as
+  you suggested: the food is the Farm's rate, as before, and the fields aren't saved (a loaded
+  game's start bare). A tile-wide path round each Farm stays bare, as a farmer standing right
+  by its yard was drawn behind it.
+  **Decide:** making the harvest the food (deliveries, as with woodsmen) would make Farms
+  lumpy and raidable; worth a try once the rest settles.
+
 ## Buildings from KayKit Medieval Hexagon (you downloaded it and the Medieval Village MegaKit)
 
 - **Every building but walls and gates is now a baked KayKit model** (`tools/bake_buildings.gd`,

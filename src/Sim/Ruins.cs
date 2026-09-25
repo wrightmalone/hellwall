@@ -26,13 +26,14 @@ internal static class RuinSystem
         var t = world.Terrain;
         int c = t.Width / 2;
         float scale = t.Width / 256f;
+        var walk = world.WalkFromKeep(); // ruins are for soldiers to loot: none in a pocket of forest
         int min = (int)(wilds.RuinMinDistance * scale), max = (int)(wilds.RuinMaxDistance * scale);
         for (int n = 0, attempts = 0; n < wilds.Ruins && attempts < wilds.Ruins * 400; attempts++)
         {
             int x = world.Rng.NextInt(t.Width), y = world.Rng.NextInt(t.Height);
             int dx = x - c, dy = y - c, d2 = dx * dx + dy * dy;
             if (d2 < min * min || d2 > max * max) continue;
-            if (!world.IsWalkable(x, y) || world.Flow.DistAt(x, y) == FlowField.Unreachable) continue;
+            if (!world.IsWalkable(x, y) || world.Flow.DistAt(x, y) == FlowField.Unreachable || !World.FairWalk(walk, t.Index(x, y), MathF.Sqrt(d2))) continue;
             if (world.RuinList.Any(r => (r.X - x) * (r.X - x) + (r.Y - y) * (r.Y - y) < 30 * 30)) continue;
             float far = (MathF.Sqrt(d2) - min) / Math.Max(1, max - min);
             var guard = world.AddPack(x, y, (int)(wilds.RuinGuards * (0.8f + 0.6f * far)), DemonKind.Thrall);

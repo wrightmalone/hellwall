@@ -122,6 +122,19 @@ public sealed record WoodsRules
     public int Reach { get; init; } = 14;
 }
 
+public sealed record MiningRules
+{
+    /// <summary>Quarries and Mines send out miners who wear rock and ore away, rather than gathering from a radius forever.</summary>
+    public bool Enabled { get; init; } = true;
+    /// <summary>Hit points of a rock tile and of an iron-ore tile: how long a deposit lasts.</summary>
+    public float RockHp { get; init; } = 360;
+    public float OreHp { get; init; } = 720;
+    /// <summary>Hit points a miner takes off a second, and what each point yields.</summary>
+    public float MineDps { get; init; } = 1;
+    public float StonePerHp { get; init; } = 0.16f;
+    public float IronPerHp { get; init; } = 0.13f;
+}
+
 public sealed record WildsRules
 {
     /// <summary>Packs on a survival map (tests and probes ask for their own number).</summary>
@@ -251,6 +264,9 @@ public sealed record BuildingDef
     /// <summary>When the woods block (WoodsRules.Blocks), its crew go out and fell trees rather than gathering from a radius.</summary>
     public bool Woodsmen { get; init; }
 
+    /// <summary>When mining is on (MiningRules.Enabled), its crew go out as miners and wear away the rock or ore they work.</summary>
+    public bool Miners { get; init; }
+
     /// <summary>
     /// While active, every demon within SlowRadius tiles moves at SlowFactor
     /// of its speed (the Belfry). Overlapping fields don't stack: the
@@ -349,6 +365,7 @@ public sealed class Rules
     public WildsRules Wilds { get; private init; } = new();
 
     public WoodsRules Woods { get; private init; } = new();
+    public MiningRules Mining { get; private init; } = new();
     public FogRules Fog { get; private init; } = new();
     public RepairRules Repair { get; private init; } = new();
 
@@ -380,7 +397,7 @@ public sealed class Rules
         {
             StartingResources = scaled.StartingResources, ColonistGoldPerSecond = scaled.ColonistGoldPerSecond, ColonistFoodPerSecond = scaled.ColonistFoodPerSecond,
             RefundFraction = scaled.RefundFraction, PossessionSpawnSeconds = scaled.PossessionSpawnSeconds, StartingUnits = scaled.StartingUnits,
-            Survival = scaled.Survival, Hellgates = scaled.Hellgates, Wilds = scaled.Wilds, Woods = scaled.Woods, Fog = scaled.Fog, Repair = scaled.Repair, Techs = scaled.Techs, Difficulties = Difficulties, Corruptions = Corruptions,
+            Survival = scaled.Survival, Hellgates = scaled.Hellgates, Wilds = scaled.Wilds, Woods = scaled.Woods, Mining = scaled.Mining, Fog = scaled.Fog, Repair = scaled.Repair, Techs = scaled.Techs, Difficulties = Difficulties, Corruptions = Corruptions,
             Buildings = scaled.Buildings, Units = scaled.Units, Demons = scaled.Demons,
             Difficulty = level,
             Hash = scaled.Hash ^ ((ulong)level + 1) * 0x100000001B3UL,
@@ -422,6 +439,7 @@ public sealed class Rules
         public HellgateRules Hellgates { get; init; } = new();
         public WildsRules Wilds { get; init; } = new();
         public WoodsRules Woods { get; init; } = new();
+        public MiningRules Mining { get; init; } = new();
         public FogRules Fog { get; init; } = new();
         public RepairRules Repair { get; init; } = new();
         public TechDef[] Techs { get; init; } = [];
@@ -455,6 +473,7 @@ public sealed class Rules
             Hellgates = file.Hellgates,
             Wilds = file.Wilds,
             Woods = file.Woods,
+            Mining = file.Mining,
             Fog = file.Fog,
             Repair = file.Repair,
             Techs = file.Techs,
@@ -494,7 +513,7 @@ public sealed class Rules
         {
             StartingResources = copy.StartingResources, ColonistGoldPerSecond = copy.ColonistGoldPerSecond, ColonistFoodPerSecond = copy.ColonistFoodPerSecond,
             RefundFraction = copy.RefundFraction, PossessionSpawnSeconds = copy.PossessionSpawnSeconds, StartingUnits = copy.StartingUnits,
-            Survival = copy.Survival, Hellgates = copy.Hellgates, Wilds = copy.Wilds, Woods = copy.Woods, Fog = copy.Fog, Repair = copy.Repair, Techs = copy.Techs, Difficulties = Difficulties, Corruptions = pool,
+            Survival = copy.Survival, Hellgates = copy.Hellgates, Wilds = copy.Wilds, Woods = copy.Woods, Mining = copy.Mining, Fog = copy.Fog, Repair = copy.Repair, Techs = copy.Techs, Difficulties = Difficulties, Corruptions = pool,
             Buildings = copy.Buildings, Units = copy.Units, Demons = copy.Demons, Difficulty = Difficulty,
             Hash = copy.Hash ^ Fnv(JsonSerializer.Serialize(pool, Options)),
         };
@@ -542,6 +561,12 @@ public sealed class Rules
         return Copy(r => r.Woods = woods);
     }
 
+    public Rules WithMining(Func<MiningRules, MiningRules> change)
+    {
+        var mining = change(Mining);
+        return Copy(r => r.Mining = mining);
+    }
+
     public Rules WithWilds(Func<WildsRules, WildsRules> change)
     {
         var wilds = change(Wilds);
@@ -565,13 +590,14 @@ public sealed class Rules
         public HellgateRules Hellgates = new();
         public WildsRules Wilds = new();
         public WoodsRules Woods = new();
+        public MiningRules Mining = new();
         public FogRules Fog = new();
         public RepairRules Repair = new();
     }
 
     Rules Copy(Action<Builder> change)
     {
-        var b = new Builder { StartingResources = StartingResources, Buildings = Buildings, Units = Units, Demons = Demons, Survival = Survival, Hellgates = Hellgates, Wilds = Wilds, Woods = Woods, Fog = Fog, Repair = Repair };
+        var b = new Builder { StartingResources = StartingResources, Buildings = Buildings, Units = Units, Demons = Demons, Survival = Survival, Hellgates = Hellgates, Wilds = Wilds, Woods = Woods, Mining = Mining, Fog = Fog, Repair = Repair };
         change(b);
         return new Rules
         {
@@ -585,6 +611,7 @@ public sealed class Rules
             Hellgates = b.Hellgates,
             Wilds = b.Wilds,
             Woods = b.Woods,
+            Mining = b.Mining,
             Fog = b.Fog,
             Repair = b.Repair,
             Techs = Techs,
@@ -600,7 +627,7 @@ public sealed class Rules
     }
 
     static string Describe(Builder b) =>
-        JsonSerializer.Serialize(new { b.StartingResources, b.Buildings, b.Units, b.Demons, b.Survival, b.Hellgates, b.Wilds, b.Woods, b.Fog, b.Repair }, Options);
+        JsonSerializer.Serialize(new { b.StartingResources, b.Buildings, b.Units, b.Demons, b.Survival, b.Hellgates, b.Wilds, b.Woods, b.Mining, b.Fog, b.Repair }, Options);
 
     static T[] Dense<TKey, T>(Dictionary<TKey, T> map, string what) where TKey : struct, Enum
     {

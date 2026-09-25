@@ -71,6 +71,26 @@ public class WoodsTests
         Assert.True(world.TreesFelled > 0, "no tree came down");
     }
 
+    /// <summary>The same ring with a way through on the far side: they go round to it, and leave the trees standing.</summary>
+    [Fact]
+    public void TheHordeGoesRoundTheWoodsToAGap()
+    {
+        var world = Rich(Woods());
+        world.PlantForest(C - 12, C - 12, C + 12, C - 11);
+        world.PlantForest(C - 12, C + 11, C + 12, C + 12);
+        world.PlantForest(C - 12, C - 12, C - 11, C + 12);
+        world.PlantForest(C + 11, C - 12, C + 12, C + 12);
+        world.PlantForest(C, C - 12, C, C - 11, Tile.Grass); // a gap in the north side, a long way round from the east
+        Run(world, new SpawnDemons(DemonKind.Imp, C + 24, C, 40));
+        RunSeconds(world, 60);
+        Assert.Equal(0, world.TreesFelled);
+        Assert.True(world.Stats.BuildingsLost > 0 || world.Buildings.First(b => b.Kind == BuildingKind.Keep).Hp < world.Rules[BuildingKind.Keep].Hp, "they got in, by the gap");
+    }
+
+    /// <summary>A tree costs the horde's route what a wall does: it breaks through a strip of trees no sooner than a wall.</summary>
+    [Fact]
+    public void ATreeIsPricedLikeAWall() => Assert.Equal(Balance.WallCostMultiplier, Rules.Default.Woods.TreeCost);
+
     [Fact]
     public void WoodsSurviveASaveMidWalk()
     {

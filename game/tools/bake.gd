@@ -33,6 +33,12 @@ var variants := [
 	["unit-exorcist", RP + "Wizard.gltf", Color(0.86, 0.9, 1.0), 1.0, ["", ""], 1.0, "Walk", 0.5], # silver-white: the advanced tier
 	["unit-woodsman", RP + "Rogue.gltf", Color(0.42, 0.5, 0.26), 1.0, ["", ""], 0.9, "Walk", 0.45], # forest green: a woodsman, not a soldier
 	["unit-woodsman-chop", RP + "Rogue.gltf", Color(0.42, 0.5, 0.26), 1.0, ["", ""], 0.9, "Dagger_Attack", 0.45], # the swing, looped while he chops
+	["unit-farmer", RP + "Monk.gltf", Color(0.78, 0.66, 0.36), 1.0, ["", ""], 0.9, "Walk", 0.5], # straw: a farmer
+	["unit-farmer-plant", RP + "Monk.gltf", Color(0.78, 0.66, 0.36), 1.0, ["", ""], 0.9, "PickUp", 0.5], # stoops to sow, and to gather
+	["unit-farmer-water", RP + "Monk.gltf", Color(0.78, 0.66, 0.36), 1.0, ["", ""], 0.9, "Idle", 0.5], # stands and waters (the water's drawn)
+	["unit-farmer-reap", RP + "Monk.gltf", Color(0.78, 0.66, 0.36), 1.0, ["", ""], 0.9, "Attack", 0.5], # a sweep, as with a sickle
+	["unit-miner", RP + "Warrior.gltf", Color(0.55, 0.5, 0.44), 1.0, ["", ""], 0.9, "Walk", 0.5], # stone-dust grey: a miner, not a Templar
+	["unit-miner-dig", RP + "Warrior.gltf", Color(0.55, 0.5, 0.44), 1.0, ["", ""], 0.9, "Sword_Attack", 0.5], # the overhead swing reads as a pick at this size
 	# Demons: Quaternius Ultimate Monsters, fitted to a height (6th field) and walked with
 	# their own clip (7th); the Thrall stays Kenney's zombie, a possessed colonist.
 	["demon-imp", QM + "Big/Demon.gltf", null, 1.0, ["", ""], 0.72, "Walk"],

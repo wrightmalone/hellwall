@@ -313,3 +313,21 @@ public class LaneTests
         Assert.True(world.Horde.Count == 0, $"the demon lives; the Templar is at ({u.X:0.0}, {u.Y:0.0})");
     }
 }
+
+public class SteppingOutTests
+{
+    [Fact]
+    public void ASoldierABuildingGoesUpOnStepsOut()
+    {
+        var world = TestWorlds.Rich();
+        world.TrySpawnUnit(UnitKind.Militia, world.Buildings.First(b => b.Kind == BuildingKind.Keep));
+        var u = world.Units[0];
+        int x = (int)u.X + 3, y = (int)u.Y + 3;
+        u.X = u.PrevX = x + 0.5f;
+        u.Y = u.PrevY = y + 0.5f;
+        var house = TestWorlds.Built(world, BuildingKind.House, x, y);
+        TestWorlds.RunSeconds(world, 0.2);
+        Assert.NotEqual(house.Id, world.BuildingIdAt((int)u.X, (int)u.Y));
+        Assert.True(world.IsHumanWalkable((int)u.X, (int)u.Y), "he's on open ground");
+    }
+}

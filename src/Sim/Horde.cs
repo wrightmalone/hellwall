@@ -60,6 +60,14 @@ public sealed class Horde
     /// army stirs up comes for the army.
     /// </summary>
     public float[] Hunt;
+    /// <summary>
+    /// Which wave column it marched in with: a wave's number times four plus
+    /// its side plus one (Column(wave, side)); 0 for the wilds. For the
+    /// client's marker on each column's centre.
+    /// </summary>
+    public int[] Column;
+    public static int ColumnOf(int wave, Side side) => wave * 4 + (int)side + 1;
+    public static (int Wave, Side Side) FromColumn(int column) => ((column - 1) / 4, (Side)((column - 1) % 4));
     public float[] HuntX;
     public float[] HuntY;
 
@@ -83,6 +91,7 @@ public sealed class Horde
         Hp = new float[capacity];
         Cooldown = new float[capacity];
         Hunt = new float[capacity];
+        Column = new int[capacity];
         HuntX = new float[capacity];
         HuntY = new float[capacity];
         ChaseX = new float[capacity];
@@ -90,7 +99,7 @@ public sealed class Horde
         ChaseD2 = new float[capacity];
     }
 
-    internal void Add(DemonKind kind, float x, float y, float hp)
+    internal void Add(DemonKind kind, float x, float y, float hp, int column = 0)
     {
         if (Count == X.Length) Grow(Count * 2);
         int i = Count++;
@@ -101,6 +110,7 @@ public sealed class Horde
         Hp[i] = hp;
         Cooldown[i] = 0;
         Hunt[i] = 0;
+        Column[i] = column;
         HuntX[i] = x;
         HuntY[i] = y;
         ChaseD2[i] = float.MaxValue;
@@ -125,6 +135,7 @@ public sealed class Horde
                 Hp[write] = Hp[read];
                 Cooldown[write] = Cooldown[read];
                 Hunt[write] = Hunt[read];
+                Column[write] = Column[read];
                 HuntX[write] = HuntX[read];
                 HuntY[write] = HuntY[read];
             }
@@ -147,6 +158,7 @@ public sealed class Horde
         Array.Resize(ref Hp, capacity);
         Array.Resize(ref Cooldown, capacity);
         Array.Resize(ref Hunt, capacity);
+        Array.Resize(ref Column, capacity);
         Array.Resize(ref HuntX, capacity);
         Array.Resize(ref HuntY, capacity);
         Array.Resize(ref ChaseX, capacity);

@@ -7,9 +7,15 @@ internal static class TestWorlds
 
     public static readonly Cost Plenty = new() { Gold = 10000, Wood = 10000, Stone = 10000, Food = 10000, Iron = 10000 };
 
+    /// <summary>
+    /// The default rules with walkable woods: most tests are about something else, on maps with
+    /// trees near the Keep, and shouldn't hang on whether a tree is in the way. Woods tests opt in.
+    /// </summary>
+    public static readonly Rules OpenWoods = Rules.Default.WithWoods(w => w with { Blocks = false });
+
     public static World Rich(Rules? rules = null, uint seed = 7)
     {
-        var world = World.Create(new WorldOptions(seed, Balance.DefaultMapSize, 0, (rules ?? Rules.Default).WithStartingResources(Plenty)));
+        var world = World.Create(new WorldOptions(seed, Balance.DefaultMapSize, 0, (rules ?? OpenWoods).WithStartingResources(Plenty)));
         world.DrainEvents();
         return world;
     }
@@ -17,7 +23,7 @@ internal static class TestWorlds
     /// <summary>Demons that neither move nor hurt: targets for towers and soldiers.</summary>
     public static Rules Dummies(Rules? rules = null)
     {
-        var r = rules ?? Rules.Default;
+        var r = rules ?? OpenWoods;
         foreach (var kind in Enum.GetValues<DemonKind>()) r = r.WithDemon(kind, d => d with { Speed = 0, Damage = 0, ExplodeDamage = 0 });
         return r;
     }

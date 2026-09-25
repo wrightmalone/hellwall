@@ -92,6 +92,7 @@ public static class StateHash
             h = Mix(h, Bits(horde.Hp[i]));
             h = Mix(h, Bits(horde.Cooldown[i]));
             h = Mix(h, Bits(horde.Hunt[i]));
+            h = Mix(h, (uint)horde.Column[i]);
             h = Mix(h, Bits(horde.HuntX[i]));
             h = Mix(h, Bits(horde.HuntY[i]));
         }
@@ -138,13 +139,14 @@ public static class StateHash
         foreach (bool done in world.GoalsDone) h = MixByte(h, done ? (byte)1 : (byte)0);
         foreach (bool fired in world.TriggersFired) h = MixByte(h, fired ? (byte)1 : (byte)0);
         h = Mix(h, (uint)world.TreesFelled);
+        h = Mix(h, (uint)world.DepositsWorn);
         h = Mix(h, (uint)world.Stats.History.Count);
         h = Mix(h, (uint)world.PatronsTaken);
         foreach (var id in world.PatronOffer) h = MixString(h, id);
         foreach (var ruin in world.Ruins) { h = Mix(h, (uint)ruin.Id); h = MixByte(h, ruin.Looted ? (byte)1 : (byte)0); }
         for (int i = 0; i < world.Vision.Explored.Length; i += 1) if (world.Vision.Explored[i]) h = Mix(h, (uint)i);
         for (int i = 0; i < world.TreeHp.Length; i++)
-            if (world.Terrain.Tiles[i] == Tile.Forest && world.TreeHp[i] != world.Rules.Woods.TreeHp) { h = Mix(h, (uint)i); h = Mix(h, Bits(world.TreeHp[i])); }
+            if (world.TreeHp[i] != world.FullHp(world.Terrain.Tiles[i])) { h = Mix(h, (uint)i); h = Mix(h, Bits(world.TreeHp[i])); }
         foreach (var m in world.Woodsmen)
         {
             h = Mix(h, (uint)m.Id); h = Mix(h, (uint)m.HomeId);
@@ -153,7 +155,7 @@ public static class StateHash
             h = Mix(h, (uint)m.Step); h = Mix(h, (uint)m.Tree); h = Mix(h, Bits(m.Carry)); h = Mix(h, Bits(m.Wait));
             foreach (int t in m.Path) h = Mix(h, (uint)t);
         }
-        foreach (var b in world.Buildings) { h = Mix(h, Bits(b.WoodWindow)); h = Mix(h, Bits(b.WoodTimer)); h = Mix(h, Bits(b.WatchedHp)); h = Mix(h, Bits(b.Calm)); h = MixByte(h, b.Upgrading ? (byte)1 : (byte)0); h = Mix(h, Bits(b.UpgradeProgress)); h = MixByte(h, b.Paused ? (byte)1 : (byte)0); }
+        foreach (var b in world.Buildings) { h = Mix(h, Bits(b.WoodWindow)); h = Mix(h, Bits(b.WoodTimer)); h = Mix(h, Bits(b.WatchedHp)); h = Mix(h, Bits(b.Calm)); h = MixByte(h, b.Upgrading ? (byte)1 : (byte)0); h = Mix(h, Bits(b.UpgradeProgress)); h = MixByte(h, b.Paused ? (byte)1 : (byte)0); h = MixByte(h, b.Exhausted ? (byte)1 : (byte)0); }
         // Flow field and spatial hash are pure functions of the above, so they aren't hashed.
         return h;
     }

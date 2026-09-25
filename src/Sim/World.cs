@@ -142,7 +142,7 @@ public sealed partial class World
     /// <summary>The horde changed (spawns, deaths) since the spatial hash was last built.</summary>
     bool _spatialStale;
 
-    /// <summary>Per tile, a tree's hit points (0 where there's no tree), and which woodsman has claimed it.</summary>
+    /// <summary>Per tile, a tree's, rock's or ore deposit's hit points (0 on open ground), and which woodsman or miner has claimed it.</summary>
     internal readonly float[] TreeHp;
     internal readonly int[] TreeClaim;
     readonly List<Woodsman> _woodsmen = new();
@@ -151,6 +151,21 @@ public sealed partial class World
 
     /// <summary>Forest is a wall: no one walks through it, the horde hacks through it.</summary>
     public bool ForestBlocks => Rules.Woods.Blocks;
+
+    /// <summary>Quarries and Mines send out miners who wear the rock and ore away.</summary>
+    public bool Mining => Rules.Mining.Enabled;
+
+    /// <summary>Whether a building's crew work out in the world (woodsmen, miners) rather than gathering from a radius.</summary>
+    public bool HasCrew(BuildingDef def) => (def.Woodsmen && ForestBlocks) || (def.Miners && Mining);
+
+    /// <summary>A tile's hit points when untouched: a tree, a rock, an ore deposit; 0 for anything else.</summary>
+    public float FullHp(Tile tile) => tile switch
+    {
+        Tile.Forest => Rules.Woods.TreeHp,
+        Tile.Rock => Rules.Mining.RockHp,
+        Tile.Ore => Rules.Mining.OreHp,
+        _ => 0,
+    };
 
     bool Blocked(Tile tile) => !Terrain.IsWalkable(tile) || (tile == Tile.Forest && ForestBlocks);
 
@@ -162,19 +177,22 @@ public sealed partial class World
     /// <summary>A tree comes down: the tile becomes open ground, and routes and gathering are recomputed.</summary>
     public int TreesFelled { get; internal set; }
 
+    /// <summary>Rock and ore tiles miners have worn away to open ground.</summary>
+    public int DepositsWorn { get; internal set; }
+
     /// <summary>A tree's hit points left, and at full health (for the client's warnings).</summary>
     public float TreeHealth(int tile) => TreeHp[tile];
     public float TreeFullHealth => Rules.Woods.TreeHp;
 
-    /// <summary>Tests and tools: turn a rectangle (inclusive) into standing forest at full health, leaving buildings alone.</summary>
-    internal void PlantForest(int x0, int y0, int x1, int y1)
+    /// <summary>Tests and tools: turn a rectangle (inclusive) into standing forest (or rock, or ore) at full health, leaving buildings alone.</summary>
+    internal void PlantForest(int x0, int y0, int x1, int y1, Tile kind = Tile.Forest)
     {
         for (int y = y0; y <= y1; y++)
             for (int x = x0; x <= x1; x++)
             {
                 if (!Terrain.InBounds(x, y) || BuildingIdAt(x, y) != 0) continue;
-                Terrain.Set(x, y, Tile.Forest);
-                TreeHp[Terrain.Index(x, y)] = Rules.Woods.TreeHp;
+                Terrain.Set(x, y, kind);
+                TreeHp[Terrain.Index(x, y)] = FullHp(kind);
             }
         OnLayoutChanged();
         MarkNetworkDirty();
@@ -192,7 +210,24 @@ public sealed partial class World
         _events.Add(new TreeFelled(Tick, tile % Terrain.Width, tile / Terrain.Width));
     }
 
+    /// <summary>Miners have taken the last of a rock or ore tile: it becomes open ground (a rock's a new way through).</summary>
+    internal void WearAway(int tile)
+    {
+        var was = Terrain.Tiles[tile];
+        if (was is not (Tile.Rock or Tile.Ore)) return;
+        DepositsWorn++;
+        Terrain.Tiles[tile] = Tile.Grass;
+        TreeHp[tile] = 0;
+        TreeClaim[tile] = 0;
+        OnLayoutChanged();
+        MarkNetworkDirty();
+        _events.Add(new DepositWorn(Tick, tile % Terrain.Width, tile / Terrain.Width, was));
+    }
+
     /// <summary>A tile beside a building a person can stand on: where its woodsmen come and go.</summary>
+    /// <summary>The nearest tile a soldier can stand on: where one caught inside a building steps out to.</summary>
+    internal (int X, int Y)? StandingSpotNear(int x, int y) => FindTileNear(x, y, 8, IsHumanWalkable);
+
     internal (int X, int Y)? DoorOf(Building b) => FindTileNear((int)b.CentreX, b.Y + b.H, 4, IsHumanWalkable);
 
     /// <summary>Per tile, the speed factor Belfries impose (1 where none reach). Derived, rebuilt every tick.</summary>
@@ -218,8 +253,7 @@ public sealed partial class World
         Array.Fill(Slow, 1f);
         TreeHp = new float[Terrain.Width * Terrain.Height];
         TreeClaim = new int[Terrain.Width * Terrain.Height];
-        for (int i = 0; i < TreeHp.Length; i++)
-            if (Terrain.Tiles[i] == Tile.Forest) TreeHp[i] = Rules.Woods.TreeHp;
+        for (int i = 0; i < TreeHp.Length; i++) TreeHp[i] = FullHp(Terrain.Tiles[i]);
         Colony = new Colony(Terrain.Width * Terrain.Height, Rules.StartingResources);
         Flow = new FlowField(Terrain.Width, Terrain.Height);
         Noise = new NoiseGrid(Terrain.Width, Terrain.Height);
@@ -346,6 +380,9 @@ public sealed partial class World
     }
 
     /// <summary>Spawn a crowd at the middle of one map edge, snapped to ground that can reach the colony.</summary>
+    /// <summary>Set while a wave lands: the column its demons join (Horde.Column).</summary>
+    internal int SpawnColumn;
+
     internal int SpawnAtEdge(Side side, DemonKind kind, int count, int inset = 6)
     {
         if (count <= 0) return 0;
@@ -836,6 +873,53 @@ public sealed partial class World
     {
         _flowDirty = true;
         _humanFieldsDirty = true;
+        _regionsStale = true;
+    }
+
+    /// <summary>
+    /// Per tile, which connected stretch of ground a soldier can walk it's in (0: none), so an
+    /// order is aimed where the soldiers can actually get: a clearing boxed in by trees is walkable
+    /// but no use. Derived from the layout, rebuilt lazily after it changes.
+    /// </summary>
+    int[]? _regions;
+    int[]? _regionQueue;
+    bool _regionsStale = true;
+
+    int RegionAt(int x, int y)
+    {
+        if (!Terrain.InBounds(x, y)) return 0;
+        if (_regionsStale || _regions == null) RebuildRegions();
+        return _regions![Terrain.Index(x, y)];
+    }
+
+    void RebuildRegions()
+    {
+        int w = Terrain.Width, n = w * Terrain.Height;
+        _regions ??= new int[n];
+        _regionQueue ??= new int[n];
+        Array.Clear(_regions);
+        int next = 0;
+        for (int start = 0; start < n; start++)
+        {
+            if (_regions[start] != 0 || !IsHumanWalkable(start % w, start / w)) continue;
+            int label = ++next, head = 0, tail = 0;
+            _regions[start] = label;
+            _regionQueue[tail++] = start;
+            while (head < tail)
+            {
+                int i = _regionQueue[head++], x = i % w, y = i / w;
+                for (int k = 0; k < 4; k++)
+                {
+                    int nx = x + (k == 0 ? 1 : k == 1 ? -1 : 0), ny = y + (k == 2 ? 1 : k == 3 ? -1 : 0);
+                    if (!Terrain.InBounds(nx, ny)) continue;
+                    int j = ny * w + nx;
+                    if (_regions[j] != 0 || !IsHumanWalkable(nx, ny)) continue;
+                    _regions[j] = label;
+                    _regionQueue[tail++] = j;
+                }
+            }
+        }
+        _regionsStale = false;
     }
 
     string? TrySpawn(SpawnDemons s)
@@ -1028,8 +1112,12 @@ public sealed partial class World
         int dx = o.X, dy = o.Y;
         if (o.Order is OrderKind.Move or OrderKind.AttackMove or OrderKind.Patrol)
         {
-            // Aim at the nearest tile a soldier can actually stand on.
-            var tile = FindTileNear(o.X, o.Y, 6, IsHumanWalkable);
+            // Aim at the nearest tile a soldier can actually stand on, and get to: the stretch of
+            // ground the first of them is on, so a click in the trees lands on their side of them.
+            int region = 0;
+            foreach (var id in o.UnitIds) if (UnitById(id) is { } first) { region = RegionAt((int)first.X, (int)first.Y); break; }
+            bool Reachable(int x, int y) => IsHumanWalkable(x, y) && (region == 0 || RegionAt(x, y) == region);
+            var tile = FindTileNear(o.X, o.Y, 6, Reachable) ?? FindTileNear(o.X, o.Y, 16, Reachable) ?? FindTileNear(o.X, o.Y, 6, IsHumanWalkable);
             if (tile == null) return "no walkable ground there";
             (dx, dy) = tile.Value;
             field = HumanFieldTo(dx, dy);
@@ -1215,7 +1303,7 @@ public sealed partial class World
                 float x = cx + 0.5f + MathF.Cos(angle) * r;
                 float y = cy + 0.5f + MathF.Sin(angle) * r;
                 if (x < 0 || y < 0 || !IsWalkable((int)x, (int)y)) continue;
-                Horde.Add(kind, x, y, hp);
+                Horde.Add(kind, x, y, hp, SpawnColumn);
                 spawned++;
                 break;
             }
@@ -1228,8 +1316,44 @@ public sealed partial class World
     /// Put the map's Hellgates on open ground far from the Keep, spread apart,
     /// each able to reach the colony.
     /// </summary>
+    /// <summary>
+    /// Steps a soldier walks from the Keep to each tile (open ground only: the woods block them
+    /// where they block the horde), -1 where he can't get. For placing what soldiers must reach,
+    /// Hellgates and ruins, so none stands in a pocket of forest or behind a long way round.
+    /// Allocates; setup only.
+    /// </summary>
+    internal int[] WalkFromKeep()
+    {
+        var dist = new int[Terrain.Width * Terrain.Height];
+        Array.Fill(dist, -1);
+        var keep = _buildings.FirstOrDefault(b => b.Kind == BuildingKind.Keep);
+        if (keep == null || DoorOf(keep) is not { } door) { Array.Fill(dist, 0); return dist; }
+        var queue = new Queue<int>();
+        int start = Terrain.Index(door.X, door.Y);
+        dist[start] = 0;
+        queue.Enqueue(start);
+        while (queue.Count > 0)
+        {
+            int i = queue.Dequeue(), x = i % Terrain.Width, y = i / Terrain.Width;
+            foreach (var (ox, oy) in new[] { (1, 0), (-1, 0), (0, 1), (0, -1) })
+            {
+                int nx = x + ox, ny = y + oy;
+                if (!Terrain.InBounds(nx, ny)) continue;
+                int n = Terrain.Index(nx, ny);
+                if (dist[n] >= 0 || Blocked(Terrain.Tiles[n])) continue;
+                dist[n] = dist[i] + 1;
+                queue.Enqueue(n);
+            }
+        }
+        return dist;
+    }
+
+    /// <summary>Soldiers can walk to it, and not by a way round much longer than the crow flies (steps are 4-way, so 1.6x allows for that).</summary>
+    internal static bool FairWalk(int[] walk, int tile, float straight) => walk[tile] >= 0 && walk[tile] <= straight * 1.6f + 10;
+
     void PlaceGates()
     {
+        var walk = WalkFromKeep();
         var rules = Rules.Hellgates;
         if (Scenario is { PlacedGates.Length: > 0 } s)
         {
@@ -1254,7 +1378,7 @@ public sealed partial class World
             bool clear = true;
             for (int ty = y; ty < y + Hellgate.Size && clear; ty++)
                 for (int tx = x; tx < x + Hellgate.Size && clear; tx++)
-                    clear = Terrain.IsWalkable(Terrain.Get(tx, ty)) && Flow.DistAt(tx, ty) != FlowField.Unreachable;
+                    clear = !Blocked(Terrain.Get(tx, ty)) && Flow.DistAt(tx, ty) != FlowField.Unreachable && FairWalk(walk, Terrain.Index(tx, ty), MathF.Sqrt(dx * dx + dy * dy)); // not in the trees, and soldiers can get to it
             if (!clear) continue;
             var gate = new Hellgate { Id = _nextId++, X = x, Y = y, Hp = rules.Hp, SpawnTimer = Rng.NextInt((int)rules.SpawnSeconds) };
             _gates.Add(gate);
