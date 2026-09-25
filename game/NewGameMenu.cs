@@ -300,7 +300,8 @@ public partial class NewGameMenu : CanvasLayer
 
     void Dialog(string title, string text)
     {
-        var dialog = new AcceptDialog { Title = title, DialogText = text, OkButtonText = "Close" };
+        var dialog = new AcceptDialog { Title = title, DialogText = text, OkButtonText = "Close", MinSize = new Vector2I(720, 0) };
+        dialog.GetLabel().AutowrapMode = TextServer.AutowrapMode.WordSmart;
         AddChild(dialog);
         dialog.PopupCentered();
         dialog.Confirmed += dialog.QueueFree;
