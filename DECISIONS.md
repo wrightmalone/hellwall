@@ -810,6 +810,13 @@ last lost by at least one).
   "Put on hold" button in its inspector. Its crew go to other work, it produces nothing, and a
   Woodcutter's woodsmen walk home and stay there; "Back to work" undoes it. Tagged "on hold"
   on the map. Saves are format 14.
+- **Double-click a building to select every one of its kind on screen** (like double-clicking
+  a soldier). The inspector then works on the group: "Upgrade 2 of 7 to Cottage (60 gold,
+  40 stone each; that's all you can pay for)" upgrades as many as the stores cover, lowest
+  first, and "Put all on hold" / "All back to work" does the whole group. Demolish is hidden
+  for a group, so a double-click can't take out a street. "On screen" rather than the whole
+  map, as in most RTSs, so you can pick one district's Houses.
+  **Decide:** shift+double-click for every one on the map, if you find yourself wanting it.
 - **Woodsmen have their own figure and a swing.** A forest-green Rogue, baked with its walk and,
   while chopping, its dagger strike looped (the model has no axe, and at this size the swing
   reads as chopping).

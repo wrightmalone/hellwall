@@ -233,6 +233,7 @@ public partial class Main : Node2D
         if (options.ContainsKey("pausemenu")) CallDeferred(nameof(OpenPauseMenu)); // for screenshots of it
         if (options.ContainsKey("noise")) _state.ShowNoise = true;
         ForestWatch.Log = DisplayServer.GetName() == "headless";
+        if (options.TryGetValue("select-group", out var groupKind) && Enum.TryParse<BuildingKind>(groupKind, true, out var gk)) _pendingGroup = gk;
         if (options.ContainsKey("select-keep")) _state.SelectedBuilding = _world.Buildings.First(b => b.Kind == BuildingKind.Keep).Id; // screenshots of the inspector
         GD.Print($"hellwall: world ready seed={_world.Seed} map={_world.Map} difficulty={_world.Rules.Difficulty} endless={_world.Survival?.Endless ?? false} hash={StateHash.Hex(_world)}");
         _started = true;
@@ -474,6 +475,7 @@ public partial class Main : Node2D
         _state.HoveredTile = Iso.TileAt(_state.MouseWorld);
 
         _horde.Sync(_world, _state.Alpha, delta);
+        if (_pendingGroup is { } pending) { _pendingGroup = null; SelectGroupForScreenshot(pending); }
         _view.Refresh();
         PanCamera(delta);
         var coming = _world.Survival?.Next;
@@ -855,7 +857,18 @@ public partial class Main : Node2D
     }
 
     /// <summary>A click selects what's under the cursor; a drag box-selects soldiers.</summary>
-    int _lastClickUnit;
+    int _lastClickUnit, _lastClickBuilding;
+
+    /// <summary>--select-group=Kind: every building of a kind selected, as a double-click would (screenshots); applied on the first frame.</summary>
+    BuildingKind? _pendingGroup;
+
+    void SelectGroupForScreenshot(BuildingKind kind)
+    {
+        var all = _world.Buildings.Where(b => b.Kind == kind).ToList();
+        if (all.Count == 0) return;
+        _state.SelectedBuilding = all[0].Id;
+        foreach (var b in all) _state.SelectedGroup.Add(b.Id);
+    }
     ulong _lastClickAt;
 
     void FinishSelection(bool additive)
@@ -886,7 +899,18 @@ public partial class Main : Node2D
                 return;
             }
             int id = _world.BuildingIdAt(_state.HoveredTile.X, _state.HoveredTile.Y);
+            // A second click on the same building soon after: every building of that kind on screen (to upgrade or hold them together).
+            bool again = id != 0 && _lastClickBuilding == id && Time.GetTicksMsec() - _lastClickAt < 400;
+            _lastClickBuilding = id;
+            _lastClickAt = Time.GetTicksMsec();
             _state.SelectedBuilding = id == 0 ? null : id;
+            if (again && _world.BuildingById(id) is { } picked)
+            {
+                var view = new Rect2(_camera.GlobalPosition - GetViewportRect().Size / _camera.Zoom / 2, GetViewportRect().Size / _camera.Zoom);
+                foreach (var b in _world.Buildings)
+                    if (b.Kind == picked.Kind && view.HasPoint(Iso.P(b.CentreX, b.CentreY))) _state.SelectedGroup.Add(b.Id);
+                if (_state.SelectedGroup.Count < 2) _state.SelectedGroup.Clear(); // just the one: a plain selection
+            }
             return;
         }
 

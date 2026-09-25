@@ -36,6 +36,7 @@ public partial class Inspector : PanelContainer
         _upgrade = UiKit.TextButton("Upgrade", 12);
         _upgrade.Pressed += () =>
         {
+            if (Group() is { Count: > 1 } group) { UpgradeGroup(group); return; }
             if (State.SelectedBuilding is not { } id) return;
             // The Keep is raised a level (a tech it works on itself); anything else upgrades in place.
             if (World.BuildingById(id) is { Kind: BuildingKind.Keep } && World.NextKeepLevel() is { } next) Send(new Research(id, next.Id));
@@ -44,15 +45,99 @@ public partial class Inspector : PanelContainer
         box.AddChild(_upgrade);
         _hold = UiKit.TextButton("Put on hold", 12);
         _hold.TooltipText = "Stand the crew down: they go to other work, and a Woodcutter's woodsmen stay home.\nNothing is produced until it's back at work.";
-        _hold.Pressed += () => { if (State.SelectedBuilding is { } id && World.BuildingById(id) is { } b) Send(new SetPaused(id, !b.Paused)); };
+        _hold.Pressed += () =>
+        {
+            if (Group() is { Count: > 1 } group)
+            {
+                // Any still working: all on hold. All on hold already: all back to work.
+                bool hold = group.Any(g => g.NeedsCrew && !g.Paused);
+                foreach (var g in group) if (g.NeedsCrew) Send(new SetPaused(g.Id, hold));
+                return;
+            }
+            if (State.SelectedBuilding is { } id && World.BuildingById(id) is { } b) Send(new SetPaused(id, !b.Paused));
+        };
         box.AddChild(_hold);
         _demolish = UiKit.TextButton("X  Demolish", 12);
         _demolish.Pressed += () => { if (State.SelectedBuilding is { } id) Send(new Demolish(id)); };
         box.AddChild(_demolish);
     }
 
+    /// <summary>The selected group's buildings still standing (fewer than two: not a group).</summary>
+    List<Building>? Group()
+    {
+        if (State.SelectedGroup.Count == 0) return null;
+        State.SelectedGroup.RemoveWhere(g => World.BuildingById(g) == null);
+        return State.SelectedGroup.OrderBy(g => g).Select(g => World.BuildingById(g)!).ToList();
+    }
+
+    /// <summary>Upgrade as many of the group as the stores will pay for, lowest id first.</summary>
+    void UpgradeGroup(List<Building> group)
+    {
+        var (eligible, to) = Upgradable(group);
+        if (to == null) return;
+        int n = Math.Min(eligible.Count, Affordable(World.Def(to.Value).Cost));
+        foreach (var g in eligible.Take(n)) Send(new UpgradeBuilding(g.Id));
+    }
+
+    /// <summary>The group's buildings ready to upgrade to the most common next tier among them, and that tier.</summary>
+    (List<Building> Eligible, BuildingKind? To) Upgradable(List<Building> group)
+    {
+        var ready = group.Where(g => g.Def.UpgradesTo != null && g.Complete && !g.Possessed && !g.Upgrading).ToList();
+        if (ready.Count == 0) return ([], null);
+        var to = ready.GroupBy(g => g.Def.UpgradesTo!.Value).OrderByDescending(x => x.Count()).First().Key;
+        return (ready.Where(g => g.Def.UpgradesTo == to).ToList(), to);
+    }
+
+    /// <summary>How many of `cost` the stores could pay for.</summary>
+    int Affordable(Cost cost)
+    {
+        int n = int.MaxValue;
+        foreach (var r in Enum.GetValues<Hellwall.Sim.Resource>())
+            if (cost[r] > 0) n = Math.Min(n, (int)(World.Colony[r] / cost[r]));
+        return n;
+    }
+
+    void ShowGroup(List<Building> group)
+    {
+        Visible = true;
+        var kinds = group.GroupBy(g => g.Kind).OrderByDescending(x => x.Count()).ToList();
+        _name.Text = string.Join(", ", kinds.Select(k => $"{k.Count()} {k.Key}{(k.Count() == 1 ? "" : "s")}"));
+        float hp = group.Sum(g => g.Hp), max = group.Sum(g => g.Def.Hp);
+        _hp.Value = max <= 0 ? 0 : hp / max;
+        int upgrading = group.Count(g => g.Upgrading), held = group.Count(g => g.Paused), building = group.Count(g => !g.Complete);
+        var parts = new List<string>();
+        if (building > 0) parts.Add($"{building} going up");
+        if (upgrading > 0) parts.Add($"{upgrading} upgrading");
+        if (held > 0) parts.Add($"{held} on hold");
+        _status.Text = parts.Count == 0 ? "All working" : string.Join(" · ", parts);
+        _status.AddThemeColorOverride("font_color", UiKit.Text);
+        int housing = group.Where(g => g.Complete).Sum(g => g.Def.Housing);
+        _detail.Text = housing > 0 ? $"houses {housing} between them" : "";
+        _demolish.Visible = false; // one at a time: a whole street demolished by a slip would hurt
+        _hold.Visible = group.Any(g => g.NeedsCrew && g.Complete);
+        _hold.Text = group.Any(g => g.NeedsCrew && !g.Paused) ? "Put all on hold" : "All back to work";
+        var (eligible, to) = Upgradable(group);
+        _upgrade.Visible = to != null;
+        if (to is { } target)
+        {
+            var def = World.Def(target);
+            bool locked = def.RequiresTech is { } needs && !World.Tech.Has(needs);
+            int n = Math.Min(eligible.Count, Affordable(def.Cost));
+            _upgrade.Disabled = locked || n == 0;
+            _upgrade.Text = locked ? $"{target} needs {World.Rules.Tech(def.RequiresTech!).Name}"
+                : n == eligible.Count ? $"Upgrade {n} to {target} ({def.Cost} each)"
+                : $"Upgrade {n} of {eligible.Count} to {target} ({def.Cost} each; that's all you can pay for)";
+            _upgrade.TooltipText = $"{target}: {Blurbs.Of(target)}\nThey work as they are while the builders are at it.";
+        }
+    }
+
     public override void _Process(double delta)
     {
+        if (Group() is { Count: > 1 } group)
+        {
+            ShowGroup(group);
+            return;
+        }
         var b = State.SelectedBuilding is { } id ? World.BuildingById(id) : null;
         if (b == null && State.SelectedBuilding != null) State.SelectedBuilding = null;
         State.SelectedUnits.RemoveWhere(u => World.UnitById(u) == null);

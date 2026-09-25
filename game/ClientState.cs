@@ -19,7 +19,19 @@ public sealed class ClientState
     public bool PatrolArmed;
     /// <summary>F4: the noise grid over the ground, so it's plain what will wake the packs.</summary>
     public bool ShowNoise;
-    public int? SelectedBuilding;
+    /// <summary>The selected building (the first of a group). Setting it starts a fresh selection: the group is cleared.</summary>
+    public int? SelectedBuilding
+    {
+        get => _selectedBuilding;
+        set { _selectedBuilding = value; SelectedGroup.Clear(); }
+    }
+    int? _selectedBuilding;
+
+    /// <summary>A double-click's worth of buildings (all of one kind on screen), the first among them; empty for a single one.</summary>
+    public readonly HashSet<int> SelectedGroup = new();
+
+    /// <summary>Every selected building: the group, or the one.</summary>
+    public IEnumerable<int> SelectedBuildings => SelectedGroup.Count > 0 ? SelectedGroup : _selectedBuilding is { } id ? [id] : [];
     public readonly HashSet<int> SelectedUnits = new();
     public readonly Dictionary<int, int[]> Groups = new();
 

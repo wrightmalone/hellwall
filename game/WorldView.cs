@@ -348,7 +348,7 @@ public partial class WorldView : Node2D
                 var front = Iso.P(b.X + b.W, b.Y + b.H);
                 float width = (b.W + b.H) * Iso.HalfW;
                 var barAt = new Vector2(front.X - width / 4, front.Y + 3);
-                if (state.SelectedBuilding == b.Id) DrawPolyline([.. Iso.Diamond(b.X, b.Y, b.W, b.H), top], Palette.Selected, 2);
+                if (state.SelectedBuilding == b.Id || state.SelectedGroup.Contains(b.Id)) DrawPolyline([.. Iso.Diamond(b.X, b.Y, b.W, b.H), top], Palette.Selected, 2);
                 if (!b.Complete) Bar(barAt, width / 2, b.Def.BuildSeconds <= 0 ? 1 : b.Built / b.Def.BuildSeconds, new Color(0.95f, 0.9f, 0.3f));
                 if (b.Upgrading && b.Def.UpgradesTo is { } up) Bar(barAt, width / 2, b.UpgradeProgress / Math.Max(1, world.Def(up).BuildSeconds), new Color(0.6f, 0.8f, 1f));
                 if (b.Hp < b.Def.Hp) Bar(barAt + new Vector2(0, 4), width / 2, b.Hp / b.Def.Hp, new Color(0.95f, 0.25f, 0.2f));
