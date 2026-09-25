@@ -66,6 +66,30 @@ public static class Art
 
     public static string SceneryPath(string name) => $"{Baked}{name}.png";
 
+    const string BakedBuildings = "res://art/baked/buildings/";
+    static Dictionary<string, Vector2>? _buildingBase;
+
+    /// <summary>
+    /// A baked building sprite (KayKit Medieval Hexagon, tools/bake_buildings.gd) and where its
+    /// footprint's centre lands in the image, or null where there isn't one (walls and gates
+    /// are drawn by WallSprite). Also "scaffold-1..3" and "ruin".
+    /// </summary>
+    public static (Texture2D Texture, Vector2 Base)? BakedBuilding(string name)
+    {
+        if (_buildingBase == null)
+        {
+            _buildingBase = new();
+            string path = $"{BakedBuildings}buildings.json";
+            if (Godot.FileAccess.FileExists(path))
+                foreach (var (key, value) in Json.ParseString(Godot.FileAccess.GetFileAsString(path)).AsGodotDictionary())
+                {
+                    var xy = value.AsGodotArray();
+                    _buildingBase[key.AsString()] = new Vector2((float)xy[0].AsDouble(), (float)xy[1].AsDouble());
+                }
+        }
+        return _buildingBase.TryGetValue(name, out var at) ? (Tex($"{BakedBuildings}{name}.png"), at) : null;
+    }
+
     static Dictionary<string, Vector2>? _sceneryBase;
 
     /// <summary>Where a scenery sprite's base (the point it stands on) is, in its image's pixels.</summary>

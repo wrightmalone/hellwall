@@ -769,6 +769,24 @@ last lost by at least one).
   campaign curve and both self-tests pass.
 - Saves are format 13.
 
+## Buildings from KayKit Medieval Hexagon (you downloaded it and the Medieval Village MegaKit)
+
+- **Every building but walls and gates is now a baked KayKit model** (`tools/bake_buildings.gd`,
+  the same approach as the units, demons and trees: rendered from our isometric camera at the
+  terrain's scale, fitted to its footprint). Walls and gates stay WallSprite's procedural
+  pieces, which join up along a line; KayKit's walls are hex-shaped and wouldn't.
+- **The mapping** is data at the top of the baker: House home A, Cottage home B, Manor the
+  tavern, Woodcutter lumbermill, Quarry blacksmith, Mine and Silver Mine the mine (red and
+  blue), Hunter archery range, Fishery watermill, Farm windmill (on its tilled field), Shrine
+  and Belfry the church (red, blue), Scriptorium the market, Barracks barracks, Keep castle,
+  Watchtower and Lance Tower towers A and B, Bombard the catapult tower, Skyspire, Censer and
+  Wardstone the blue towers. Red roofs for the everyday, blue for the holy and the advanced.
+  **Decide:** any you'd swap (the Quarry as a blacksmith is the weakest fit).
+- **Scaffolding while a building goes up,** in place of the old greyed-out building, and ruins
+  are KayKit's destroyed building.
+- The Medieval Village MegaKit is modular (walls, roofs, doors to assemble), so it's kept for
+  bespoke pieces later: a proper Manor, Scriptorium or Keep level.
+
 ## Things I noticed that you should decide
 
 - **Scale:** addressed by 12-14 and 21. The Convergence is 9,000 plus whatever

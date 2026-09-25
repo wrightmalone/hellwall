@@ -283,7 +283,8 @@ public partial class NewGameMenu : CanvasLayer
         "  Kenney (kenney.nl): Tower Defense, Isometric Tiles Landscape, Graveyard Kit\n" +
         "  Quaternius (quaternius.com): RPG Characters (the soldiers), Ultimate Monsters (the demons),\n" +
         "    Stylized Nature MegaKit (trees, rocks, grass)\n" +
-        "  Kay Lousberg (kaylousberg.itch.io): KayKit Dungeon Pack (the gold, food and sanctity icons)\n\n" +
+        "  Kay Lousberg (kaylousberg.itch.io): KayKit Medieval Hexagon Pack (the buildings),\n" +
+        "    KayKit Dungeon Pack (the gold, food and sanctity icons)\n\n" +
         "Sound and music: synthesized in code, placeholders.\n\n" +
         "Built with Godot (godotengine.org) and .NET.";
 

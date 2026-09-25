@@ -55,13 +55,20 @@ public partial class WorldView : Node2D
                 _ruins[r.Id] = node;
                 Sorted.AddChild(node);
             }
-            node.Modulate = r.Looted ? new Color(0.75f, 0.72f, 0.7f, 0.8f) : new Color(0.5f, 0.46f, 0.44f);
+            node.Modulate = r.Looted ? new Color(0.8f, 0.78f, 0.76f, 0.75f) : new Color(0.78f, 0.72f, 0.7f);
         }
     }
 
     static Node2D RuinSprite(Ruin r)
     {
         var node = new Node2D { Position = Iso.P(r.X + 2, r.Y + 2) };
+        if (Art.BakedBuilding("ruin") is { } ruin)
+        {
+            // A 2x2 bake, shown half again as large: an old town's worth of broken stone.
+            var at = Iso.P(r.X + 0.5f, r.Y + 0.5f) - node.Position;
+            node.AddChild(new Sprite2D { Texture = ruin.Texture, Centered = false, Scale = new Vector2(0.75f, 0.75f), Position = at - ruin.Base * 0.75f, TextureFilter = TextureFilterEnum.LinearWithMipmaps });
+            return node;
+        }
         (float dx, float dy, float size)[] layout = [(-1.4f, -0.6f, 1.2f), (0.6f, -1.2f, 0.9f), (0.2f, 0.8f, 1.0f)];
         for (int i = 0; i < layout.Length; i++)
         {
@@ -97,7 +104,8 @@ public partial class WorldView : Node2D
                 Sorted.AddChild(sprite);
                 changed = true;
             }
-            sprite.Modulate = !b.Complete ? new Color(0.55f, 0.55f, 0.6f, 0.75f)
+            if (sprite is BuildingSprite built) built.Show(b.Complete);
+            sprite.Modulate = !b.Complete ? new Color(0.85f, 0.85f, 0.9f, 0.9f)
                 : b.Possessed ? new Color(0.75f, 0.4f, 0.95f)
                 : !b.Active ? new Color(0.6f, 0.6f, 0.6f)
                 : Colors.White;
@@ -162,9 +170,15 @@ public partial class WorldView : Node2D
         sprite.Position = Iso.P(Mathf.Lerp(prevX, x, State.Alpha), Mathf.Lerp(prevY, y, State.Alpha));
     }
 
-    /// <summary>A building: Tower Defense pieces stacked bottom first, standing on its footprint's centre.</summary>
+    /// <summary>
+    /// A building: its baked KayKit sprite standing on its footprint's centre, with
+    /// scaffolding in its place while it's going up. Kinds with no baked sprite fall
+    /// back to Tower Defense pieces stacked bottom first.
+    /// </summary>
     sealed partial class BuildingSprite : Node2D
     {
+        readonly Sprite2D? _built, _scaffold;
+
         public BuildingSprite(Building b)
         {
             // Sorted by the footprint's front corner, so it draws after anything standing behind it.
@@ -180,6 +194,19 @@ public partial class WorldView : Node2D
                         AddChild(new Sprite2D { Texture = tex, Centered = false, Scale = new Vector2(0.5f, 0.5f), Position = at - new Vector2(33, 16.5f), ZIndex = -1 });
                     }
             }
+            if (Art.BakedBuilding(b.Kind.ToString()) is { } baked)
+            {
+                // Baked at twice the tiles' scale, like the terrain: shown at half.
+                _built = new Sprite2D { Texture = baked.Texture, Centered = false, Scale = new Vector2(0.5f, 0.5f), Position = centre - baked.Base * 0.5f, TextureFilter = TextureFilterEnum.LinearWithMipmaps };
+                AddChild(_built);
+                if (Art.BakedBuilding($"scaffold-{Math.Clamp(Math.Max(b.W, b.H), 1, 3)}") is { } scaffold)
+                {
+                    _scaffold = new Sprite2D { Texture = scaffold.Texture, Centered = false, Scale = new Vector2(0.5f, 0.5f), Position = centre - scaffold.Base * 0.5f, TextureFilter = TextureFilterEnum.LinearWithMipmaps };
+                    AddChild(_scaffold);
+                }
+                Show(b.Complete);
+                return;
+            }
             float lift = 0;
             foreach (var path in Art.BuildingPieces(b.Kind))
             {
@@ -193,6 +220,13 @@ public partial class WorldView : Node2D
                 AddChild(sprite);
                 lift += (h - w / 2) * scale; // the next piece stands on this one's top
             }
+        }
+
+        /// <summary>Scaffolding until it's finished, the building after.</summary>
+        public void Show(bool complete)
+        {
+            if (_built != null) _built.Visible = complete || _scaffold == null;
+            if (_scaffold != null) _scaffold.Visible = !complete;
         }
     }
 

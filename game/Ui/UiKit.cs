@@ -92,6 +92,7 @@ public static class UiKit
 
     public static Texture2D Building(BuildingKind kind)
     {
+        if (Art.BakedBuilding(kind.ToString()) is { } baked) return Trimmed(baked.Texture, "bb-" + kind);
         var pieces = Art.BuildingPieces(kind);
         string path = kind == BuildingKind.Farm && Art.Ground(kind) is { } g ? g : pieces[^1];
         return Trimmed(Art.Tex(path), "b-" + kind);
