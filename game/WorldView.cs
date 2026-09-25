@@ -219,6 +219,13 @@ public partial class WorldView : Node2D
                 Iso.Ellipse(this, feet, 0.34f, new Color(0.35f, 0.7f, 1f, 0.95f), 2);
             }
 
+            // Where demons fell: dark splashes that fade.
+            foreach (var (x, y, size, age) in View.State.Marks)
+            {
+                float a = 1 - (float)(age / ClientState.MarkLife);
+                Iso.Ellipse(this, new Vector2(x, y), size, new Color(0.22f, 0.04f, 0.03f, 0.55f * a), filled: true);
+            }
+
             // F4: noise, one cell at a time, in the cell's diamond: orange as it builds, red at waking level.
             if (View.State.ShowNoise)
             {

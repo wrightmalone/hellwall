@@ -25,6 +25,8 @@ public sealed class WorldStats
     public readonly List<HistorySample> History = new();
 }
 
+public readonly record struct DeathMark(float X, float Y, DemonKind Kind);
+
 public readonly record struct HistorySample(int Tick, int Colonists, int Soldiers, int Horde);
 
 /// <summary>
@@ -967,14 +969,20 @@ public sealed partial class World
     }
 
     /// <summary>Remove everything that died this tick, report it, and check for defeat.</summary>
+    /// <summary>Where demons died this tick: for the client's fading marks. Not state (not saved or hashed), and reused, so it costs nothing.</summary>
+    public IReadOnlyList<DeathMark> RecentDeaths => _deaths;
+    readonly List<DeathMark> _deaths = new();
+
     void ResolveDeaths()
     {
         // Bloaters burst as they die, however they died, before anything else is counted.
         // Broodmothers' broods crawl out after the dead are cleared, so they don't count as killed.
         List<(DemonKind Kind, float X, float Y, int Count)>? broods = null;
+        _deaths.Clear();
         for (int i = 0; i < Horde.Count; i++)
         {
             if (Horde.Hp[i] > 0) continue;
+            _deaths.Add(new DeathMark(Horde.X[i], Horde.Y[i], Horde.Kind[i]));
             var def = Def(Horde.Kind[i]);
             if (def.ExplodeDamage > 0) Combat.Explode(this, Horde.X[i], Horde.Y[i], def);
             if (def.BroodCount > 0) (broods ??= new()).Add((def.BroodKind, Horde.X[i], Horde.Y[i], def.BroodCount));

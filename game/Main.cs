@@ -345,6 +345,19 @@ public partial class Main : Node2D
     public static bool EdgeScroll => Settings.Get("edge_scroll", true);
     public static bool ConfineMouse => Settings.Get("confine_mouse", true);
 
+    /// <summary>This tick's dead, as marks on the ground where you can see them.</summary>
+    void CollectMarks()
+    {
+        var dead = _world.RecentDeaths;
+        for (int i = 0; i < dead.Count && _state.Marks.Count < ClientState.MaxMarks; i++)
+        {
+            var d = dead[i];
+            if (!_world.Vision.IsVisible(d.X, d.Y)) continue;
+            float size = d.Kind is DemonKind.Brute or DemonKind.Broodmother or DemonKind.Bloater ? 0.55f : 0.3f;
+            _state.Marks.Add((d.X, d.Y, size, 0));
+        }
+    }
+
     void DisarmAttackMove()
     {
         _state.AttackMoveArmed = false;
@@ -425,6 +438,7 @@ public partial class Main : Node2D
                 _simClock.Restart();
                 _world.Step();
                 double ms = _simClock.Elapsed.TotalMilliseconds;
+                CollectMarks();
                 _simMsWindow += ms;
                 _ticksWindow++;
                 if (_benchSeconds > 0) _tickMs.Add(ms);
@@ -437,6 +451,12 @@ public partial class Main : Node2D
         Age(_state.Shots, delta, ClientState.ShotLife);
         Age(_state.Bursts, delta, 0.4);
         Age(_state.Spits, delta, 0.45);
+        for (int i = _state.Marks.Count - 1; i >= 0; i--)
+        {
+            var m = _state.Marks[i];
+            if (m.Age + delta > ClientState.MarkLife) _state.Marks.RemoveAt(i);
+            else _state.Marks[i] = (m.X, m.Y, m.Size, m.Age + delta);
+        }
         Age(_state.Howls, delta, 1.2);
         Age(_state.Log, delta, 8);
 

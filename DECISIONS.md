@@ -685,6 +685,9 @@ last lost by at least one).
 - **Noise view** (F4): the noise grid over the ground, orange as it builds and red where it's
   loud enough to wake a sleeping pack. The gaps list suggested making noise visible; this is
   the cheap version (a toggle, not always on).
+- **Death marks** (the gaps list's cheap one): a demon that dies in sight leaves a dark splash
+  that fades over 4 s, at most 2,500 at once. The sim keeps each tick's deaths in a reused list
+  (not saved or hashed); the client draws them.
 - **For playtesters:** a "What's new in this build" button on the main menu, a Bestiary in the
   pause menu (every demon's numbers and how to deal with it), Credits, and a Controls button.
 - **The threat card names what's coming:** "with Hounds, Gargoyles, Spitters" for the next

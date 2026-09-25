@@ -35,6 +35,10 @@ public sealed class ClientState
     public readonly List<(ShotFired Shot, double Age)> Shots = new();
     public readonly List<(DemonBurst Burst, double Age)> Bursts = new();
     public readonly List<(DemonSpat Spit, double Age)> Spits = new();
+    /// <summary>Where demons fell, fading: a dark splash on the ground, at most MaxMarks of them.</summary>
+    public readonly List<(float X, float Y, float Size, double Age)> Marks = new();
+    public const int MaxMarks = 2500;
+    public const double MarkLife = 4;
     public readonly List<(DemonHowled Howl, double Age)> Howls = new();
     public readonly List<(string Text, double Age)> Log = new();
 
