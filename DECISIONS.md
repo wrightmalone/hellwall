@@ -633,6 +633,9 @@ numbers are with each item). Things for you to decide are marked **Decide**.
   doesn't pause for the choice; the offer waits. The bot takes the first card. Sweep with
   them: 14/24 (from 11), spread 3-6 per path, average day 60-63. **Decide:** the saints'
   names and the milestones are placeholders for the story.
+- **Weekly challenge** (main menu): a seed and map kind from the ISO year and week, at Normal,
+  the same for everyone; its best score is kept like any other. Ready for a shared
+  leaderboard, if there's ever somewhere to post scores.
 - **Patrol** (Z then click, or the card's button): soldiers attack-move to the point, then back
   to where they stood, for ever, fighting what comes in reach. For guarding a wall line or a
   road to an outpost.

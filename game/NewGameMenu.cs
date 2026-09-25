@@ -97,9 +97,14 @@ public partial class NewGameMenu : CanvasLayer
             resume.Pressed += () => { Continue(); QueueFree(); };
             box.AddChild(resume);
         }
+        var weekly = Weekly();
         var campaign = UiKit.TextButton($"Campaign: {Campaign.Default.Name}", 18);
         campaign.Pressed += () => { OpenCampaign(); QueueFree(); };
         box.AddChild(campaign);
+        var weeklyButton = UiKit.TextButton($"{weekly.Name}: {weekly.Map}, seed {weekly.Seed}", 15);
+        weeklyButton.TooltipText = "The same map and seed for everyone this week, at Normal. Your best score for it is kept.";
+        weeklyButton.Pressed += () => { Start(new GameSetup(weekly.Seed, weekly.Map, weekly.Difficulty, false, weekly)); QueueFree(); };
+        box.AddChild(weeklyButton);
         if (OpenEditor != null)
         {
             var editor = UiKit.TextButton("Map editor", 15);
@@ -229,6 +234,20 @@ public partial class NewGameMenu : CanvasLayer
     }
 
     static readonly int MapKinds = Enum.GetValues<MapKind>().Length;
+
+    /// <summary>This ISO week's challenge: a seed and a kind of map from the year and week, at Normal, as designed.</summary>
+    static ScenarioDef Weekly()
+    {
+        var today = DateTime.UtcNow;
+        int year = System.Globalization.ISOWeek.GetYear(today), week = System.Globalization.ISOWeek.GetWeekOfYear(today);
+        uint h = unchecked((uint)(year * 73856093) ^ (uint)(week * 19349663));
+        h ^= h >> 13; h *= 0x5bd1e995; h ^= h >> 15;
+        return new ScenarioDef
+        {
+            Id = $"weekly-{year}-{week:00}", Name = $"Weekly challenge {year}-W{week:00}",
+            Seed = h % 100000, Map = (MapKind)(h / 100000 % (uint)MapKinds), Difficulty = Difficulty.Normal,
+        };
+    }
 
     static HBoxContainer Row(VBoxContainer box, string label)
     {
