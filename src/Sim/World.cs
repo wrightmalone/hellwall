@@ -21,7 +21,11 @@ public sealed class WorldStats
     public int DemonsKilled;
     public int BuildingsLost;
     public int UnitsLost;
+    /// <summary>The run over time, sampled every half day: for the end panel's chart.</summary>
+    public readonly List<HistorySample> History = new();
 }
+
+public readonly record struct HistorySample(int Tick, int Colonists, int Soldiers, int Horde);
 
 /// <summary>
 /// The whole simulation state and its fixed-rate step. Plain data plus the
@@ -266,6 +270,8 @@ public sealed partial class World
         WoodsSystem.Step(this, dt);
         Vision.Step(this);
         RepairSystem.Step(this, dt);
+        if (Survival != null && Tick % (int)(Rules.Survival.DaySeconds * Balance.TickHz / 2) == 0)
+            Stats.History.Add(new HistorySample(Tick, Colony.Colonists, _units.Count, Horde.Count));
         Abilities.Heal(this, dt);
         Combat.TowersFire(this, dt);
         StepPossessed(dt);

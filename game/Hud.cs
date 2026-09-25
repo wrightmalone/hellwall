@@ -101,6 +101,8 @@ public partial class Hud : CanvasLayer
         endBox.AddThemeConstantOverride("separation", 8);
         _endText = UiKit.Label("", 16);
         endBox.AddChild(_endText);
+        _chart = new RunChart { World = World };
+        endBox.AddChild(_chart);
         var endRow = new HBoxContainer { Alignment = BoxContainer.AlignmentMode.Center };
         endRow.AddThemeConstantOverride("separation", 8);
         if (World.Scenario != null)
@@ -157,6 +159,8 @@ public partial class Hud : CanvasLayer
         return label;
     }
 
+    RunChart _chart = null!;
+
     public override void _Process(double delta)
     {
         var screen = GetViewport().GetVisibleRect().Size;
@@ -207,7 +211,10 @@ public partial class Hud : CanvasLayer
                 _endText.Text = $"{mode} · {World.Map} · {World.Rules.Difficulty} · seed {World.Seed}\n{goals}{scoreLine}" +
                     $"Days survived: {World.Day}\nDemons slain: {st.DemonsKilled}\nBuildings lost: {st.BuildingsLost}\nSoldiers lost: {st.UnitsLost}" +
                     $"\nResearched: {(World.Tech.Researched.Count == 0 ? "nothing" : string.Join(", ", World.Tech.Researched.Select(id => World.Rules.Tech(id).Name)))}{corruptions}{opens}";
+                _chart.Refresh();
                 _end.Visible = true;
+                _card.Visible = false; // the run is over: nothing to build, and it would cover the buttons
+                Voice.Silence();
             }
             _end.Position = new Vector2(screen.X / 2 - _end.Size.X / 2, screen.Y * 0.3f + 70);
         }

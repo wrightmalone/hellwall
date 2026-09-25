@@ -68,6 +68,13 @@ public partial class TalkingHead : PanelContainer
         if (_ready && !_active) Next();
     }
 
+    /// <summary>Stop talking: drop what's queued and hide.</summary>
+    public void Silence()
+    {
+        _queue.Clear();
+        Visible = _active = false;
+    }
+
     void Next()
     {
         if (!_queue.TryDequeue(out var line)) { Visible = _active = false; return; }

@@ -54,6 +54,8 @@ public sealed partial class World
             w.Write(Stats.DemonsKilled);
             w.Write(Stats.BuildingsLost);
             w.Write(Stats.UnitsLost);
+            w.Write(Stats.History.Count);
+            foreach (var sample in Stats.History) { w.Write(sample.Tick); w.Write(sample.Colonists); w.Write(sample.Soldiers); w.Write(sample.Horde); }
 
             foreach (var v in Colony.Stock) w.Write(v);
             foreach (var v in Colony.NetPerSecond) w.Write(v);
@@ -256,6 +258,7 @@ public sealed partial class World
         world.Stats.DemonsKilled = r.ReadInt32();
         world.Stats.BuildingsLost = r.ReadInt32();
         world.Stats.UnitsLost = r.ReadInt32();
+        for (int n = r.ReadInt32(); n > 0; n--) world.Stats.History.Add(new HistorySample(r.ReadInt32(), r.ReadInt32(), r.ReadInt32(), r.ReadInt32()));
 
         var colony = world.Colony;
         for (int i = 0; i < colony.Stock.Length; i++) colony.Stock[i] = r.ReadDouble();
