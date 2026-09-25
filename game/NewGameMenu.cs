@@ -151,6 +151,7 @@ public partial class NewGameMenu : CanvasLayer
         _woods.TooltipText = "No one walks through the trees. Woodcutters send out woodsmen who fell them one by one, so the forest\nshrinks and opens new ways into your town. The horde can hack through trees, slowly.";
         _more.AddChild(_woods);
         foreach (var o in new[] { _difficulty, _map, _mode, _days }) o.ItemSelected += _ => Describe();
+        Remembered(true);
         Describe();
 
         var begin = new Button { Text = "Begin" };
@@ -195,8 +196,34 @@ public partial class NewGameMenu : CanvasLayer
         _about.Text = $"{mode}\n{map}\n{DifficultyAbout[difficulty]}";
     }
 
+    /// <summary>The skirmish settings last used, kept in settings.cfg: restored when the menu opens, saved when a run begins.</summary>
+    void Remembered(bool restore)
+    {
+        var options = new (string Key, OptionButton Box)[] { ("sk_size", _size), ("sk_days", _days), ("sk_waves", _waves), ("sk_gates", _gates), ("sk_packs", _wilds), ("sk_strays", _strays), ("sk_ruins", _ruinsOption), ("sk_start", _start) };
+        foreach (var (key, box) in options)
+        {
+            if (restore)
+            {
+                int i = Settings.Get(key, box.Selected);
+                if (i >= 0 && i < box.ItemCount) box.Selected = i;
+            }
+            else Settings.Set(key, box.Selected);
+        }
+        if (restore)
+        {
+            _fog.ButtonPressed = Settings.Get("sk_fog", true);
+            _woods.ButtonPressed = Initial.Woods || Settings.Get("sk_woods", false);
+        }
+        else
+        {
+            Settings.Set("sk_fog", _fog.ButtonPressed);
+            Settings.Set("sk_woods", _woods.ButtonPressed);
+        }
+    }
+
     void Begin()
     {
+        Remembered(false);
         uint seed = uint.TryParse(_seed.Text.Trim(), out var s) ? s : (uint)GD.Randi();
         var difficulty = (Difficulty)_difficulty.Selected;
         bool endless = _mode.Selected == 1;

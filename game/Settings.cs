@@ -21,6 +21,7 @@ public static class Settings
 
     public static bool Get(string key, bool fallback) => (bool)File.GetValue("game", key, fallback);
     public static float Get(string key, float fallback) => (float)File.GetValue("game", key, fallback);
+    public static int Get(string key, int fallback) => (int)File.GetValue("game", key, fallback);
 
     public static void Set(string key, Variant value)
     {
