@@ -460,6 +460,13 @@ talking heads, fog of war with demons spread over the map, an edge-of-map resour
 advanced units, and whatever else I thought worth a swing. Each decision below is one I
 made alone; flag any you'd change.
 
+**Where things stand.** Everything on your list is in, and a build of it is in
+`out/build/` (0.9.0; a later one may follow, see the bottom of this section). My own
+swings, in the order I'd rate them: fog plus visible sleeping demons (the map finally looks
+like TAB), ruins, veterancy, repair plus the Spitter, the end-of-run chart and score, patrol,
+Cottages, music. Balance at Normal is back in its band after each change (the sweep's
+numbers are with each item). Things for you to decide are marked **Decide**.
+
 ### Living woods (your idea)
 
 - **It's an option, off by default** (new-game menu "Living woods", `--woods`, rule
@@ -603,7 +610,11 @@ made alone; flag any you'd change.
   guards are awake and none are within 8 tiles, a soldier who walks in takes the loot: 250
   gold, 100 wood, 100 stone and 40 iron near home, up to twice that at the far end. Dark
   broken stones once seen, a gold dot on the minimap until looted. A skirmish setting
-  (None/Some/Many). The bot loots them only by accident.
+  (None/Some/Many). The bot loots them only by accident. **The two gate missions have no
+  ruins:** their guard packs stood between the army and the gates, and The Gatekeepers went
+  from won-by-legion to lost-by-all. Without them the curve is back (legion wins The
+  Gatekeepers, pyre The Hellwall). The Long Siege is now lost by all three paths, each at
+  the Convergence (days 62-63): coin-flip territory, but worth a look if it stays that way.
 - **The Fishery** (O): food from the water around it, so lakeshores are worth building on.
   Slightly better per tile than a Hunter, worse than a Farm.
 - **A Works build tab:** Mines, Silver Mines, the Barracks and the Scriptorium moved out of

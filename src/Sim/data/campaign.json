@@ -162,7 +162,8 @@
       ],
       "lockedUnits": [
         "Exorcist"
-      ]
+      ],
+      "ruins": 0
     },
     {
       "id": "drowned",
@@ -336,7 +337,8 @@
           "say": "The last gate falls. Now hold the wall.",
           "speaker": "captain"
         }
-      ]
+      ],
+      "ruins": 0
     }
   ]
 }
