@@ -359,7 +359,7 @@ public partial class WorldView : Node2D
                     DrawLine(at - new Vector2(3, 0), at + new Vector2(3, 0), new Color(0.4f, 1, 0.4f), 2);
                     DrawLine(at - new Vector2(0, 3), at + new Vector2(0, 3), new Color(0.4f, 1, 0.4f), 2);
                 }
-                string tag = b.Possessed ? $"POSSESSED x{b.Occupants}" : b.Complete && !b.Active && b.OnGround ? "no crew" : ""; // off holy ground shows as darkness, not a label
+                string tag = b.Possessed ? $"POSSESSED x{b.Occupants}" : b.Paused ? "on hold" : b.Complete && !b.Active && b.OnGround ? "no crew" : ""; // off holy ground shows as darkness, not a label
                 if (tag.Length > 0) Text(font, front + new Vector2(-24, 18), tag, 11, b.Possessed ? new Color(1, 0.7f, 1) : new Color(1, 0.65f, 0.6f));
             }
 

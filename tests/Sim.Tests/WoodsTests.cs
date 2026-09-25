@@ -120,3 +120,29 @@ public class GapTests
         Assert.False(WoodsSystem.OpensAGap(t, 20, 20));
     }
 }
+
+public class HoldTests
+{
+    [Fact]
+    public void ALodgeOnHoldCallsItsWoodsmenHomeAndFreesItsCrew()
+    {
+        var world = TestWorlds.Rich(Rules.Default.WithWoods(w => w with { Blocks = true }));
+        var lodge = TestWorlds.Built(world, BuildingKind.Woodcutter, TestWorlds.C + 5, TestWorlds.C - 1);
+        world.PlantForest(TestWorlds.C + 9, TestWorlds.C - 3, TestWorlds.C + 12, TestWorlds.C + 3);
+        TestWorlds.RunSeconds(world, 15);
+        Assert.Contains(world.Woodsmen, m => m.State != WoodsmanState.Home);
+        int used = world.Colony.WorkersUsed;
+        TestWorlds.Run(world, new SetPaused(lodge.Id, true));
+        TestWorlds.RunSeconds(world, 15);
+        Assert.All(world.Woodsmen, m => Assert.Equal(WoodsmanState.Home, m.State));
+        Assert.Equal(used - lodge.Def.Workers, world.Colony.WorkersUsed);
+        int felled = world.TreesFelled;
+        TestWorlds.RunSeconds(world, 30);
+        Assert.Equal(felled, world.TreesFelled);
+        TestWorlds.Run(world, new SetPaused(lodge.Id, false));
+        TestWorlds.RunSeconds(world, 15);
+        Assert.Contains(world.Woodsmen, m => m.State != WoodsmanState.Home);
+        var loaded = World.Load(world.Save(), world.Rules);
+        Assert.Equal(StateHash.Compute(world), StateHash.Compute(loaded));
+    }
+}

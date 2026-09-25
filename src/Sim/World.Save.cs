@@ -17,7 +17,7 @@ namespace Hellwall.Sim;
 public sealed partial class World
 {
     const uint Magic = 0x56535748; // "HWSV"
-    const int FormatVersion = 13;
+    const int FormatVersion = 14;
 
     public byte[] Save()
     {
@@ -92,6 +92,7 @@ public sealed partial class World
                 w.Write(b.Calm);
                 w.Write(b.Upgrading);
                 w.Write(b.UpgradeProgress);
+                w.Write(b.Paused);
                 w.Write(b.Possessed);
                 w.Write(b.Occupants);
                 w.Write(b.PossessTimer);
@@ -327,6 +328,7 @@ public sealed partial class World
             b.Calm = r.ReadSingle();
             b.Upgrading = r.ReadBoolean();
             b.UpgradeProgress = r.ReadSingle();
+            b.Paused = r.ReadBoolean();
             b.Possessed = r.ReadBoolean();
             b.Occupants = r.ReadInt32();
             b.PossessTimer = r.ReadSingle();

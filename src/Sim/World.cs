@@ -700,6 +700,7 @@ public sealed partial class World
             Research r => TryResearch(r),
             UpgradeBuilding u => TryUpgrade(u.BuildingId),
             ChoosePatron p => PatronSystem.Choose(this, p.TechId),
+            SetPaused p => TryPause(p.BuildingId, p.Paused),
             OrderUnits o => TryOrder(o),
             _ => "unknown command",
         };
@@ -733,6 +734,14 @@ public sealed partial class World
         OnLayoutChanged();
         _events.Add(new BuildingPlaced(Tick, building.Id, kind, x, y));
         return building;
+    }
+
+    string? TryPause(int id, bool paused)
+    {
+        if (!_buildingById.TryGetValue(id, out var b)) return "no such building";
+        if (!b.NeedsCrew) return $"{b.Kind} has no crew to stand down";
+        b.Paused = paused;
+        return null;
     }
 
     string? TryUpgrade(int id)

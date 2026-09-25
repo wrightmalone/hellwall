@@ -12,7 +12,7 @@ public partial class Inspector : PanelContainer
 
     Label _name = null!, _status = null!, _detail = null!;
     ProgressBar _hp = null!;
-    Button _demolish = null!, _upgrade = null!;
+    Button _demolish = null!, _upgrade = null!, _hold = null!;
 
     public override void _Ready()
     {
@@ -42,6 +42,10 @@ public partial class Inspector : PanelContainer
             else Send(new UpgradeBuilding(id));
         };
         box.AddChild(_upgrade);
+        _hold = UiKit.TextButton("Put on hold", 12);
+        _hold.TooltipText = "Stand the crew down: they go to other work, and a Woodcutter's woodsmen stay home.\nNothing is produced until it's back at work.";
+        _hold.Pressed += () => { if (State.SelectedBuilding is { } id && World.BuildingById(id) is { } b) Send(new SetPaused(id, !b.Paused)); };
+        box.AddChild(_hold);
         _demolish = UiKit.TextButton("X  Demolish", 12);
         _demolish.Pressed += () => { if (State.SelectedBuilding is { } id) Send(new Demolish(id)); };
         box.AddChild(_demolish);
@@ -61,9 +65,10 @@ public partial class Inspector : PanelContainer
                 b.Possessed ? $"POSSESSED: {b.Occupants} still inside. Demolish to purge it" :
                 !b.Complete ? $"Under construction, {b.Built / Math.Max(0.001f, b.Def.BuildSeconds):P0}" :
                 !b.OnGround ? "Dark: not on holy ground" :
+                b.Paused ? "On hold (its crew are at other work)" :
                 b.NeedsCrew && !b.Staffed ? $"Idle: needs {b.Def.Workers} workers" :
                 "Working";
-            _status.AddThemeColorOverride("font_color", b.Possessed || !b.OnGround || (b.NeedsCrew && !b.Staffed) ? UiKit.Threat : UiKit.Text);
+            _status.AddThemeColorOverride("font_color", b.Paused ? UiKit.Muted : b.Possessed || !b.OnGround || (b.NeedsCrew && !b.Staffed) ? UiKit.Threat : UiKit.Text);
             var d = new List<string>();
             if (b.Def.Produces is { } r && b.Complete) d.Add($"{b.Rate * World.Colony.Power:0.00} {r.ToString().ToLowerInvariant()} a second");
             if (b.Def.Weapon is { } w) d.Add($"range {w.Range:0.#}, {w.Damage:0} damage every {w.Cooldown:0.##} s");
@@ -72,6 +77,8 @@ public partial class Inspector : PanelContainer
             if (b.Def.SanctityUse > 0) d.Add($"draws {b.Def.SanctityUse:0} sanctity");
             _detail.Text = string.Join("\n", d);
             _demolish.Visible = b.Kind != BuildingKind.Keep;
+            _hold.Visible = b.NeedsCrew && b.Complete && !b.Possessed;
+            _hold.Text = b.Paused ? "Back to work" : "Put on hold";
             _upgrade.Visible = b.Def.UpgradesTo != null && b.Complete && !b.Possessed;
             if (b.Kind == BuildingKind.Keep)
             {
@@ -113,6 +120,7 @@ public partial class Inspector : PanelContainer
             _detail.Text = units.Count == 1 ? $"{units[0].Order} · {units[0].Kills} kills{NextRank(units[0])}" : string.Join(", ", units.GroupBy(u => u.Order).Select(g => $"{g.Count()} {g.Key.ToString().ToLowerInvariant()}"));
             _demolish.Visible = false;
             _upgrade.Visible = false;
+            _hold.Visible = false;
         }
         else Visible = false;
     

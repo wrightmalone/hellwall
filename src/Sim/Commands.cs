@@ -37,6 +37,9 @@ public sealed record SetRally(int BuildingId, int X, int Y) : Command;
 /// <summary>Start researching a tech at a Scriptorium. Paid for up front; refunded if the building is lost.</summary>
 public sealed record Research(int BuildingId, string TechId) : Command;
 
+/// <summary>Put a crewed building on hold (its crew freed, its woodsmen home), or back to work.</summary>
+public sealed record SetPaused(int BuildingId, bool Paused) : Command;
+
 /// <summary>Take one of the blessings on offer (World.PatronOffer).</summary>
 public sealed record ChoosePatron(string TechId) : Command;
 

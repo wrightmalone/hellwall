@@ -60,6 +60,8 @@ public sealed class Building
 
     /// <summary>Has its full crew. Buildings are idle, not slower, when short-staffed.</summary>
     public bool Staffed;
+    /// <summary>Put on hold by the player: takes no crew (they go to other work), does nothing; its woodsmen stay home.</summary>
+    public bool Paused;
 
     /// <summary>Gatherers: resource per second at full sanctity, from the tiles it has claimed.</summary>
     public double Rate;

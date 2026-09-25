@@ -95,7 +95,7 @@ internal static class ColonySystem
         foreach (var b in world.BuildingList)
         {
             if (!b.NeedsCrew) continue;
-            b.Staffed = b.Complete && b.OnGround && !b.Possessed && pool >= b.Def.Workers;
+            b.Staffed = b.Complete && b.OnGround && !b.Possessed && !b.Paused && pool >= b.Def.Workers;
             if (b.Staffed) pool -= b.Def.Workers;
         }
         colony.Colonists = colonists;

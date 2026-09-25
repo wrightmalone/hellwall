@@ -806,6 +806,10 @@ last lost by at least one).
   thick (warns), three thick (doesn't), and one with a gap two tiles off (doesn't).
   **Decide:** a way to tell woodsmen to spare a stretch of forest (a "keep" marker) would be the
   natural next step if you want to protect a flank on purpose.
+- **Put on hold** (your idea, instead of a "keep" marker): any building with a crew has a
+  "Put on hold" button in its inspector. Its crew go to other work, it produces nothing, and a
+  Woodcutter's woodsmen walk home and stay there; "Back to work" undoes it. Tagged "on hold"
+  on the map. Saves are format 14.
 - **Woodsmen have their own figure and a swing.** A forest-green Rogue, baked with its walk and,
   while chopping, its dagger strike looped (the model has no axe, and at this size the swing
   reads as chopping).
