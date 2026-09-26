@@ -107,7 +107,26 @@ public partial class Main : Node2D
             o.TryGetValue("mission", out var mid) ? Campaign.Default.Find(mid) ?? throw new ArgumentException($"no mission '{mid}'") : null);
         // Any flag that sets up a run (and every headless boot, which is verify.sh) skips the menu.
         bool flagged = new[] { "seed", "map", "difficulty", "endless", "autoplay", "bench", "demo", "skip", "screenshot", "mission", "woods" }.Any(o.ContainsKey);
-        if (_retry != null)
+        if (_pendingStart != null)
+        {
+            // Chosen from the menu while the backdrop game was playing: a fresh scene, then this.
+            var chosen = _pendingStart;
+            _pendingStart = null;
+            Begin(chosen);
+            if (_pendingContinue is { } slot) { _pendingContinue = null; _continueSlot = slot; CallDeferred(nameof(ContinueLoad)); }
+        }
+        else if (_editorNext)
+        {
+            _editorNext = false;
+            OpenEditor();
+        }
+        else if (_again != null)
+        {
+            var run = _again;
+            _again = null;
+            Begin(run);
+        }
+        else if (_retry != null)
         {
             var again = _retry;
             _retry = null;
@@ -127,22 +146,57 @@ public partial class Main : Node2D
         else ShowMenu(setup);
     }
 
-    void ShowMenu(GameSetup setup) => AddChild(new NewGameMenu
+    void ShowMenu(GameSetup setup)
     {
-        Initial = setup, Start = Begin, OpenCampaign = OpenCampaign, OpenEditor = OpenEditor, ShowNews = _options.ContainsKey("whatsnew"),
-        Saved = NewestSlot() is { } newest ? SlotSummary(newest) : null,
-        Continue = () =>
+        // A town at war behind the menu (as in Factorio): the bot playing, quietly, the camera drifting round it.
+        if (!_started && (DisplayServer.GetName() != "headless" || _options.ContainsKey("backdrop")) && !_options.ContainsKey("no-backdrop")) StartBackdrop();
+        AddChild(new NewGameMenu
         {
-            _continueSlot = NewestSlot() ?? 0;
-            Begin(new GameSetup(11, MapKind.Plains, Difficulty.Normal, false));
-            CallDeferred(nameof(ContinueLoad));
-        },
-    });
+            Initial = setup, Start = Play, OpenCampaign = OpenCampaign, OpenEditor = () => { if (_backdrop) { _editorNext = true; GetTree().ReloadCurrentScene(); } else OpenEditor(); },
+            ShowNews = _options.ContainsKey("whatsnew"),
+            Saved = NewestSlot() is { } newest ? SlotSummary(newest) : null,
+            Continue = () =>
+            {
+                _pendingContinue = NewestSlot() ?? 0;
+                Play(new GameSetup(11, MapKind.Plains, Difficulty.Normal, false));
+            },
+        });
+    }
+
+    /// <summary>Start a run chosen from a menu: with the backdrop playing, in a fresh scene; otherwise here and now.</summary>
+    void Play(GameSetup setup)
+    {
+        if (!_backdrop)
+        {
+            if (_pendingContinue is { } slot) { _pendingContinue = null; _continueSlot = slot; Begin(setup); CallDeferred(nameof(ContinueLoad)); }
+            else Begin(setup);
+            return;
+        }
+        _pendingStart = setup;
+        Input.MouseMode = Input.MouseModeEnum.Visible;
+        GetTree().ReloadCurrentScene();
+    }
+
+    static GameSetup? _pendingStart, _again;
+    static int? _pendingContinue;
+    static bool _editorNext;
+    /// <summary>The game behind the main menu: the bot's, not the player's; no HUD, no input, hushed.</summary>
+    bool _backdrop;
+    GameSetup? _setup;
+
+    void StartBackdrop()
+    {
+        _backdrop = true;
+        var day = DateTime.Now;
+        uint seed = (uint)(day.DayOfYear * 7919 + day.Hour * 131);
+        var maps = new[] { MapKind.Plains, MapKind.Lakes, MapKind.Wildwood, MapKind.Causeway, MapKind.Highlands };
+        Begin(new GameSetup(seed, maps[seed % maps.Length], Difficulty.Normal, false));
+    }
 
     void OpenEditor() => AddChild(new MapEditor
     {
         Back = () => ShowMenu(new GameSetup(11, MapKind.Plains, Difficulty.Normal, false)),
-        Play = map => Begin(new GameSetup(map.Seed, map.Map, Difficulty.Normal, false, map with { Id = "map-" + map.Id })),
+        Play = map => Play(new GameSetup(map.Seed, map.Map, Difficulty.Normal, false, map with { Id = "map-" + map.Id })),
     });
 
     void OpenCampaign()
@@ -150,7 +204,7 @@ public partial class Main : Node2D
         CampaignMap? map = null;
         map = new CampaignMap
         {
-            Begin = mission => { map!.QueueFree(); Begin(new GameSetup(mission.Seed, mission.Map, mission.Difficulty, false, mission)); },
+            Begin = mission => { map!.QueueFree(); Play(new GameSetup(mission.Seed, mission.Map, mission.Difficulty, false, mission)); },
             Back = () => { map!.QueueFree(); ShowMenu(new GameSetup(11, MapKind.Plains, Difficulty.Normal, false)); },
         };
         AddChild(map);
@@ -158,6 +212,7 @@ public partial class Main : Node2D
 
     void Begin(GameSetup setup)
     {
+        _setup = setup;
         var options = _options;
         uint seed = setup.Seed;
         _screenshotPath = options.GetValueOrDefault("screenshot");
@@ -174,7 +229,7 @@ public partial class Main : Node2D
         if (woods != rules.Woods.Blocks) rules = rules.WithWoods(w => w with { Blocks = woods });
         // Miners likewise, but on unless turned off: every kind of run reads the setting.
         if (options.ContainsKey("no-mining") || (!options.ContainsKey("mining") && !Settings.Get("sk_mining", true))) rules = rules.WithMining(m => m with { Enabled = false });
-        if (options.ContainsKey("reveal")) rules = rules.WithFog(f => f with { Enabled = false });
+        if (options.ContainsKey("reveal") || _backdrop) rules = rules.WithFog(f => f with { Enabled = false });
         if (options.ContainsKey("patrons-now")) rules = rules.WithSurvival(s => s with { PatronMilestones = [1, .. s.PatronMilestones] }); // screenshots of the picker
         // A survival run takes its packs from rules.json (wilds).
         _world = setup.Mission is { } mission && !scripted
@@ -200,7 +255,7 @@ public partial class Main : Node2D
         }
         AddChild(_camera);
 
-        _withCoach = !scripted && !options.ContainsKey("autoplay") && !options.ContainsKey("selftest") && Coach.Enabled;
+        _withCoach = !scripted && !_backdrop && !options.ContainsKey("autoplay") && !options.ContainsKey("selftest") && Coach.Enabled;
         BuildHud();
         // A mission opens with its narrator restating the briefing.
         if (_world.Scenario is { } opening && !scripted) _hud.Voice.Say(Campaign.Default.Speaker(""), opening.Briefing);
@@ -208,7 +263,22 @@ public partial class Main : Node2D
         if (_benchSeconds > 0) StartBenchAssault();
         if (_demoSeconds > 0) StartDemo();
 
-        if (options.ContainsKey("autoplay")) _bot = new Hellwall.Headless.Bot(_world, Hellwall.Headless.Bot.Style.Full);
+        if (options.ContainsKey("autoplay") || _backdrop) _bot = new Hellwall.Headless.Bot(_world, Hellwall.Headless.Bot.Style.Full);
+        if (_backdrop)
+        {
+            // Into the thick of it: a town already up, a few waves in.
+            for (int t = 0; t < 520 * Balance.TickHz && _world.Outcome == Outcome.Running; t++)
+            {
+                if (_world.Tick % Balance.TickHz == 0) _bot!.Act();
+                _world.Step();
+                _state.Farmers.Step(_world, (float)TickSeconds);
+                _bot!.See(_world.DrainEvents());
+            }
+            _terrainView!.Repaint();
+            _hud.Visible = false;
+            _sound.Loudness = 0.25f;
+            _camera.Zoom = Vector2.One * 0.8f / Display.UiScale;
+        }
 
         // --build=Kind: put one on the first place it can go near the Keep, before any fast-forward (screenshots of what it does).
         if (options.TryGetValue("build", out var buildKind) && Enum.TryParse<BuildingKind>(buildKind, true, out var toBuild))
@@ -277,7 +347,8 @@ public partial class Main : Node2D
         _hud = new Hud
         {
             World = _world, State = _state, Send = Send, Minimap = _minimap, NewRun = NewRun,
-            BackToCampaign = BackToCampaign, Retry = RetryMission,
+            BackToCampaign = BackToCampaign, Retry = RetryMission, Again = PlayAgain,
+            LoadLatest = NewestSlot() is { } newest ? () => LoadFrom(newest) : null,
             JumpTo = tile => _camera.Position = Iso.P(tile),
             Speed = () => (_paused ? "PAUSED  ·  " : "") + $"{Speeds[_speed]}x  ·  F1 help",
             Order = OrderSelected,
@@ -430,7 +501,7 @@ public partial class Main : Node2D
     /// <summary>Keep the cursor inside the window while playing (so the edges scroll), and free it on menus and the end screen.</summary>
     void UpdateMouseMode()
     {
-        var want = _started && ConfineMouse && _pauseMenu == null && _world.Outcome == Outcome.Running ? Input.MouseModeEnum.Confined : Input.MouseModeEnum.Visible;
+        var want = _started && !_backdrop && ConfineMouse && _pauseMenu == null && _world.Outcome == Outcome.Running ? Input.MouseModeEnum.Confined : Input.MouseModeEnum.Visible;
         if (Input.MouseMode != want) Input.MouseMode = want;
     }
 
@@ -469,6 +540,15 @@ public partial class Main : Node2D
     }
 
     static ScenarioDef? _retry;
+
+    /// <summary>The same run from the start: the setup it began with, in a fresh scene.</summary>
+    void PlayAgain()
+    {
+        _again = _setup;
+        Input.MouseMode = Input.MouseModeEnum.Visible;
+        DisarmAttackMove();
+        GetTree().ReloadCurrentScene();
+    }
 
     void NewRun()
     {
@@ -538,6 +618,7 @@ public partial class Main : Node2D
         _view.Refresh();
         PanCamera(delta);
         StepShake(delta);
+        StepAutosave();
         var coming = _world.Survival?.Next;
         var light = coming is { Announced: true } ? (coming.Final ? new Color(1, 0.78f, 0.74f) : new Color(1, 0.9f, 0.87f)) : Colors.White;
         _tint.Color = _tint.Color.Lerp(light, (float)Math.Min(1, delta * 0.8));
@@ -674,7 +755,7 @@ public partial class Main : Node2D
         _pauseMenu = new PauseMenu
         {
             Resume = ClosePauseMenu, QuitToMenu = NewRun, Controls = () => _hud.ToggleHelp(), BestiaryText = Blurbs.Bestiary(_world),
-            SaveSlot = SaveTo,
+            SaveSlot = slot => SaveTo(slot),
             LoadSlot = slot => { ClosePauseMenu(); LoadFrom(slot); },
         };
         AddChild(_pauseMenu);
@@ -694,6 +775,7 @@ public partial class Main : Node2D
     /// </summary>
     public override void _Input(InputEvent @event)
     {
+        if (_backdrop) return; // the menu's backdrop takes no orders
         // Middle-drag pans the camera; like a box select, it's followed over the interface until it's let go.
         if (_middlePan)
         {
@@ -716,7 +798,7 @@ public partial class Main : Node2D
 
     public override void _UnhandledInput(InputEvent @event)
     {
-        if (!_started) return;
+        if (!_started || _backdrop) return;
         if (_pauseMenu != null)
         {
             if (@event is InputEventKey { Pressed: true, Echo: false, Keycode: Key.Escape or Key.F10 }) ClosePauseMenu();
@@ -919,7 +1001,7 @@ public partial class Main : Node2D
     readonly Random _shakeRandom = new();
     public static bool ScreenShake => Settings.Get("screen_shake", true);
 
-    void Shake(float amount) { if (ScreenShake) _trauma = Math.Min(1, _trauma + amount); }
+    void Shake(float amount) { if (ScreenShake && !_backdrop) _trauma = Math.Min(1, _trauma + amount); }
 
     void StepShake(double delta)
     {
@@ -949,7 +1031,30 @@ public partial class Main : Node2D
     }
 
     /// <summary>The most recently written of all the saves, for the main menu's Continue.</summary>
-    public static int? NewestSlot() => Enumerable.Range(0, 4).Where(s => System.IO.File.Exists(SlotPath(s)))
+    /// <summary>Autosaves take these slots, the oldest overwritten each time: the last five, five minutes apart.</summary>
+    public static readonly int[] AutosaveSlots = [11, 12, 13, 14, 15];
+    public static bool Autosave => Settings.Get("autosave", true);
+    const double AutosaveSeconds = 300;
+
+    /// <summary>The newest autosave's slot, if any.</summary>
+    public static int? NewestAutosave() => AutosaveSlots.Where(s => System.IO.File.Exists(SlotPath(s)))
+        .OrderByDescending(s => System.IO.File.GetLastWriteTime(SlotPath(s))).Select(s => (int?)s).FirstOrDefault();
+
+    int _lastAutosaveTick;
+
+    /// <summary>Every five minutes of play (game time: paused doesn't count), over the oldest of the five autosaves.</summary>
+    void StepAutosave()
+    {
+        if (!Autosave || _backdrop || _bot != null || _benchSeconds > 0 || _demoSeconds > 0 || _world.Outcome != Outcome.Running) return;
+        double every = _options.TryGetValue("autosave-seconds", out var a) ? double.Parse(a) : AutosaveSeconds;
+        if (_world.Tick - _lastAutosaveTick < every * Balance.TickHz) return;
+        _lastAutosaveTick = _world.Tick;
+        int slot = AutosaveSlots.OrderBy(s => System.IO.File.Exists(SlotPath(s)) ? System.IO.File.GetLastWriteTime(SlotPath(s)) : DateTime.MinValue).First();
+        SaveTo(slot, quiet: true);
+        _state.Say($"Autosaved (day {_world.Day})");
+    }
+
+    public static int? NewestSlot() => Enumerable.Range(0, 4).Concat(AutosaveSlots).Where(s => System.IO.File.Exists(SlotPath(s)))
         .OrderByDescending(s => System.IO.File.GetLastWriteTime(SlotPath(s))).Select(s => (int?)s).FirstOrDefault();
 
     void QuickSave() => SaveTo(0);
@@ -958,13 +1063,13 @@ public partial class Main : Node2D
     int _continueSlot;
     void ContinueLoad() => LoadFrom(_continueSlot);
 
-    void SaveTo(int slot)
+    void SaveTo(int slot, bool quiet = false)
     {
         _world.FlushCommands();
         System.IO.File.WriteAllBytes(SlotPath(slot), _world.Save());
         string mode = _world.Scenario?.Name ?? (_world.Survival is { Endless: true } ? "Endless" : "Survival");
         System.IO.File.WriteAllText(SlotPath(slot) + ".txt", $"{mode} · {_world.Map} · {_world.Rules.Difficulty} · day {_world.Day}");
-        _state.Say($"Saved (day {_world.Day})");
+        if (!quiet) _state.Say($"Saved (day {_world.Day})");
     }
 
     void LoadFrom(int slot)
@@ -979,6 +1084,7 @@ public partial class Main : Node2D
         {
             var loaded = World.Load(System.IO.File.ReadAllBytes(path), _baseRules);
             _world = loaded;
+            _lastAutosaveTick = loaded.Tick; // five minutes on from here
             TheMusic.World = _world;
             BuildViews();
             // The horde layer is sized to the map, which a save may change.
@@ -1173,6 +1279,16 @@ public partial class Main : Node2D
 
     void PanCamera(double delta)
     {
+        if (_backdrop)
+        {
+            // A slow turn round the town, like a banner-bearer walking the walls.
+            var keep = _world.Buildings.FirstOrDefault(b => b.Kind == BuildingKind.Keep);
+            float angle = (float)(Time.GetTicksMsec() / 1000.0 * Mathf.Tau / 150);
+            var centre = keep != null ? new Vector2(keep.CentreX, keep.CentreY) : new Vector2(_world.Terrain.Width / 2f, _world.Terrain.Height / 2f);
+            _camera.Position = Iso.P(centre + new Vector2(Mathf.Cos(angle), Mathf.Sin(angle)) * 14);
+            if (_world.Outcome != Outcome.Running) { _menuNext = true; GetTree().ReloadCurrentScene(); } // its run is over: another
+            return;
+        }
         if (_pauseMenu != null) return;
         if (Input.IsKeyPressed(Key.Ctrl) || Input.IsKeyPressed(Key.Alt)) return;
         // The arrows (the letters are the command card's grid), the screen's edges, and middle-drag (in _UnhandledInput).

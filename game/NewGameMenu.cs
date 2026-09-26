@@ -68,7 +68,8 @@ public partial class NewGameMenu : CanvasLayer
 
     public override void _Ready()
     {
-        var backdrop = new ColorRect { Color = new Color(0.06f, 0.04f, 0.05f, 0.94f) };
+        // Thin enough to see the town playing behind the menu (Main's backdrop game), dark enough to read over.
+        var backdrop = new ColorRect { Color = new Color(0.06f, 0.04f, 0.05f, 0.55f) };
         backdrop.SetAnchorsPreset(Control.LayoutPreset.FullRect);
         AddChild(backdrop);
 

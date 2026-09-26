@@ -83,6 +83,23 @@ public partial class PauseMenu : CanvasLayer
             line.AddChild(load);
             box.AddChild(line);
         }
+        // The autosaves: the newest to load here; the other four are kept in case it's too late.
+        {
+            var line = new HBoxContainer();
+            line.AddThemeConstantOverride("separation", 6);
+            int? newest = Main.NewestAutosave();
+            string? what = newest is { } a ? Main.SlotSummary(a) : null;
+            var label = UiKit.Label($"Autosave: {what ?? (Main.Autosave ? "none yet (every 5 minutes)" : "off")}", 12, what == null ? UiKit.Muted : UiKit.Text);
+            label.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
+            label.ClipText = true;
+            label.CustomMinimumSize = new Vector2(260, 0);
+            var load = UiKit.TextButton("Load", 12);
+            load.Disabled = newest == null;
+            load.Pressed += () => { if (newest is { } a) LoadSlot(a); };
+            line.AddChild(label);
+            line.AddChild(load);
+            box.AddChild(line);
+        }
 
         box.AddChild(new HSeparator());
 
@@ -107,6 +124,7 @@ public partial class PauseMenu : CanvasLayer
         box.AddChild(Display.UiScaleRow());
         box.AddChild(Toggle("Pause when a building is possessed", "pause_on_possession", false));
         box.AddChild(Toggle("Screen shake", "screen_shake", true));
+        box.AddChild(Toggle("Autosave every 5 minutes (the last five kept)", "autosave", true));
 
         box.AddChild(new HSeparator());
 
@@ -123,7 +141,7 @@ public partial class PauseMenu : CanvasLayer
     }
 
     /// <summary>A button that asks once before it acts: the first click relabels it, the second does it.</summary>
-    static Button Confirming(string text, string ask, Action act)
+    public static Button Confirming(string text, string ask, Action act)
     {
         var b = UiKit.TextButton(text, 15);
         bool armed = false;

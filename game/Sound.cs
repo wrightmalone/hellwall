@@ -24,6 +24,8 @@ public partial class Sound : Node2D
     static double Gap(Cue cue) => cue switch { Cue.Shot => 0.05, Cue.Boom => 0.12, Cue.Burst => 0.1, _ => 0.4 };
 
     public static float Volume => Settings.Get("volume", 0.7f);
+    /// <summary>This player's share of the volume: low for the game playing behind the main menu.</summary>
+    public float Loudness = 1;
 
     public override void _Ready()
     {
@@ -80,9 +82,9 @@ public partial class Sound : Node2D
     /// <summary>Play at a world tile position, or everywhere (announcements) when at is null.</summary>
     public void Play(Cue cue, Vector2? at = null)
     {
-        if (Volume <= 0 || _cooldown.GetValueOrDefault(cue) > 0) return;
+        if (Volume * Loudness <= 0 || _cooldown.GetValueOrDefault(cue) > 0) return;
         _cooldown[cue] = Gap(cue);
-        float db = Mathf.LinearToDb(Volume);
+        float db = Mathf.LinearToDb(Volume * Loudness);
         if (at is not { } tile)
         {
             _global.Stream = _streams[cue];

@@ -921,6 +921,21 @@ last lost by at least one).
   `scripts/ab.sh '<flags>' plains lakes` runs a quick sweep with and without some flags per map
   and prints them side by side. `scripts/verify.sh --fast` (about a minute) skips the full-run
   gates. Iterate with those; a full sweep and verify before a commit or build.
+- **More on the end screen**: "Play it again" for every kind of run (the same map and settings
+  from the start; missions had it, survival and skirmish didn't), "Main menu", "Load last save"
+  (the newest of your saves and autosaves), "Look at the field" (hides the results so you can
+  see how it ended; "Show the results" brings them back), and "Quit to desktop", which asks once.
+- **A town at war behind the main menu** (as in Factorio): opening the menu starts a game of its
+  own, the bot playing, fog off, no HUD and a quarter of the sound, a few waves in already, the
+  camera turning slowly round the town. It takes no input; when its run ends, another starts.
+  Picking anything from the menu (a run, the campaign's missions, Continue, the editor) starts
+  that in a fresh scene, so nothing of the backdrop's carries over. The menu's dark wash is
+  thinner to let it show. The seed changes by the hour and the map kind with it. `--no-backdrop`
+  turns it off. **Decide:** whether the camera should wander further (to the walls, a fight).
+- **Autosaves**: every five minutes of play (game time, so paused doesn't count), over the
+  oldest of five, so the last five are kept, 25 minutes back. The pause menu has an Autosave row
+  (the newest, to load) and a switch to turn them off; Continue and "Load last save" count them.
+  Not in the bot's or the backdrop's games.
 - **A rally point no longer heaps soldiers on one tile** (your playtest): each soldier out of a
   Barracks was sent there on his own, so each took its very middle. Now he takes the nearest
   spot of a formation round it that no one there or on the way already holds, the same

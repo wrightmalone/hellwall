@@ -76,6 +76,16 @@ public partial class TerrainView : Node2D
         else if (kind == Tile.Grass && Pick(x * 7 + 3, y * 5 + 1, 14) == 0) _tuft.SetCell(cell, _sources[Art.Tufts[Pick(y, x, Art.Tufts.Length)]], Vector2I.Zero);
     }
 
+    /// <summary>Every tile again, after the world was run on without us (the menu's backdrop game).</summary>
+    public void Repaint()
+    {
+        var t = World.Terrain;
+        for (int y = 0; y < t.Height; y++)
+            for (int x = 0; x < t.Width; x++)
+                PaintCell(x, y);
+        RepaintHoly();
+    }
+
     public void RepaintHoly()
     {
         var t = World.Terrain;

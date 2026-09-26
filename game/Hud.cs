@@ -34,6 +34,10 @@ public partial class Hud : CanvasLayer
     /// <summary>A mission ended: back to the campaign map, or play it again.</summary>
     public Action BackToCampaign = null!;
     public Action Retry = null!;
+    /// <summary>The same run again from the start (survival, skirmish, a hand-made map).</summary>
+    public Action Again = null!;
+    /// <summary>Load the newest save, if there is one (null: there isn't).</summary>
+    public Action? LoadLatest;
 
     public AlertFeed Alerts = null!;
     /// <summary>The campaign's speakers.</summary>
@@ -44,6 +48,8 @@ public partial class Hud : CanvasLayer
     Inspector _inspector = null!;
     Label _debug = null!, _notices = null!, _banner = null!, _help = null!, _endText = null!;
     PanelContainer _end = null!;
+    Button? _showEnd;
+    bool _endShown;
     readonly Dictionary<Side, Label> _edgeWarnings = new();
 
     const string HelpText =
@@ -162,14 +168,33 @@ public partial class Hud : CanvasLayer
         }
         else
         {
-            var again = UiKit.TextButton("New run", 15);
-            again.Pressed += () => NewRun();
+            var again = UiKit.TextButton("Play it again", 15);
+            again.TooltipText = "The same map and settings, from the start";
+            again.Pressed += () => Again();
             endRow.AddChild(again);
+            var menu = UiKit.TextButton("Main menu", 15);
+            menu.Pressed += () => NewRun();
+            endRow.AddChild(menu);
         }
-        var quit = UiKit.TextButton("Quit", 15);
-        quit.Pressed += () => GetTree().Quit();
-        endRow.AddChild(quit);
         endBox.AddChild(endRow);
+        var moreRow = new HBoxContainer { Alignment = BoxContainer.AlignmentMode.Center };
+        moreRow.AddThemeConstantOverride("separation", 8);
+        if (LoadLatest is { } load)
+        {
+            var loadButton = UiKit.TextButton("Load last save", 14);
+            loadButton.Pressed += () => { _end.Visible = false; _endShown = false; load(); };
+            moreRow.AddChild(loadButton);
+        }
+        var look = UiKit.TextButton("Look at the field", 14);
+        look.TooltipText = "Hide this and look round the map as it ended";
+        look.Pressed += () => { _end.Visible = false; _showEnd!.Visible = true; };
+        moreRow.AddChild(look);
+        moreRow.AddChild(PauseMenu.Confirming("Quit to desktop", "Quit? Click again", () => GetTree().Quit()));
+        endBox.AddChild(moreRow);
+        _showEnd = UiKit.TextButton("Show the results", 14);
+        _showEnd.Visible = false;
+        _showEnd.Pressed += () => { _showEnd.Visible = false; _end.Visible = true; };
+        AddChild(_showEnd);
         _end.AddChild(endBox);
         AddChild(_end);
     }
@@ -226,17 +251,19 @@ public partial class Hud : CanvasLayer
         _help.Position = new Vector2(screen.X / 2 - 460, screen.Y / 2 - 140);
         UpdateEdgeWarnings(screen);
 
+        if (World.Outcome == Outcome.Running) _endShown = false; // a load took it back to before the end
         if (World.Outcome != Outcome.Running)
         {
-            _banner.Visible = true;
+            _banner.Visible = !_showEnd!.Visible; // hidden while looking round the field
             bool keepStands = World.Buildings.Any(b => b.Kind == BuildingKind.Keep);
             _banner.Text = World.Outcome == Outcome.Won ? (Campaign.Default.Contains(World.Scenario) ? "Mission won" : "The colony endures")
                 : !keepStands ? (World.Survival is { Endless: true } ? $"The Keep has fallen on day {World.Day}" : "The Keep has fallen")
                 : "Out of time: the Convergence came and went";
             _banner.Size = new Vector2(screen.X, 60);
             _banner.Position = new Vector2(0, screen.Y * 0.3f);
-            if (!_end.Visible)
+            if (!_endShown)
             {
+                _endShown = true;
                 var st = World.Stats;
                 var s = World.Survival;
                 string corruptions = s is { Endless: true, Corruptions.Count: > 0 }
@@ -265,6 +292,7 @@ public partial class Hud : CanvasLayer
                 Voice.Silence();
             }
             _end.Position = new Vector2(screen.X / 2 - _end.Size.X / 2, screen.Y * 0.3f + 70);
+            _showEnd!.Position = new Vector2(screen.X / 2 - _showEnd.Size.X / 2, _bar.Size.Y + 10);
         }
     }
 
