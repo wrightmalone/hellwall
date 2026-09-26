@@ -143,6 +143,11 @@ public partial class WorldView : Node2D
             Figure(seen, step, m.Id, sheet, Art.UnitScale * 0.8f, m.X, m.Y, m.PrevX, m.PrevY,
                 chopping ? new Vector2(m.Tree % w + 0.5f - m.X, m.Tree / w + 0.5f - m.Y) : null);
         }
+        // Fishing boats: always rocking (their "walk" is the swell), facing the way they last sailed.
+        foreach (var boat in State.Fishers.All)
+        {
+            Figure(seen, step, boat.Id, "res://art/baked/unit-boat.png", Art.UnitScale * 1.35f, boat.X, boat.Y, boat.PrevX, boat.PrevY, new Vector2(boat.HeadX, boat.HeadY), ticked: false);
+        }
         // Farmers: straw-coloured, out on the fields; at work they face the tile and stoop, water or reap.
         foreach (var h in State.Farmers.All)
         {
@@ -155,7 +160,7 @@ public partial class WorldView : Node2D
             };
             bool working = h.Doing is Farmers.Work.Plant or Farmers.Work.Water or Farmers.Work.Reap;
             Figure(seen, step, h.Id, sheet, Art.UnitScale * 0.8f, h.X, h.Y, h.PrevX, h.PrevY,
-                working ? new Vector2(h.Tile % w + 0.5f - h.X, h.Tile / w + 0.5f - h.Y) : null);
+                working ? new Vector2(h.Tile % w + 0.5f - h.X, h.Tile / w + 0.5f - h.Y) : null, ticked: false);
         }
         foreach (var id in _units.Keys.Where(id => !seen.Contains(id)).ToList())
         {
@@ -165,7 +170,8 @@ public partial class WorldView : Node2D
         }
     }
 
-    void Figure(HashSet<int> seen, int step, int id, string sheet, float scale, float x, float y, float prevX, float prevY, Vector2? chopping)
+    /// <param name="ticked">Moved by the sim, a tick at a time (drawn between its last two places); false for the client's own figures, which move every frame.</param>
+    void Figure(HashSet<int> seen, int step, int id, string sheet, float scale, float x, float y, float prevX, float prevY, Vector2? chopping, bool ticked = true)
     {
         seen.Add(id);
         if (!_units.TryGetValue(id, out var sprite))
@@ -189,9 +195,10 @@ public partial class WorldView : Node2D
         if (chopping is { } at) _facing[id] = Art.Facing(at.X, at.Y);
         else if (moving) _facing[id] = Art.Facing(dx, dy);
         int facing = _facing.GetValueOrDefault(id, 1);
-        int frame = chopping != null || moving ? (step + id) % Art.Frames : 0; // chopping: the swing sheet, looped
+        // chopping: the swing sheet, looped. (A positive remainder: the client's own figures have negative ids.)
+        int frame = chopping != null || moving ? ((step + id) % Art.Frames + Art.Frames) % Art.Frames : 0;
         sprite.RegionRect = new Rect2(frame * Art.Cell, facing * Art.Cell, Art.Cell, Art.Cell);
-        sprite.Position = Iso.P(Mathf.Lerp(prevX, x, State.Alpha), Mathf.Lerp(prevY, y, State.Alpha));
+        sprite.Position = ticked ? Iso.P(Mathf.Lerp(prevX, x, State.Alpha), Mathf.Lerp(prevY, y, State.Alpha)) : Iso.P(x, y);
     }
 
     /// <summary>
@@ -440,6 +447,31 @@ public partial class WorldView : Node2D
             }
 
             DrawColumns(state, font);
+
+            // A boat's net: spreading on the water as it's cast, drawn in as it's hauled (with the catch in it); a "+" over the Fishery as it lands.
+            foreach (var boat in state.Fishers.All)
+            {
+                if (boat.Doing is not (Fishers.Work.Cast or Fishers.Work.Haul)) continue;
+                float t = boat.Doing == Fishers.Work.Cast ? 1 - boat.Timer / Fishers.CastSeconds : boat.Timer / Fishers.HaulSeconds;
+                float r = 0.2f + 1.1f * Mathf.Clamp(t, 0, 1);
+                var at = new Vector2(boat.X + 0.6f, boat.Y + 0.6f);
+                var net = new Color(0.9f, 0.85f, 0.65f, 0.75f);
+                Iso.Ellipse(this, at, r, net, 1.2f);
+                Iso.Ellipse(this, at, r * 0.55f, net, 1f);
+                for (int k = 0; k < 8; k++)
+                {
+                    float a = k * Mathf.Tau / 8;
+                    DrawLine(Iso.P(at), Iso.P(at + new Vector2(Mathf.Cos(a), Mathf.Sin(a)) * r), net, 1f);
+                }
+                if (boat.Doing == Fishers.Work.Haul)
+                    for (int k = 0; k < 4; k++)
+                    {
+                        float a = (float)Time.GetTicksMsec() / 300f + k * 1.7f;
+                        DrawCircle(Iso.P(at + new Vector2(Mathf.Cos(a), Mathf.Sin(a)) * r * 0.4f), 1.8f, new Color(0.8f, 0.85f, 0.95f));
+                    }
+            }
+            foreach (var (at, age) in state.Fishers.Landed)
+                Text(font, Iso.P(at) + new Vector2(-10, -30 - age * 18), "+ fish", 13, new Color(0.9f, 0.95f, 1f, 1 - age / 1.6f));
 
             // A farmer watering: drops falling from the can onto the tile.
             foreach (var h in state.Farmers.All)

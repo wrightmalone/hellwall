@@ -29,6 +29,9 @@ public partial class NewGameMenu : CanvasLayer
         [MapKind.Lakes] = "The land runs between lakes: chokepoints to hold, and little room to build.",
         [MapKind.Highlands] = "Rock ridges and the passes between them. Stone is plentiful; space isn't.",
         [MapKind.Wildwood] = "Deep forest. Wood everywhere, little open ground.",
+        [MapKind.Causeway] = "A river down the middle, your town on the causeway. Waves from north and south, down both banks: four gaps to hold.",
+        [MapKind.TwoFronts] = "Waves from east and west only. The rich north is thick with sleeping demons: clear it if you dare.",
+        [MapKind.Crossing] = "A river to the east with one bridge. Everything comes over it.",
     };
 
     static readonly Dictionary<Difficulty, string> DifficultyAbout = new()

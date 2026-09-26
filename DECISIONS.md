@@ -921,6 +921,19 @@ last lost by at least one).
   `scripts/ab.sh '<flags>' plains lakes` runs a quick sweep with and without some flags per map
   and prints them side by side. `scripts/verify.sh --fast` (about a minute) skips the full-run
   gates. Iterate with those; a full sweep and verify before a commit or build.
+- **Farmers no longer flicker and jump** (your playtest): a figure's walk frame was its id's
+  remainder, and the client's own figures (farmers, boats) have negative ids, so some frames
+  pointed off the sheet and the figure vanished for them; farmers' ids could also collide
+  between farms while a crew changed, two sharing one sprite. Fixed both, plus a cap on a
+  single step (the first frames after loading are long). They're also drawn where they are,
+  not part-way back toward the frame before (that's for the sim's tick-by-tick figures).
+- **No brown pad under Farms**: the crops and farmers show the field now.
+- **Fishing boats**: each working Fishery has a boat (built from shapes in the baker, as no pack
+  has one: a hull, a mast and sail, the net bundled in the stern, rocking on the swell). It
+  sails out over the water, by water all the way, to a spot a few tiles off, casts its net
+  (it spreads on the water), hauls it in with the catch glinting in it, sails home and lands
+  it ("+ fish" rises over the Fishery). For the eye only, like the farmers: the food is the
+  Fishery's rate. `--build=Fishery` puts one down for screenshots.
 - **Farmers**: a Farm's crew (four, straw-coloured) walk out over its field, stoop to sow a
   tile, come back and water it (drops from the can), and reap it with a sweep when it's
   ripe; the crops show on the ground as furrows, green shoots, then gold. For the eye only, as

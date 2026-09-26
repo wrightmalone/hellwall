@@ -37,6 +37,8 @@ var variants := [
 	["unit-farmer-plant", RP + "Monk.gltf", Color(0.78, 0.66, 0.36), 1.0, ["", ""], 0.9, "PickUp", 0.5], # stoops to sow, and to gather
 	["unit-farmer-water", RP + "Monk.gltf", Color(0.78, 0.66, 0.36), 1.0, ["", ""], 0.9, "Idle", 0.5], # stands and waters (the water's drawn)
 	["unit-farmer-reap", RP + "Monk.gltf", Color(0.78, 0.66, 0.36), 1.0, ["", ""], 0.9, "Attack", 0.5], # a sweep, as with a sickle
+	# The Fishery's boat: no pack has one, so it's built from shapes (make_model), rocking on the water.
+	["unit-boat", "proc:boat", null, 1.0, ["", ""]],
 	["unit-miner", RP + "Warrior.gltf", Color(0.55, 0.5, 0.44), 1.0, ["", ""], 0.9, "Walk", 0.5], # stone-dust grey: a miner, not a Templar
 	["unit-miner-dig", RP + "Warrior.gltf", Color(0.55, 0.5, 0.44), 1.0, ["", ""], 0.9, "Sword_Attack", 0.5], # the overhead swing reads as a pick at this size
 	# Demons: Quaternius Ultimate Monsters, fitted to a height (6th field) and walked with
@@ -100,7 +102,7 @@ func bake():
 func bake_one(v):
 	# The RPG characters' textures are darker than the monsters': more fill light, so both read at 30 px.
 	env.environment.ambient_light_energy = 0.95 if v[1].begins_with(RP) else 0.55
-	var model: Node3D = load(v[1]).instantiate()
+	var model: Node3D = make_model(v[1]) if v[1].begins_with("proc:") else load(v[1]).instantiate()
 	model.scale = Vector3.ONE * v[3]
 	viewport.add_child(model)
 	if v.size() > 5:
@@ -124,6 +126,10 @@ func bake_one(v):
 		for f in FRAMES:
 			if player:
 				player.seek(length * f / FRAMES, true)
+			elif v[1].begins_with("proc:"):
+				# A made model has no walk: it rocks on the swell.
+				model.rotation.z = sin(TAU * f / FRAMES) * 0.08
+				model.position.y = sin(TAU * f / FRAMES + 1.0) * 0.015
 			else:
 				stride(model, v[3], TAU * f / FRAMES)
 			await RenderingServer.frame_post_draw
@@ -135,6 +141,46 @@ func bake_one(v):
 	print("baked ", v[0])
 	model.queue_free()
 	await process_frame
+
+func add_part(root3: Node3D, mesh: Mesh, mat: Material, at: Vector3, rot: Vector3) -> void:
+	var m := MeshInstance3D.new()
+	m.mesh = mesh
+	m.material_override = mat
+	m.position = at
+	m.rotation_degrees = rot
+	root3.add_child(m)
+
+# Models with no file: built from boxes and prisms. "proc:boat": a small fishing boat, bow to +Z.
+func make_model(kind: String) -> Node3D:
+	var root3 := Node3D.new()
+	var wood := StandardMaterial3D.new()
+	wood.albedo_color = Color(0.5, 0.32, 0.18)
+	var dark := StandardMaterial3D.new()
+	dark.albedo_color = Color(0.3, 0.19, 0.11)
+	var cloth := StandardMaterial3D.new()
+	cloth.albedo_color = Color(0.92, 0.88, 0.78)
+	var net := StandardMaterial3D.new()
+	net.albedo_color = Color(0.75, 0.7, 0.55)
+	if kind == "proc:boat":
+		var hull := BoxMesh.new()
+		hull.size = Vector3(0.3, 0.12, 0.5)
+		add_part(root3, hull, wood, Vector3(0, 0.06, -0.04), Vector3.ZERO)
+		var bow := PrismMesh.new() # the pointed front
+		bow.size = Vector3(0.3, 0.2, 0.12)
+		add_part(root3, bow, wood, Vector3(0, 0.06, 0.27), Vector3(90, 0, 0))
+		var rim := BoxMesh.new()
+		rim.size = Vector3(0.32, 0.03, 0.52)
+		add_part(root3, rim, dark, Vector3(0, 0.125, -0.04), Vector3.ZERO)
+		var mast := BoxMesh.new()
+		mast.size = Vector3(0.025, 0.42, 0.025)
+		add_part(root3, mast, dark, Vector3(0, 0.33, 0.04), Vector3.ZERO)
+		var sail := BoxMesh.new()
+		sail.size = Vector3(0.012, 0.26, 0.2)
+		add_part(root3, sail, cloth, Vector3(0.02, 0.37, -0.04), Vector3.ZERO)
+		var heap := BoxMesh.new() # the net, bundled in the stern
+		heap.size = Vector3(0.16, 0.05, 0.12)
+		add_part(root3, heap, net, Vector3(0, 0.15, -0.2), Vector3.ZERO)
+	return root3
 
 # Scale a model so it stands `height` tall with its feet on the ground (models come in every size).
 func fit(model: Node3D, height: float):

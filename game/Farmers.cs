@@ -36,6 +36,8 @@ public sealed class Farmers
     readonly HashSet<int> _claimed = new();
     readonly Random _rng = new(12345);
     double _survey = 99;
+    /// <summary>Farmers' own ids, counting down from -1: never a sim id (those are positive), never two farmers the same.</summary>
+    int _nextId = -1;
 
     const float Speed = 1.4f;
     const float WorkSeconds = 3f;
@@ -44,6 +46,8 @@ public sealed class Farmers
 
     public void Step(World world, float dt)
     {
+        // A long frame (loading, a hitch) mustn't carry anyone several tiles in one step.
+        dt = MathF.Min(dt, 0.1f);
         _survey += dt;
         if (_survey > 2)
         {
@@ -124,7 +128,7 @@ public sealed class Farmers
             while (field.Hands.Count(h => h.Doing != Work.Home) < b.Def.Workers)
             {
                 float x0 = b.CentreX + (float)(_rng.NextDouble() - 0.5), y0 = b.CentreY + b.H / 2f;
-                field.Hands.Add(new Hand { Id = -(b.Id * 8 + field.Hands.Count + 1), X = x0, Y = y0, PrevX = x0, PrevY = y0 });
+                field.Hands.Add(new Hand { Id = _nextId--, X = x0, Y = y0, PrevX = x0, PrevY = y0 });
             }
         }
         foreach (var id in _fields.Keys.ToList())

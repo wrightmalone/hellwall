@@ -184,12 +184,8 @@ public static class Art
         _ => 0.72f,
     };
 
-    /// <summary>Farms and the like show worked ground under the building.</summary>
-    public static string? Ground(BuildingKind kind) => kind switch
-    {
-        BuildingKind.Farm => $"{Land}landscapeTiles_073.png",
-        _ => null,
-    };
+    /// <summary>Worked ground under a building, for kinds that want it. None now: a Farm's fields show as its crops, tended by its farmers.</summary>
+    public static string? Ground(BuildingKind kind) => null;
 
     // --- soldiers and demons: sheets baked from Kenney's 3D characters (tools/bake.gd) ---
 

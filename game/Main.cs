@@ -210,6 +210,22 @@ public partial class Main : Node2D
 
         if (options.ContainsKey("autoplay")) _bot = new Hellwall.Headless.Bot(_world, Hellwall.Headless.Bot.Style.Full);
 
+        // --build=Kind: put one on the first place it can go near the Keep, before any fast-forward (screenshots of what it does).
+        if (options.TryGetValue("build", out var buildKind) && Enum.TryParse<BuildingKind>(buildKind, true, out var toBuild))
+        {
+            int c = _world.Terrain.Width / 2;
+            bool placed = false;
+            for (int r = 4; r < 40 && !placed; r++)
+                for (int dy = -r; dy <= r && !placed; dy++)
+                    for (int dx = -r; dx <= r && !placed; dx++)
+                        if (Math.Max(Math.Abs(dx), Math.Abs(dy)) == r && _world.CheckPlacement(toBuild, c + dx, c + dy) == null && (_world.Def(toBuild).Produces == null || _world.EstimateGathering(toBuild, c + dx, c + dy) > 0.02))
+                        {
+                            _world.Enqueue(new PlaceBuilding(toBuild, c + dx, c + dy));
+                            _world.FlushCommands();
+                            placed = true;
+                        }
+        }
+
         // Fast-forward before the first frame: for screenshots and for jumping into the middle of a run.
         if (options.TryGetValue("skip", out var skip))
         {
@@ -218,6 +234,7 @@ public partial class Main : Node2D
                 if (_bot != null && _world.Tick % Balance.TickHz == 0) _bot.Act();
                 _world.Step();
                 _state.Farmers.Step(_world, (float)TickSeconds);
+                _state.Fishers.Step(_world, (float)TickSeconds);
                 var events = _world.DrainEvents();
                 _bot?.See(events);
                 foreach (var e in events)
@@ -228,8 +245,12 @@ public partial class Main : Node2D
         }
 
         // Select a building of a kind before the first frame, for screenshots of its inspector.
-        if (options.TryGetValue("inspect", out var inspect) && Enum.TryParse<BuildingKind>(inspect, true, out var kindToInspect))
-            _state.SelectedBuilding = _world.Buildings.FirstOrDefault(b => b.Kind == kindToInspect)?.Id;
+        if (options.TryGetValue("inspect", out var inspect) && Enum.TryParse<BuildingKind>(inspect, true, out var kindToInspect)
+            && _world.Buildings.FirstOrDefault(b => b.Kind == kindToInspect) is { } inspected)
+        {
+            _state.SelectedBuilding = inspected.Id;
+            _camera.Position = Iso.P(inspected.CentreX, inspected.CentreY); // and look at it
+        }
 
         // scripts/verify.sh looks for this line: the engine banner alone doesn't prove the C# scene ran.
         if (options.GetValueOrDefault("selftest") == "controls") CallDeferred(nameof(SelfTestControls));
@@ -510,7 +531,7 @@ public partial class Main : Node2D
         _state.HoveredTile = Iso.TileAt(_state.MouseWorld);
 
         _horde.Sync(_world, _state.Alpha, delta);
-        if (!_paused) _state.Farmers.Step(_world, (float)delta);
+        if (!_paused) { _state.Farmers.Step(_world, (float)delta); _state.Fishers.Step(_world, (float)delta); }
         if (_pendingGroup is { } pending) { _pendingGroup = null; SelectGroupForScreenshot(pending); }
         _view.Refresh();
         PanCamera(delta);

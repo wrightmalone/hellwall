@@ -58,6 +58,9 @@ public sealed class ClientState
     /// <summary>Demons per HordeColumns.Cell square, for the shadow a mass of them casts (empty until measured).</summary>
     public int[] Density = [];
 
+    /// <summary>The Fisheries' boats (for the eye only).</summary>
+    public readonly Fishers Fishers = new();
+
     /// <summary>The people working the Farms' fields (for the eye only).</summary>
     public readonly Farmers Farmers = new();
     /// <summary>Each marching wave column's centre (tiles) and head-count, for its marker.</summary>
