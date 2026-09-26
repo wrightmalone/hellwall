@@ -949,6 +949,13 @@ last lost by at least one).
 - **The Convergence lands like it means it**: a swelling roar, a long red pulse round the screen,
   "THE CONVERGENCE" across the middle, and a shake. And every dense horde darkens the ground
   under it (a shadow per crowded 4x4 square, deeper with more), so a mass reads as a mass.
+- **Maps can be shared**: in the map editor, "Export..." saves the map as a `.hwmap` file anywhere
+  (the system's own file dialog), "Import..." takes one in, checks it, adds it to your maps
+  (a number on the end if the name's taken) and opens it; "Maps folder" opens where they live.
+  A map from someone else is untrusted, so it's checked first: a size the game makes, every
+  tile there and real, and nothing out of all proportion (hand-placed packs, gates, wave sizes,
+  days, starting stock); a doctored one is refused with the reason. The Steam Workshop can sit
+  on the same file later.
 - **Screen shake, with a switch** (pause menu, "Screen shake", on by default): the Convergence
   landing, and a wall going down on screen. It decays on its own and uses real time, so it
   feels the same at any game speed.

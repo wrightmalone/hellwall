@@ -131,3 +131,44 @@ public class CampaignTests
         Assert.Equal(StateHash.Compute(world), StateHash.Compute(loaded));
     }
 }
+
+public class SharedMapTests
+{
+    static ScenarioDef Painted(int size = 192)
+    {
+        var tiles = new Tile[size * size];
+        return new ScenarioDef { Id = "shared", Name = "Shared", MapSize = size, Tiles = ScenarioDef.EncodeTiles(tiles), PlacedPacks = [new PlacedPack(10, 10, 20)] };
+    }
+
+    [Fact]
+    public void AMapFromTheEditorIsFitToPlay()
+    {
+        Assert.Null(Painted().Problem());
+        Assert.Null(ScenarioDef.FromJson(Painted().ToJson()).Problem());
+        Assert.All(Campaign.Default.Scenarios, s => Assert.Null(s.Problem()));
+    }
+
+    [Theory]
+    [InlineData("size")]
+    [InlineData("tiles")]
+    [InlineData("packs")]
+    [InlineData("horde")]
+    [InlineData("waves")]
+    [InlineData("gates")]
+    [InlineData("stock")]
+    public void ADoctoredMapIsTurnedAway(string what)
+    {
+        var map = Painted();
+        map = what switch
+        {
+            "size" => map with { MapSize = 10000 },
+            "tiles" => map with { Tiles = Convert.ToBase64String(new byte[] { 1, 2, 3 }) },
+            "packs" => map with { PlacedPacks = Enumerable.Range(0, 5000).Select(i => new PlacedPack(1, 1, 5)).ToArray() },
+            "horde" => map with { PlacedPacks = [new PlacedPack(1, 1, 1_000_000)] },
+            "waves" => map with { Waves = 1e9 },
+            "gates" => map with { PlacedGates = [new PlacedGate(-5, 3)] },
+            _ => map with { Start = new Cost { Gold = double.NaN } },
+        };
+        Assert.NotNull(map.Problem());
+    }
+}

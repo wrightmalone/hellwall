@@ -137,6 +137,55 @@ public partial class MapEditor : Node2D
         RefreshSaved();
     }
 
+    FileDialog Dialog(FileDialog.FileModeEnum mode, string title)
+    {
+        var dialog = new FileDialog
+        {
+            FileMode = mode, Access = FileDialog.AccessEnum.Filesystem, UseNativeDialog = true, Title = title,
+            Filters = [$"*.{MapFiles.Extension} ; Hellwall map", "*.json ; Hellwall map (JSON)"],
+            CurrentDir = OS.GetSystemDir(OS.SystemDir.Desktop),
+        };
+        dialog.Canceled += dialog.QueueFree;
+        AddChild(dialog);
+        return dialog;
+    }
+
+    void ExportMap()
+    {
+        var map = Current();
+        var dialog = Dialog(FileDialog.FileModeEnum.SaveFile, "Export map");
+        dialog.CurrentFile = $"{map.Id}.{MapFiles.Extension}";
+        dialog.FileSelected += path =>
+        {
+            try
+            {
+                MapFiles.Export(map, path);
+                _status.Text = $"Exported '{map.Name}' to {path}";
+            }
+            catch (Exception e) { _status.Text = $"Couldn't export: {e.Message}"; }
+            dialog.QueueFree();
+        };
+        dialog.PopupCentered(new Vector2I(820, 520));
+    }
+
+    void ImportMap()
+    {
+        var dialog = Dialog(FileDialog.FileModeEnum.OpenFile, "Import map");
+        dialog.FileSelected += path =>
+        {
+            var (map, error) = MapFiles.Import(path);
+            if (map == null) _status.Text = $"Couldn't import that map: {error}";
+            else
+            {
+                Load(map);
+                RefreshSaved();
+                _status.Text = $"Imported '{map.Name}': it's in your maps now";
+            }
+            dialog.QueueFree();
+        };
+        dialog.PopupCentered(new Vector2I(820, 520));
+    }
+
     void RefreshSaved()
     {
         _saved.Clear();
@@ -267,6 +316,18 @@ public partial class MapEditor : Node2D
         bool pack = saved?.PlacedPacks.Length == 1, gate = saved?.PlacedGates.Length == 1;
         var world = saved == null ? null : World.Create((saved with { Id = "map-selftest" }).Options(Rules.Default));
         bool plays = world != null && world.Terrain.Get(c + 40, c) == Tile.Water && world.Gates.Count == 1 && world.Packs.Any(p => p.X == c - 41);
+        // Shared: exported to a file, imported back as a map of its own (the name's taken, so "-2"), and a doctored one turned away.
+        bool shared = false;
+        if (saved != null)
+        {
+            string file = System.IO.Path.Combine(OS.GetUserDataDir(), "selftest-export." + MapFiles.Extension);
+            MapFiles.Export(saved, file);
+            var (back, _) = MapFiles.Import(file);
+            System.IO.File.WriteAllText(file, (saved with { PlacedPacks = [new PlacedPack(1, 1, 1_000_000)] }).ToJson());
+            var (_, refused) = MapFiles.Import(file);
+            shared = back is { Id: "selftest-map-2" } && back.Tiles == saved.Tiles && refused != null;
+            foreach (var f in new[] { file, System.IO.Path.Combine(MapFiles.Folder, "selftest-map-2.json") }) try { System.IO.File.Delete(f); } catch (System.IO.IOException) { }
+        }
         try { System.IO.File.Delete(System.IO.Path.Combine(MapFiles.Folder, "selftest-map.json")); } catch (System.IO.IOException) { }
         // Undo twice: the gate goes, then the pack; the lake stays.
         Undo();
@@ -274,8 +335,8 @@ public partial class MapEditor : Node2D
         bool undone = _gates.Count == 0 && _packs.Count == 0 && _world.Terrain.Get(c + 40, c) == Tile.Water;
         Undo();
         bool dry = _world.Terrain.Get(c + 40, c) != Tile.Water;
-        bool pass = water && pack && gate && plays && undone && dry;
-        GD.Print(pass ? "hellwall-selftest: PASS editor" : $"hellwall-selftest: FAIL editor (saved {saved != null}, water {water}, pack {pack}, gate {gate}, plays {plays}, undo {undone}, undo paint {dry})");
+        bool pass = water && pack && gate && plays && shared && undone && dry;
+        GD.Print(pass ? "hellwall-selftest: PASS editor" : $"hellwall-selftest: FAIL editor (saved {saved != null}, water {water}, pack {pack}, gate {gate}, plays {plays}, export and import {shared}, undo {undone}, undo paint {dry})");
         GetTree().Quit();
     }
 
@@ -427,6 +488,21 @@ public partial class MapEditor : Node2D
         actions.AddChild(play);
         actions.AddChild(back);
         box.AddChild(actions);
+        // Sharing: a map is one file, to send and to take in.
+        var share = new HBoxContainer();
+        var export = UiKit.TextButton("Export...", 13);
+        export.TooltipText = "Save this map as a file to send to someone (." + MapFiles.Extension + ")";
+        export.Pressed += ExportMap;
+        var import = UiKit.TextButton("Import...", 13);
+        import.TooltipText = "Add a map someone sent you, and open it";
+        import.Pressed += ImportMap;
+        var folder = UiKit.TextButton("Maps folder", 13);
+        folder.TooltipText = "Open the folder your hand-made maps are kept in";
+        folder.Pressed += () => { System.IO.Directory.CreateDirectory(MapFiles.Folder); OS.ShellOpen(MapFiles.Folder); };
+        share.AddChild(export);
+        share.AddChild(import);
+        share.AddChild(folder);
+        box.AddChild(share);
         _status = UiKit.Label("", 12, UiKit.Muted);
         _status.AutowrapMode = TextServer.AutowrapMode.WordSmart;
         _status.CustomMinimumSize = new Vector2(280, 0);

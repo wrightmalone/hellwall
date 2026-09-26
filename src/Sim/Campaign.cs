@@ -165,6 +165,34 @@ public sealed record ScenarioDef
 
     public static string EncodeTiles(Tile[] tiles) => Convert.ToBase64String(Array.ConvertAll(tiles, t => (byte)t));
 
+    /// <summary>Map sizes the game makes: a shared map must be one of them.</summary>
+    public static readonly int[] MapSizes = [128, 192, 256, 320];
+
+    /// <summary>
+    /// What's wrong with a map someone else made (an imported file), or null if it's fit to play:
+    /// a known size, its tiles all there and all real tiles, and nothing out of all proportion
+    /// (a doctored file mustn't be able to put a million demons on the map or run for ever).
+    /// </summary>
+    public string? Problem()
+    {
+        if (Name.Length > 60 || Briefing.Length > 4000) return "its name or briefing is too long";
+        if (Array.IndexOf(MapSizes, MapSize) < 0) return $"it's {MapSize} tiles across, which isn't a size the game makes";
+        if (!Enum.IsDefined(Map) || !Enum.IsDefined(Difficulty)) return "it names a kind of map or difficulty this build doesn't have";
+        if (Days is < 0 or > 400 || Waves is < 0 or > 20 || Convergence is < 0 or > 20) return "its days or wave sizes are out of range";
+        if (Hellgates is < -1 or > 16 || Packs is < -1 or > 5000 || Strays is < -1 or > 5000 || Ruins is < -1 or > 64) return "it asks for too many gates, packs, strays or ruins";
+        if (Start != null && Enum.GetValues<Resource>().Any(r => Start[r] is < 0 or > 1_000_000 || double.IsNaN(Start[r]))) return "its starting stock is out of range";
+        if (PlacedPacks.Length > 2000 || PlacedPacks.Any(p => p.Count is < 1 or > 1000 || !Enum.IsDefined(p.Kind) || p.X < 0 || p.Y < 0 || p.X >= MapSize || p.Y >= MapSize)) return "its hand-placed packs are out of range";
+        if (PlacedGates.Length > 16 || PlacedGates.Any(g => g.X < 0 || g.Y < 0 || g.X >= MapSize || g.Y >= MapSize)) return "its hand-placed Hellgates are out of range";
+        if (Tiles.Length > 0)
+        {
+            Tile[]? tiles;
+            try { tiles = DecodeTiles(); }
+            catch (FormatException e) { return e.Message; }
+            if (tiles!.Any(t => !Enum.IsDefined(t))) return "it has tiles this build doesn't know";
+        }
+        return null;
+    }
+
     public string ToJson() => System.Text.Json.JsonSerializer.Serialize(this, Campaign.Json);
     public static ScenarioDef FromJson(string json) => System.Text.Json.JsonSerializer.Deserialize<ScenarioDef>(json, Campaign.Json) ?? throw new FormatException("empty scenario");
 }
