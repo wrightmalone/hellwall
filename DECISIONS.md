@@ -931,7 +931,10 @@ last lost by at least one).
   costs food even if it's beaten off. Soldiers standing between don't count as a wall.
   Bot sweep: fortress 7/8, pyre 6/8, legion 3/8 (it lives on iron, and Mines out in the open
   stop when demons come). Saves are format 18.
-  **Decide:** whether soldiers nearby should steady the crew (it would make escorts matter).
+- **Soldiers steady a crew** (you said yes): each soldier within the building's working ground
+  and two tiles more steadies its crew against four demons with an open way in, so a Militia at
+  the field's edge shrugs off a stray and a pack needs a proper escort. A steadied building says
+  "Demons close, but your soldiers are keeping the crew at work".
 - **Walls and gates look built, not blocked out** (your note that they stood out as
   in-progress): baked in the pieces our walls join from, a post on the tile and an arm half a
   tile toward each neighbour, so lines and corners join as before. Stone is KayKit's

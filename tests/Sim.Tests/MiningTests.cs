@@ -160,3 +160,25 @@ public class FlightTests
         Assert.All(world.Woodsmen.Where(m => m.HomeId == quarry.Id), m => Assert.True(m.State is WoodsmanState.Home or WoodsmanState.Back, $"a miner still {m.State}"));
     }
 }
+
+public class SteadyingTests
+{
+    [Fact]
+    public void ASoldierByTheFieldsKeepsTheCrewAtWorkAgainstAStrayButNotAPack()
+    {
+        var world = TestWorlds.Rich(TestWorlds.Dummies());
+        var farm = TestWorlds.Built(world, BuildingKind.Farm, TestWorlds.C + 6, TestWorlds.C - 1);
+        world.TrySpawnUnit(UnitKind.Militia, world.Buildings.First(b => b.Kind == BuildingKind.Keep));
+        var guard = world.Units[0];
+        guard.X = guard.PrevX = TestWorlds.C + 9.5f;
+        guard.Y = guard.PrevY = TestWorlds.C + 0.5f;
+        TestWorlds.Run(world, new OrderUnits([guard.Id], OrderKind.Hold, 0, 0));
+        TestWorlds.Run(world, new SpawnDemons(DemonKind.Imp, TestWorlds.C + 13, TestWorlds.C, 1));
+        TestWorlds.RunSeconds(world, 2);
+        Assert.False(farm.Fleeing, "one soldier steadies them against one demon");
+        Assert.True(farm.Steadied);
+        TestWorlds.Run(world, new SpawnDemons(DemonKind.Imp, TestWorlds.C + 13, TestWorlds.C + 1, 12));
+        TestWorlds.RunSeconds(world, 2);
+        Assert.True(farm.Fleeing, "but not against a pack");
+    }
+}

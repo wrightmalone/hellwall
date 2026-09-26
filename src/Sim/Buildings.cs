@@ -67,6 +67,8 @@ public sealed class Building
     /// <summary>Seconds its crew stay fled from demons that came too close with no wall between (FlightSystem); nothing gathered meanwhile.</summary>
     public float FleeTimer;
     public bool Fleeing => FleeTimer > 0;
+    /// <summary>Demons close, but enough soldiers by to keep the crew at work (FlightSystem, rechecked every second; for the display).</summary>
+    public bool Steadied;
 
     /// <summary>Gatherers: resource per second at full sanctity, from the tiles it has claimed.</summary>
     public double Rate;

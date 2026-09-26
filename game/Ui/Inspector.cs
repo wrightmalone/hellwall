@@ -162,6 +162,7 @@ public partial class Inspector : PanelContainer
                 !b.OnGround ? "Dark: not on holy ground" :
                 b.Paused ? "On hold (its crew are at other work)" :
                 b.Fleeing ? "Crew fled: demons close, and no wall between. Nothing gathered till they're gone" :
+                b.Steadied ? "Demons close, but your soldiers are keeping the crew at work" :
                 b.NeedsCrew && !b.Staffed ? $"Idle: needs {b.Def.Workers} workers" :
                 b.Exhausted && World.HasCrew(b.Def) ? $"Worked out: no {(b.Kind == BuildingKind.Woodcutter ? "trees" : b.Kind == BuildingKind.Mine ? "ore" : "rock")} left in reach. Build another further out" :
                 "Working";
