@@ -47,18 +47,22 @@ public partial class Hud : CanvasLayer
     readonly Dictionary<Side, Label> _edgeWarnings = new();
 
     const string HelpText =
-        "BUILD   pick from the build card (bottom) or 1-0 - =  M N O C L P  G B U; click to place; drag walls for a line; right-click or Esc to stop\n" +
+        "KEYS    the command card (bottom) is a grid, and each key presses the cell in its place:  Q W E R T  /  A S D F G  /  Z X C V B\n" +
+        "BUILD   top row: what kind (Q Town, W Works, E Holy, R Walls, T Towers); rows below: which one (a House is Q then A); click to place; drag walls for a line; right-click or Esc to stop\n" +
         "SELECT  click a building or soldier; drag to box-select soldiers (shift adds) · select a House or the Keep to upgrade it\n" +
-        "ORDER   right-click: move (they won't stop to fight) · A then click, or shift+right-click: attack-move · Z then click: patrol · H hold · Shift+S stop\n" +
-        "BARRACKS  select it to train: Q E R T Y F V, shift-click for five; click a queued soldier to cancel; right-click the ground for a rally point\n" +
-        "GROUPS  Ctrl+1-9 set · Alt+1-9 recall · Ctrl+A every soldier · double-click a soldier for all of its kind on screen\n" +
-        "X / Delete  demolish (purges a possessed building) · alerts on the left: click to go there\n" +
+        "ORDER   right-click: move (they won't stop to fight) · A then click, or shift+right-click: attack-move · S stop · D hold · F then click: patrol · top row: only one kind\n" +
+        "BUILDING  select it: Q upgrade · W hold · B demolish (purges a possessed one; Delete too) · a Barracks trains on the top rows, shift for five, right-click the ground for a rally point\n" +
+        "GROUPS  1-9: select · twice: go there · Ctrl+1-9 set · Shift+1-9 add · Ctrl+A every soldier · double-click a soldier (or a building) for all of its kind on screen\n" +
+        "Alerts on the left: click to go there\n" +
         "Esc or F10 menu · Space pause · Tab speed · F5 save · F9 load · F4 noise view · F3 debug\n" +
-        "CAMERA  WASD or screen edges pan · wheel zoom · minimap click to jump · Home/Backspace to the Keep\n" +
+        "CAMERA  arrow keys, screen edges or middle-drag pan · wheel zoom · minimap click to jump · Home/Backspace to the Keep\n" +
         "Debug: F6 noise at cursor · K wave · J 20k assault\n" +
         "F1 to close";
 
     public void ToggleHelp() => _help.Visible = !_help.Visible;
+
+    /// <summary>A key on the command card's grid: true if it pressed something.</summary>
+    public bool PressCard(Key key) => _card.Visible && _card.Press(key);
 
     public override void _Ready()
     {
@@ -72,10 +76,10 @@ public partial class Hud : CanvasLayer
         AddChild(Voice);
         AddChild(new PatronPicker { World = World, Send = Send });
         AddChild(Minimap);
-        _card = new CommandCard { World = World, State = State, Send = Send, Order = Order };
-        AddChild(_card);
         _inspector = new Inspector { World = World, State = State, Send = Send };
         AddChild(_inspector);
+        _card = new CommandCard { World = World, State = State, Send = Send, Order = Order, Inspector = _inspector };
+        AddChild(_card);
 
         _debug = Outlined(new Label { Visible = false }, 12);
         AddChild(_debug);

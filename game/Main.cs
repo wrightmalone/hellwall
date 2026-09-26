@@ -52,7 +52,6 @@ public partial class Main : Node2D
     readonly ClientState _state = new();
     static readonly string SavePath = ProjectSettings.GlobalizePath("user://quicksave.hwsave");
     /// <summary>Barracks train keys, in the order of its Trains list.</summary>
-    public static readonly Key[] TrainKeys = [Key.Q, Key.E, Key.R, Key.T, Key.Y, Key.F, Key.V];
     static readonly double[] Speeds = [1, 2, 4];
     int _speed;
     Hellwall.Headless.Bot? _bot;
@@ -330,8 +329,30 @@ public partial class Main : Node2D
             Input.FlushBufferedEvents();
             for (int i = 0; i < 2; i++) await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
         }
+        // Control groups: Ctrl+1 sets, Esc drops the selection, 1 brings it back.
+        async Task Tap(Key k, bool ctrl = false)
+        {
+            Input.ParseInputEvent(new InputEventKey { Keycode = k, Pressed = true, CtrlPressed = ctrl });
+            Input.ParseInputEvent(new InputEventKey { Keycode = k, Pressed = false, CtrlPressed = ctrl });
+            Input.FlushBufferedEvents();
+            for (int i = 0; i < 2; i++) await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
+        }
+        int soldiers = _state.SelectedUnits.Count;
+        await Tap(Key.Key1, ctrl: true);
+        _state.SelectedUnits.Clear();
+        await Tap(Key.Key1);
+        bool grouped = soldiers > 0 && _state.SelectedUnits.Count == soldiers;
         await Escape();
         bool cleared = _state.SelectedUnits.Count == 0 && _pauseMenu == null;
+        // The build grid: Q (Town) then A arms a House; W (Works) then D, its third, a Barracks; Esc disarms.
+        await Tap(Key.Q);
+        await Tap(Key.A);
+        bool house = _state.Armed == BuildingKind.House;
+        await Tap(Key.W);
+        await Tap(Key.D);
+        bool barracks = _state.Armed == BuildingKind.Barracks;
+        await Escape();
+        bool built = house && barracks && _state.Armed == null;
         await Escape();
         int tick = _world.Tick;
         for (int i = 0; i < 10; i++) await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
@@ -345,8 +366,8 @@ public partial class Main : Node2D
         LoadFrom(9);
         bool reloaded = StateHash.Hex(_world) == hash;
         foreach (var f in new[] { SlotPath(9), SlotPath(9) + ".txt" }) System.IO.File.Delete(f);
-        bool pass = armed && ordered && kept && cleared && menu && resumed && reloaded;
-        GD.Print(pass ? "hellwall-selftest: PASS controls" : $"hellwall-selftest: FAIL controls (units {_world.Units.Count}, armed {armed}, ordered {ordered}, selection kept and disarmed {kept}, esc cleared {cleared}, menu paused {menu}, resumed {resumed}, save and load {reloaded})");
+        bool pass = armed && ordered && kept && grouped && cleared && built && menu && resumed && reloaded;
+        GD.Print(pass ? "hellwall-selftest: PASS controls" : $"hellwall-selftest: FAIL controls (units {_world.Units.Count}, armed {armed}, ordered {ordered}, selection kept and disarmed {kept}, group 1 {grouped}, esc cleared {cleared}, build grid {built}, menu paused {menu}, resumed {resumed}, save and load {reloaded})");
         GetTree().Quit();
     }
 
@@ -610,6 +631,12 @@ public partial class Main : Node2D
     /// </summary>
     public override void _Input(InputEvent @event)
     {
+        // Middle-drag pans the camera; like a box select, it's followed over the interface until it's let go.
+        if (_middlePan)
+        {
+            if (@event is InputEventMouseMotion mm) { _camera.Position -= mm.Relative / _camera.Zoom; GetViewport().SetInputAsHandled(); return; }
+            if (@event is InputEventMouseButton { ButtonIndex: MouseButton.Middle, Pressed: false }) { _middlePan = false; GetViewport().SetInputAsHandled(); return; }
+        }
         if (!_started || _pauseMenu != null || _state.DragStart == null) return;
         if (@event is not InputEventMouseButton { ButtonIndex: MouseButton.Left, Pressed: false } mb) return;
         if (_swallowRelease) { _swallowRelease = false; return; }
@@ -620,7 +647,9 @@ public partial class Main : Node2D
     }
 
     /// <summary>True while a box select or a wall line is being dragged: the minimap stays out of it.</summary>
-    public bool Dragging => _state.DragStart != null;
+    public bool Dragging => _state.DragStart != null || _middlePan;
+
+    bool _middlePan;
 
     public override void _UnhandledInput(InputEvent @event)
     {
@@ -633,6 +662,9 @@ public partial class Main : Node2D
         }
         switch (@event)
         {
+            case InputEventMouseButton { ButtonIndex: MouseButton.Middle, Pressed: true }:
+                _middlePan = true;
+                break;
             case InputEventMouseButton { ButtonIndex: MouseButton.Left } mb:
                 if (mb.Pressed && _state.AttackMoveArmed)
                 {
@@ -698,45 +730,22 @@ public partial class Main : Node2D
 
     void HandleKey(InputEventKey key)
     {
-        int group = key.Keycode is >= Key.Key1 and <= Key.Key9 ? (int)(key.Keycode - Key.Key1) + 1 : 0;
-        if (group > 0 && key.CtrlPressed)
+        // Control groups on the number keys: Ctrl sets, Shift adds, alone selects, twice quickly goes there.
+        int group = key.Keycode is >= Key.Key1 and <= Key.Key9 ? (int)(key.Keycode - Key.Key1) + 1 : key.Keycode == Key.Key0 ? 10 : 0;
+        if (group > 0)
         {
-            _state.Groups[group] = _state.SelectedUnits.ToArray();
-            _state.Say($"Group {group}: {_state.SelectedUnits.Count} units");
-            return;
-        }
-        if (group > 0 && key.AltPressed)
-        {
-            _state.SelectedUnits.Clear();
-            foreach (var id in _state.Groups.GetValueOrDefault(group, [])) _state.SelectedUnits.Add(id);
-            _state.SelectedBuilding = null;
+            ControlGroup(group, key.CtrlPressed || key.MetaPressed, key.ShiftPressed);
             return;
         }
 
-        foreach (var (kind, hotkey, _) in Palette.BuildBar)
-        {
-            if (key.Keycode != hotkey) continue;
-            _state.Armed = _state.Armed == kind ? null : kind;
-            return;
-        }
+        // The command card's grid: the key presses whatever sits in its place (HotkeyGrid).
+        if (!key.CtrlPressed && !key.AltPressed && !key.MetaPressed && _hud.PressCard(key.Keycode)) return;
 
         var selected = _state.SelectedBuilding is { } sid ? _world.BuildingById(sid) : null;
         switch (key.Keycode)
         {
             case Key.Escape when _state.AttackMoveArmed:
                 DisarmAttackMove();
-                break;
-            case Key.Z when _state.SelectedUnits.Count > 0:
-                _state.AttackMoveArmed = true;
-                _state.PatrolArmed = true;
-                _state.Armed = null;
-                Input.SetDefaultCursorShape(Input.CursorShape.Cross);
-                break;
-            case Key.A when _state.SelectedUnits.Count > 0 && !key.CtrlPressed && !key.AltPressed:
-                _state.PatrolArmed = false;
-                _state.AttackMoveArmed = true;
-                _state.Armed = null;
-                Input.SetDefaultCursorShape(Input.CursorShape.Cross);
                 break;
             case Key.Escape when _bot == null && _state.Armed == null && _state.SelectedUnits.Count == 0 && _state.SelectedBuilding == null:
             case Key.F10:
@@ -776,18 +785,8 @@ public partial class Main : Node2D
                 break;
             case Key.F5: QuickSave(); break;
             case Key.F9: QuickLoad(); break;
-            case Key.X or Key.Delete when selected != null:
+            case Key.Delete when selected != null:
                 Send(new Demolish(selected.Id));
-                break;
-            case Key.Q or Key.E or Key.R or Key.T or Key.Y or Key.F or Key.V when selected is { Def.Trains.Length: > 0 }:
-                int i = Array.IndexOf(TrainKeys, key.Keycode);
-                if (i < selected.Def.Trains.Length) Send(new TrainUnit(selected.Id, selected.Def.Trains[i]));
-                break;
-            case Key.H when _state.SelectedUnits.Count > 0:
-                Send(new OrderUnits(_state.SelectedUnits.ToArray(), OrderKind.Hold, 0, 0));
-                break;
-            case Key.S when _state.SelectedUnits.Count > 0 && key.ShiftPressed:
-                Send(new OrderUnits(_state.SelectedUnits.ToArray(), OrderKind.Idle, 0, 0));
                 break;
             case Key.F6:
                 Send(new MakeNoise(_state.HoveredTile.X, _state.HoveredTile.Y, 40, 3));
@@ -800,6 +799,36 @@ public partial class Main : Node2D
             case Key.J:
                 foreach (var c in Scenarios.EdgeAssault(_world, 20000, points: 8)) Send(c);
                 break;
+        }
+    }
+
+    int _lastGroup;
+    ulong _lastGroupAt;
+
+    void ControlGroup(int group, bool set, bool add)
+    {
+        if (set || add)
+        {
+            var ids = add ? _state.Groups.GetValueOrDefault(group, []).Concat(_state.SelectedUnits).Distinct().ToArray() : _state.SelectedUnits.ToArray();
+            _state.Groups[group] = ids;
+            _state.Say($"Group {group % 10}: {ids.Length} soldier{(ids.Length == 1 ? "" : "s")}");
+            return;
+        }
+        var alive = _state.Groups.GetValueOrDefault(group, []).Where(id => _world.UnitById(id) != null).ToArray();
+        _state.Groups[group] = alive;
+        if (alive.Length == 0) return;
+        bool again = _lastGroup == group && Time.GetTicksMsec() - _lastGroupAt < 400;
+        _lastGroup = group;
+        _lastGroupAt = Time.GetTicksMsec();
+        _state.SelectedBuilding = null;
+        _state.Armed = null;
+        _state.SelectedUnits.Clear();
+        foreach (var id in alive) _state.SelectedUnits.Add(id);
+        if (again)
+        {
+            // Twice: the camera to the middle of them.
+            var units = alive.Select(id => _world.UnitById(id)!).ToList();
+            _camera.Position = Iso.P(units.Average(u => u.X), units.Average(u => u.Y));
         }
     }
 
@@ -1042,12 +1071,12 @@ public partial class Main : Node2D
     {
         if (_pauseMenu != null) return;
         if (Input.IsKeyPressed(Key.Ctrl) || Input.IsKeyPressed(Key.Alt)) return;
+        // The arrows (the letters are the command card's grid), the screen's edges, and middle-drag (in _UnhandledInput).
         var dir = Vector2.Zero;
-        if (Input.IsKeyPressed(Key.W) || Input.IsKeyPressed(Key.Up)) dir.Y -= 1;
-        if ((Input.IsKeyPressed(Key.S) && !Input.IsKeyPressed(Key.Shift)) || Input.IsKeyPressed(Key.Down)) dir.Y += 1;
-        // A is attack-move while soldiers are selected; it only pans when none are.
-        if ((Input.IsKeyPressed(Key.A) && _state.SelectedUnits.Count == 0) || Input.IsKeyPressed(Key.Left)) dir.X -= 1;
-        if (Input.IsKeyPressed(Key.D) || Input.IsKeyPressed(Key.Right)) dir.X += 1;
+        if (Input.IsKeyPressed(Key.Up)) dir.Y -= 1;
+        if (Input.IsKeyPressed(Key.Down)) dir.Y += 1;
+        if (Input.IsKeyPressed(Key.Left)) dir.X -= 1;
+        if (Input.IsKeyPressed(Key.Right)) dir.X += 1;
         // At the edge of the window, when edge scrolling is on and the window has the mouse.
         if (EdgeScroll && DisplayServer.WindowIsFocused())
         {

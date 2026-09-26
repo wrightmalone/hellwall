@@ -930,6 +930,31 @@ last lost by at least one).
   **Decide:** making the harvest the food (deliveries, as with woodsmen) would make Farms
   lumpy and raidable; worth a try once the rest settles.
 
+## Grid hotkeys (your call: grid only, categories first, arrows and middle-drag for the camera)
+
+- **The command card is a grid of three rows by five, and each key presses the cell in its
+  place**: Q W E R T / A S D F G / Z X C V B, whatever the card holds. Empty cells keep their
+  places (dimmed), so a key is always where the hand expects it. The keys live in one table
+  (`game/Ui/HotkeyGrid.cs`), and the card, the hints and the help all read from it.
+- **Building**: the top row is the category (Q Town, W Works, E Holy, R Walls, T Towers), the two
+  rows under it that category's buildings in order. A House is Q then A; the card stays on the
+  last category, so five Houses is Q A, A, A, A, A.
+- **A building selected**: its commands take the card, as in StarCraft 2: Q upgrade (or raise the
+  Keep), W hold, B demolish (purge, if possessed); the long form ("Upgrade 2 of 7 to Cottage
+  (...)") is in the hint under the grid. A Barracks: its soldiers on the top rows (shift for
+  five), V clears the rally point, B demolishes. A Scriptorium: its research in the cells.
+  Esc goes back to the build card. Delete still demolishes.
+- **Soldiers selected**: the top row picks out one kind of them; A attack-move, S stop (was
+  Shift+S), D hold (was H), F patrol (was Z).
+- **Control groups on the number keys**: 1-9 (and 0) select a group, twice quickly jumps the
+  camera to it, Ctrl sets, Shift adds. Alt+N is gone.
+- **The camera**: arrow keys, screen edges, middle-drag (followed over the interface, like a box
+  select). WASD no longer pans in a game. The map editor keeps WASD: it has no grid.
+- The controls self-test now also sets and recalls a control group and builds a House and a
+  Barracks through the grid.
+  **Decide:** whether Esc from a building's card should go back to building (it deselects now),
+  and whether control groups should take buildings too (StarCraft's do; ours are soldiers).
+
 ## Buildings from KayKit Medieval Hexagon (you downloaded it and the Medieval Village MegaKit)
 
 - **Every building but walls and gates is now a baked KayKit model** (`tools/bake_buildings.gd`,

@@ -295,14 +295,22 @@ public partial class NewGameMenu : CanvasLayer
 
     /// <summary>For playtesters: what changed since the last build they had. Kept short; DECISIONS.md has the why.</summary>
     const string WhatsNew =
+        "New keys: the command card is a grid, and each key presses the cell in its place (Q W E R T / A S D F G / Z X C V B).\n" +
+        "  Build: the top row picks a kind (Q Town, W Works...), the rows below which one (a House is Q then A).\n" +
+        "  Soldiers: A attack-move, S stop, D hold, F patrol. 1-9: control groups (Ctrl sets, Shift adds, twice to go there).\n" +
+        "  The camera: arrow keys, the screen's edges, or drag with the middle button.\n" +
+        "Forests are walls: the horde goes round them, and breaks through trees no sooner than a wall.\n" +
+        "The Convergence comes mostly from one side, told ten minutes ahead. Waves come from at most two sides.\n" +
+        "Miners wear rock and iron away; a worked-out Quarry or Mine says so. A marker follows each wave in.\n" +
+        "Farmers sow, water and reap their fields.\n" +
         "Fog of war: the map is dark until you've seen it, and you build only on explored ground.\n" +
         "Sleeping demons stand where they'll wake; hover a crowd to see how many. Ruins guarded by Thralls hold loot.\n" +
         "Spitters (green) spit over the walls at towers and soldiers. Kill them on the way in.\n" +
-        "Silver lies only near the map's edge: a Silver Mine (N) pays for Exorcists (V at a Barracks).\n" +
+        "Silver lies only near the map's edge: a Silver Mine (Works) pays for Exorcists (trained at a Barracks).\n" +
         "Soldiers rank up with kills. Buildings mend themselves when left alone, for a fee.\n" +
         "Upgrade Houses to Cottages and Manors; raise the Keep itself (select it). Stone gates after Masonry.\n" +
-        "Patron saints offer a blessing at 40, 90 and 160 colonists. Fishery (O) for food from water.\n" +
-        "Z then click: patrol. Ctrl+A: every soldier. Home: back to the Keep. F4: noise view.\n" +
+        "Patron saints offer a blessing at 40, 90 and 160 colonists. Fishery (Town) for food from water.\n" +
+        "Ctrl+A: every soldier. Home: back to the Keep. F4: noise view.\n" +
         "Esc: the pause menu, with save slots, volume, music, fullscreen and interface size.\n" +
         "Skirmish settings, a weekly challenge, a map editor, a ninth mission, music, and an end-of-run chart.";
 

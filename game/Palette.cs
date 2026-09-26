@@ -90,14 +90,4 @@ public static class Palette
     public static readonly Color GhostOk = new(0.3f, 1f, 0.3f, 0.45f);
     public static readonly Color GhostBad = new(1f, 0.25f, 0.25f, 0.45f);
     public static readonly Color Tracer = new(1f, 0.95f, 0.6f);
-
-    /// <summary>Build bar order, with each slot's hotkey.</summary>
-    public static readonly (BuildingKind Kind, Key Key, string Label)[] BuildBar =
-    [
-        (BuildingKind.House, Key.Key1, "1"), (BuildingKind.Farm, Key.Key2, "2"), (BuildingKind.Hunter, Key.Key3, "3"),
-        (BuildingKind.Woodcutter, Key.Key4, "4"), (BuildingKind.Quarry, Key.Key5, "5"), (BuildingKind.Shrine, Key.Key6, "6"),
-        (BuildingKind.Wardstone, Key.Key7, "7"), (BuildingKind.Wall, Key.Key8, "8"), (BuildingKind.StoneWall, Key.Key9, "9"),
-        (BuildingKind.Watchtower, Key.Key0, "0"), (BuildingKind.Bombard, Key.Minus, "-"), (BuildingKind.LanceTower, Key.Equal, "="),
-        (BuildingKind.Mine, Key.M, "M"), (BuildingKind.Fishery, Key.O, "O"), (BuildingKind.SilverMine, Key.N, "N"), (BuildingKind.Censer, Key.C, "C"), (BuildingKind.Belfry, Key.L, "L"), (BuildingKind.Skyspire, Key.P, "P"), (BuildingKind.Gate, Key.G, "G"), (BuildingKind.Barracks, Key.B, "B"), (BuildingKind.Scriptorium, Key.U, "U"),
-    ];
 }

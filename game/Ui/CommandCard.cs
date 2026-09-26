@@ -4,11 +4,13 @@ using Hellwall.Sim;
 namespace Hellwall.Game;
 
 /// <summary>
-/// Bottom centre, and it changes with the selection:
-/// nothing (or an ordinary building) selected: the build menu, in four tabs;
-/// a Barracks: its army, its queue and its rally point, so every Barracks
-/// trains on its own; a Scriptorium: research; soldiers: who's selected and
-/// their orders. Buttons only send Commands or change ClientState.
+/// Bottom centre: a grid of three rows by five, and it changes with the selection.
+/// Nothing selected: the build menu, its categories on the top row and their
+/// buildings below. A Barracks: its army, queue and rally point. A Scriptorium:
+/// research. Any other building (or a group of them): upgrade, hold, demolish.
+/// Soldiers: pick out one kind, and their orders. Each cell answers to the key
+/// in its place (HotkeyGrid), so the keys can never disagree with what's shown.
+/// Buttons only send Commands or change ClientState.
 /// </summary>
 public partial class CommandCard : PanelContainer
 {
@@ -17,23 +19,24 @@ public partial class CommandCard : PanelContainer
     public Action<Command> Send = null!;
     /// <summary>Order the selected soldiers (Main owns the arming and cursor).</summary>
     public Action<string> Order = null!;
+    /// <summary>Its upgrade, hold and demolish buttons, which know a group and the Keep: the card shows and presses them.</summary>
+    public Inspector Inspector = null!;
 
-    static readonly (string Name, BuildingKind[] Kinds)[] Tabs =
-    [
-        ("Town", [BuildingKind.House, BuildingKind.Farm, BuildingKind.Hunter, BuildingKind.Fishery, BuildingKind.Woodcutter, BuildingKind.Quarry]),
-        ("Works", [BuildingKind.Mine, BuildingKind.SilverMine, BuildingKind.Barracks, BuildingKind.Scriptorium]),
-        ("Holy", [BuildingKind.Shrine, BuildingKind.Wardstone]),
-        ("Walls", [BuildingKind.Wall, BuildingKind.StoneWall, BuildingKind.Gate, BuildingKind.StoneGate]),
-        ("Towers", [BuildingKind.Watchtower, BuildingKind.Bombard, BuildingKind.LanceTower, BuildingKind.Censer, BuildingKind.Belfry, BuildingKind.Skyspire]),
-    ];
+    const int CellW = 64, CellH = 52;
 
     int _tab;
     string _mode = "";
     VBoxContainer _body = null!;
+    GridContainer _grid = null!;
+    /// <summary>What each cell does when clicked or keyed (null: empty).</summary>
+    readonly Action?[] _press = new Action?[HotkeyGrid.Cells];
+    readonly Button?[] _cells = new Button?[HotkeyGrid.Cells];
     readonly List<(Button Button, BuildingKind Kind)> _build = new();
     readonly List<(Button Button, UnitKind Kind)> _train = new();
     readonly List<Button> _queue = new();
     readonly List<Button> _tabs = new();
+    /// <summary>The Inspector's buttons this card is showing, each with the cell it mirrors.</summary>
+    readonly List<(Button Cell, Button Source, string Short)> _mirrors = new();
     Label _title = null!, _hint = null!;
     ProgressBar? _progress;
 
@@ -49,26 +52,47 @@ public partial class CommandCard : PanelContainer
     string ModeNow()
     {
         var b = State.SelectedBuilding is { } id ? World.BuildingById(id) : null;
-        if (b is { Def.Trains.Length: > 0, Complete: true }) return $"barracks-{b.Id}";
-        if (b is { Def.Researches: true, Complete: true }) return $"lab-{b.Id}-{b.Researching}-{string.Join(",", World.Tech.Researched)}";
         if (State.SelectedUnits.Count > 0) return $"army-{State.SelectedUnits.Count}";
+        if (b is { Def.Trains.Length: > 0, Complete: true, Possessed: false }) return $"barracks-{b.Id}";
+        if (b is { Def.Researches: true, Complete: true, Possessed: false }) return $"lab-{b.Id}-{b.Researching}-{string.Join(",", World.Tech.Researched)}";
+        if (b != null) return $"building-{b.Id}-{State.SelectedGroup.Count}";
         return $"build-{_tab}";
     }
 
     public override void _Process(double delta)
     {
+        EnsureMode();
+        UpdateStates();
+    }
+
+    void EnsureMode()
+    {
         string mode = ModeNow();
         if (mode != _mode) Rebuild(mode);
+    }
+
+    /// <summary>A key on the grid: press whatever is in its cell. False if the key isn't on the grid or the cell is empty or unavailable.</summary>
+    public bool Press(Key key)
+    {
+        int cell = HotkeyGrid.CellOf(key);
+        if (cell < 0) return false;
+        EnsureMode();
         UpdateStates();
+        if (_press[cell] is not { } act || _cells[cell] is not { Visible: true, Disabled: false }) return false;
+        act();
+        return true;
     }
 
     void Clear()
     {
         foreach (var c in _body.GetChildren()) c.QueueFree();
+        Array.Clear(_press);
+        Array.Clear(_cells);
         _build.Clear();
         _train.Clear();
         _queue.Clear();
         _tabs.Clear();
+        _mirrors.Clear();
         _progress = null;
     }
 
@@ -78,13 +102,57 @@ public partial class CommandCard : PanelContainer
         Clear();
         _title = UiKit.Label("", 14, UiKit.Gold);
         _body.AddChild(_title);
+        _grid = new GridContainer { Columns = HotkeyGrid.Cols };
+        _grid.AddThemeConstantOverride("h_separation", 4);
+        _grid.AddThemeConstantOverride("v_separation", 4);
+        _body.AddChild(_grid);
         var b = State.SelectedBuilding is { } id ? World.BuildingById(id) : null;
         if (mode.StartsWith("barracks")) BuildBarracks(b!);
         else if (mode.StartsWith("lab")) BuildLab(b!);
+        else if (mode.StartsWith("building")) BuildBuilding(b!);
         else if (mode.StartsWith("army")) BuildArmy();
         else BuildMenu();
+        // Empty cells hold their places, so every key stays where the hand expects it.
+        for (int i = 0; i < HotkeyGrid.Cells; i++)
+        {
+            if (_cells[i] == null)
+            {
+                var blank = UiKit.IconButton(null, "", CellH);
+                blank.CustomMinimumSize = new Vector2(CellW, CellH);
+                blank.Disabled = true;
+                blank.Modulate = new Color(1, 1, 1, 0.25f);
+                _cells[i] = blank;
+            }
+            _grid.AddChild(_cells[i]);
+        }
         _hint = UiKit.Label("", 12, UiKit.Muted);
+        _hint.AutowrapMode = TextServer.AutowrapMode.WordSmart;
+        _hint.CustomMinimumSize = new Vector2(HotkeyGrid.Cols * (CellW + 4), 0);
         _body.AddChild(_hint);
+    }
+
+    /// <summary>Put a button in a cell, with its key in the corner, doing `act` when clicked or keyed.</summary>
+    Button Cell(int cell, Texture2D? icon, string text, Action act)
+    {
+        var button = UiKit.IconButton(icon, HotkeyGrid.Label(cell), CellH);
+        button.CustomMinimumSize = new Vector2(CellW, CellH);
+        if (text.Length > 0)
+        {
+            button.Text = text;
+            button.AddThemeFontSizeOverride("font_size", 12);
+            button.VerticalIconAlignment = VerticalAlignment.Top;
+        }
+        button.Pressed += act;
+        _press[cell] = act;
+        _cells[cell] = button;
+        return button;
+    }
+
+    /// <summary>A cell that shows and presses one of the Inspector's buttons (which keeps its text, state and logic), under a short name.</summary>
+    void Mirror(int cell, Button source, string shortName)
+    {
+        var button = Cell(cell, null, shortName, () => source.EmitSignal(BaseButton.SignalName.Pressed));
+        _mirrors.Add((button, source, shortName));
     }
 
     // --- build menu ---
@@ -92,31 +160,21 @@ public partial class CommandCard : PanelContainer
     void BuildMenu()
     {
         _title.Text = "Build";
-        var tabs = new HBoxContainer();
-        tabs.AddThemeConstantOverride("separation", 4);
-        for (int i = 0; i < Tabs.Length; i++)
+        var tabs = HotkeyGrid.Tabs;
+        for (int i = 0; i < tabs.Length; i++)
         {
             int t = i;
-            var tab = UiKit.TextButton(Tabs[i].Name, 13);
+            var tab = Cell(i, null, tabs[i].Name, () => { _tab = t; _mode = ""; State.Armed = null; });
             tab.ToggleMode = true;
-            tab.ButtonPressed = i == _tab;
-            tab.Pressed += () => { _tab = t; _mode = ""; };
-            tabs.AddChild(tab);
             _tabs.Add(tab);
         }
-        _body.AddChild(tabs);
-        var grid = new HBoxContainer();
-        grid.AddThemeConstantOverride("separation", 4);
-        foreach (var kind in Tabs[_tab].Kinds)
+        var kinds = tabs[_tab].Kinds;
+        for (int i = 0; i < kinds.Length && HotkeyGrid.FirstBuildCell + i < HotkeyGrid.Cells; i++)
         {
-            string key = Palette.BuildBar.FirstOrDefault(x => x.Kind == kind).Label ?? "";
-            var button = UiKit.IconButton(UiKit.Building(kind), key);
-            var k = kind;
-            button.Pressed += () => State.Armed = State.Armed == k ? null : k;
-            grid.AddChild(button);
-            _build.Add((button, kind));
+            var k = kinds[i];
+            var button = Cell(HotkeyGrid.FirstBuildCell + i, UiKit.Building(k), "", () => State.Armed = State.Armed == k ? null : k);
+            _build.Add((button, k));
         }
-        _body.AddChild(grid);
     }
 
     // --- a Barracks: the army ---
@@ -124,24 +182,20 @@ public partial class CommandCard : PanelContainer
     void BuildBarracks(Building b)
     {
         _title.Text = $"{b.Kind}: train";
-        var grid = new HBoxContainer();
-        grid.AddThemeConstantOverride("separation", 4);
-        for (int i = 0; i < b.Def.Trains.Length; i++)
+        int bid = b.Id;
+        for (int i = 0; i < b.Def.Trains.Length && i < HotkeyGrid.Cells - 2; i++)
         {
             var kind = b.Def.Trains[i];
-            string key = i < Main.TrainKeys.Length ? Main.TrainKeys[i].ToString() : "";
-            var button = UiKit.IconButton(UiKit.Unit(kind), key);
-            int bid = b.Id;
-            // Shift-click queues five.
-            button.Pressed += () =>
+            // Shift queues five.
+            var button = Cell(i, UiKit.Unit(kind), "", () =>
             {
                 int n = Input.IsKeyPressed(Key.Shift) ? 5 : 1;
                 for (int j = 0; j < n; j++) Send(new TrainUnit(bid, kind));
-            };
-            grid.AddChild(button);
+            });
             _train.Add((button, kind));
         }
-        _body.AddChild(grid);
+        Cell(HotkeyGrid.Cells - 2, null, "Rally\nclear", () => Send(new SetRally(bid, -1, 0))).TooltipText = "Clear the rally point: new soldiers stand at the door";
+        Mirror(HotkeyGrid.Cells - 1, Inspector.DemolishButton, "Demolish");
 
         var queue = new HBoxContainer();
         queue.AddThemeConstantOverride("separation", 3);
@@ -150,24 +204,21 @@ public partial class CommandCard : PanelContainer
         {
             int slot = i;
             var s = UiKit.IconButton(null, "", 34);
-            int bid = b.Id;
             s.Pressed += () => Send(new CancelTraining(bid, slot));
             queue.AddChild(s);
             _queue.Add(s);
         }
         _body.AddChild(queue);
-        _progress = new ProgressBar { MinValue = 0, MaxValue = 1, ShowPercentage = false, CustomMinimumSize = new Vector2(0, 6) };
-        _progress.AddThemeStyleboxOverride("background", UiKit.Box(new Color(0.24f, 0.23f, 0.21f), null, 3, 0));
-        _progress.AddThemeStyleboxOverride("fill", UiKit.Box(UiKit.Gold, UiKit.Gold, 3, 0));
-        _body.AddChild(_progress);
+        _progress = Progress(6);
+    }
 
-        var rally = new HBoxContainer();
-        rally.AddThemeConstantOverride("separation", 6);
-        var clear = UiKit.TextButton("Clear rally point", 12);
-        int id = b.Id;
-        clear.Pressed += () => Send(new SetRally(id, -1, 0));
-        rally.AddChild(clear);
-        _body.AddChild(rally);
+    ProgressBar Progress(int height)
+    {
+        var bar = new ProgressBar { MinValue = 0, MaxValue = 1, ShowPercentage = false, CustomMinimumSize = new Vector2(0, height) };
+        bar.AddThemeStyleboxOverride("background", UiKit.Box(new Color(0.24f, 0.23f, 0.21f), null, 3, 0));
+        bar.AddThemeStyleboxOverride("fill", UiKit.Box(UiKit.Gold, UiKit.Gold, 3, 0));
+        _body.AddChild(bar);
+        return bar;
     }
 
     // --- a Scriptorium ---
@@ -175,60 +226,74 @@ public partial class CommandCard : PanelContainer
     void BuildLab(Building b)
     {
         _title.Text = b.Researching is { } r ? $"Researching {World.Rules.Tech(r).Name}" : "Research";
+        Mirror(HotkeyGrid.Cells - 1, Inspector.DemolishButton, "Demolish");
         if (b.Researching != null)
         {
-            _progress = new ProgressBar { MinValue = 0, MaxValue = 1, ShowPercentage = false, CustomMinimumSize = new Vector2(0, 8) };
-            _progress.AddThemeStyleboxOverride("background", UiKit.Box(new Color(0.24f, 0.23f, 0.21f), null, 3, 0));
-            _progress.AddThemeStyleboxOverride("fill", UiKit.Box(UiKit.Gold, UiKit.Gold, 3, 0));
-            _body.AddChild(_progress);
+            _progress = Progress(8);
             return;
         }
-        var flow = new HFlowContainer { CustomMinimumSize = new Vector2(540, 0) };
-        flow.AddThemeConstantOverride("h_separation", 4);
-        flow.AddThemeConstantOverride("v_separation", 4);
+        int cell = 0;
         foreach (var tech in World.Rules.Techs.Where(t => World.CheckResearch(t.Id) == null))
         {
-            var button = UiKit.TextButton($"{tech.Name}  ·  tier {tech.Tier}", 12);
-            button.TooltipText = $"{tech.Name}: {tech.Cost}, {tech.Seconds:0} s\n{tech.Description}";
+            if (cell >= HotkeyGrid.Cells - 1) break;
             int bid = b.Id;
             string techId = tech.Id;
-            button.Pressed += () => Send(new Research(bid, techId));
-            flow.AddChild(button);
+            var button = Cell(cell++, null, Short(tech.Name), () => Send(new Research(bid, techId)));
+            button.TooltipText = $"{tech.Name} (tier {tech.Tier}): {tech.Cost}, {tech.Seconds:0} s\n{tech.Description}";
         }
-        _body.AddChild(flow);
+    }
+
+    /// <summary>A name that fits a cell: its first word, or two short ones on two lines.</summary>
+    static string Short(string name)
+    {
+        var words = name.Split(' ');
+        return words.Length > 1 && words[0].Length + words[1].Length < 14 ? $"{words[0]}\n{words[1]}" : words[0];
+    }
+
+    // --- any other building, or a group of them ---
+
+    void BuildBuilding(Building b)
+    {
+        _title.Text = State.SelectedGroup.Count > 1 ? $"{State.SelectedGroup.Count} {b.Kind}s" : b.Kind.ToString();
+        Mirror(0, Inspector.UpgradeButton, b.Kind == BuildingKind.Keep ? "Raise" : "Upgrade");
+        Mirror(1, Inspector.HoldButton, "Hold");
+        Mirror(HotkeyGrid.Cells - 1, Inspector.DemolishButton, "Demolish");
     }
 
     // --- soldiers ---
+
+    static readonly (int Cell, string Label, string Order, string Tip)[] Orders =
+    [
+        (HotkeyGrid.Cols + 0, "Attack", "attack", "Attack-move: then click where (or shift+right-click); they fight what they meet on the way"),
+        (HotkeyGrid.Cols + 1, "Stop", "stop", "Stop where they are"),
+        (HotkeyGrid.Cols + 2, "Hold", "hold", "Hold: stand and shoot, never chase"),
+        (HotkeyGrid.Cols + 3, "Patrol", "patrol", "Patrol: then click; back and forth between here and there, fighting"),
+    ];
 
     void BuildArmy()
     {
         var units = World.Units.Where(u => State.SelectedUnits.Contains(u.Id)).ToList();
         _title.Text = $"{units.Count} soldier{(units.Count == 1 ? "" : "s")}";
-        var groups = new HBoxContainer();
-        groups.AddThemeConstantOverride("separation", 4);
+        int cell = 0;
         foreach (var g in units.GroupBy(u => u.Kind).OrderBy(g => g.Key))
         {
+            if (cell >= HotkeyGrid.Cols) break;
             var kind = g.Key;
-            var b = UiKit.IconButton(UiKit.Unit(kind), $"{g.Count()}", 48);
-            b.TooltipText = $"{kind}: click to select only these";
-            b.Pressed += () =>
+            var ids = g.Select(u => u.Id).ToList();
+            var b = Cell(cell++, UiKit.Unit(kind), $"{g.Count()}", () =>
             {
                 State.SelectedUnits.Clear();
-                foreach (var u in World.Units.Where(u => u.Kind == kind && units.Contains(u))) State.SelectedUnits.Add(u.Id);
-            };
-            groups.AddChild(b);
+                foreach (var id in ids) State.SelectedUnits.Add(id);
+            });
+            b.IconAlignment = HorizontalAlignment.Left;
+            b.VerticalIconAlignment = VerticalAlignment.Center;
+            b.TooltipText = $"{kind}: select only these";
         }
-        _body.AddChild(groups);
-        var orders = new HBoxContainer();
-        orders.AddThemeConstantOverride("separation", 4);
-        foreach (var (label, order) in new[] { ("A  Attack-move", "attack"), ("Z  Patrol", "patrol"), ("H  Hold", "hold"), ("Shift+S  Stop", "stop") })
+        foreach (var (at, label, order, tip) in Orders)
         {
             var o = order;
-            var b = UiKit.TextButton(label, 12);
-            b.Pressed += () => Order(o);
-            orders.AddChild(b);
+            Cell(at, null, label, () => Order(o)).TooltipText = tip;
         }
-        _body.AddChild(orders);
     }
 
     void UpdateStates()
@@ -243,7 +308,15 @@ public partial class CommandCard : PanelContainer
             button.Modulate = State.Armed == kind ? new Color(0.75f, 1, 0.7f) : locked ? new Color(1, 1, 1, 0.3f) : affordable ? Colors.White : new Color(1, 0.75f, 0.75f, 0.75f);
             button.TooltipText = $"{kind}: {Blurbs.Of(kind)}\n{def.Cost} · {def.Hp:0} hp · {def.BuildSeconds:0} s to build{Hud.Describe(def)}" + (mission ? "\nnot in this mission" : locked ? $"\nneeds {World.Rules.Tech(def.RequiresTech!).Name}" : affordable ? "" : "\nyou can't afford it yet");
         }
-        foreach (var t in _tabs) t.ButtonPressed = _tabs.IndexOf(t) == _tab;
+        for (int i = 0; i < _tabs.Count; i++) _tabs[i].ButtonPressed = i == _tab;
+        foreach (var (cell, source, shortName) in _mirrors)
+        {
+            cell.Visible = true;
+            cell.Disabled = !source.Visible || source.Disabled;
+            cell.Modulate = source.Visible ? Colors.White : new Color(1, 1, 1, 0.25f);
+            cell.Text = source == Inspector.DemolishButton && source.Text.Contains("Purge") ? "Purge" : source == Inspector.HoldButton && source.Text.Contains("Back") ? "Resume" : shortName;
+            cell.TooltipText = source.Visible ? source.Text + (source.TooltipText.Length > 0 ? "\n" + source.TooltipText : "") : "";
+        }
 
         var b = State.SelectedBuilding is { } id ? World.BuildingById(id) : null;
         if (b != null && _train.Count > 0)
@@ -256,7 +329,7 @@ public partial class CommandCard : PanelContainer
                 bool affordable = colony.CanAfford(def.Cost);
                 button.Modulate = locked ? new Color(1, 1, 1, 0.3f) : affordable ? Colors.White : new Color(1, 0.75f, 0.75f, 0.75f);
                 button.TooltipText = $"{kind}: {Blurbs.Of(kind)}\n{def.Cost}\n{def.Hp:0} hp, range {def.Weapon.Range}, {def.Weapon.Damage:0} dmg every {def.Weapon.Cooldown}s" +
-                    (mission ? "\nnot in this mission" : locked ? $"\nneeds {World.Rules.Tech(def.RequiresTech!).Name}" : "") + "\nshift-click: five";
+                    (mission ? "\nnot in this mission" : locked ? $"\nneeds {World.Rules.Tech(def.RequiresTech!).Name}" : "") + "\nshift: five";
             }
             for (int i = 0; i < _queue.Count; i++)
             {
@@ -266,16 +339,22 @@ public partial class CommandCard : PanelContainer
                 _queue[i].Modulate = filled ? Colors.White : new Color(1, 1, 1, 0.35f);
             }
             if (_progress != null) _progress.Value = b.Queue.Count == 0 ? 0 : b.TrainProgress / Math.Max(0.01f, World.Def(b.Queue[0]).TrainSeconds);
-            _hint.Text = b.RallyX >= 0 ? "Right-click the ground to move the rally point" : "Right-click the ground to set a rally point";
+            _hint.Text = (b.RallyX >= 0 ? "Right-click the ground to move the rally point" : "Right-click the ground to set a rally point") + " · shift to train five";
         }
         else if (b is { Researching: { } r } && _progress != null)
         {
             _progress.Value = b.ResearchProgress / World.Rules.Tech(r).Seconds;
             _hint.Text = World.Rules.Tech(r).Description;
         }
+        else if (_mode.StartsWith("building"))
+        {
+            // The long form of what Upgrade would do (cost, how many of a group) where there's room to read it.
+            var up = Inspector.UpgradeButton;
+            _hint.Text = up.Visible ? up.Text : "Esc to go back to building";
+        }
         else if (_mode.StartsWith("build"))
         {
-            _hint.Text = State.Armed is { } k ? $"Placing {k}: click to build, drag walls for a line, right-click to stop" : "Number keys pick a building too";
+            _hint.Text = State.Armed is { } k ? $"Placing {k}: click to build, drag walls for a line, right-click to stop" : "Top row: what kind · the rows below: which one";
         }
         else if (_mode.StartsWith("army"))
         {

@@ -3,7 +3,11 @@ using Hellwall.Sim;
 
 namespace Hellwall.Game;
 
-/// <summary>Bottom right: the selected building's health, state, output and the demolish button; or the selected soldiers' health.</summary>
+/// <summary>
+/// Bottom right: the selected building's health, state and output, or the selected soldiers'
+/// health. Its upgrade, hold and demolish buttons (which know about groups, the Keep and
+/// possession) aren't drawn here: the command card shows them in their grid cells.
+/// </summary>
 public partial class Inspector : PanelContainer
 {
     public World World = null!;
@@ -13,6 +17,15 @@ public partial class Inspector : PanelContainer
     Label _name = null!, _status = null!, _detail = null!;
     ProgressBar _hp = null!;
     Button _demolish = null!, _upgrade = null!, _hold = null!;
+    public Button UpgradeButton => _upgrade;
+    public Button HoldButton => _hold;
+    public Button DemolishButton => _demolish;
+
+    public override void _ExitTree()
+    {
+        // Not in the tree (the card mirrors them), so not freed with it.
+        foreach (var b in new[] { _upgrade, _hold, _demolish }) if (b.GetParent() == null) b.QueueFree();
+    }
 
     public override void _Ready()
     {
@@ -42,7 +55,6 @@ public partial class Inspector : PanelContainer
             if (World.BuildingById(id) is { Kind: BuildingKind.Keep } && World.NextKeepLevel() is { } next) Send(new Research(id, next.Id));
             else Send(new UpgradeBuilding(id));
         };
-        box.AddChild(_upgrade);
         _hold = UiKit.TextButton("Put on hold", 12);
         _hold.TooltipText = "Stand the crew down: they go to other work, and its woodsmen or miners stay home.\nNothing is produced until it's back at work.";
         _hold.Pressed += () =>
@@ -56,10 +68,8 @@ public partial class Inspector : PanelContainer
             }
             if (State.SelectedBuilding is { } id && World.BuildingById(id) is { } b) Send(new SetPaused(id, !b.Paused));
         };
-        box.AddChild(_hold);
-        _demolish = UiKit.TextButton("X  Demolish", 12);
+        _demolish = UiKit.TextButton("Demolish", 12);
         _demolish.Pressed += () => { if (State.SelectedBuilding is { } id) Send(new Demolish(id)); };
-        box.AddChild(_demolish);
     }
 
     /// <summary>The selected group's buildings still standing (fewer than two: not a group).</summary>
@@ -192,7 +202,7 @@ public partial class Inspector : PanelContainer
                     : locked ? $"{to} needs {World.Rules.Tech(upDef.RequiresTech!).Name}" : $"Upgrade to {to} ({upDef.Cost})";
                 _upgrade.TooltipText = $"{to}: {Blurbs.Of(to)}\n{upDef.Hp:0} hp{Hud.Describe(upDef)}\nIt works as it is while the builders are at it.";
             }
-            _demolish.Text = b.Possessed ? "X  Purge" : "X  Demolish";
+            _demolish.Text = b.Possessed ? "Purge" : "Demolish";
         }
         else if (State.SelectedUnits.Count > 0)
         {

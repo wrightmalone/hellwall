@@ -27,10 +27,10 @@ public partial class Coach : PanelContainer
     int Count(BuildingKind k) => World.Buildings.Count(b => b.Kind == k);
     bool Built(BuildingKind k, int n = 1) => World.Buildings.Count(b => b.Kind == k && b.Complete) >= n;
 
-    /// <summary>A building named in the hint's own words, with its key from the build bar: K(House, "Houses") is "Houses [1]".</summary>
+    /// <summary>A building named in the hint's own words, with its two keys on the command card: K(House, "Houses") is "Houses [Q A]".</summary>
     static string K(BuildingKind kind, string? name = null)
     {
-        string label = Palette.BuildBar.FirstOrDefault(b => b.Kind == kind).Label ?? "";
+        string label = HotkeyGrid.KeysFor(kind);
         return label.Length > 0 ? $"{name ?? kind.ToString()} [{label}]" : name ?? kind.ToString();
     }
 
