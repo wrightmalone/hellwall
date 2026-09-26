@@ -342,6 +342,16 @@ public partial class Main : Node2D
         _state.SelectedUnits.Clear();
         await Tap(Key.Key1);
         bool grouped = soldiers > 0 && _state.SelectedUnits.Count == soldiers;
+        // A building in a group: the Keep on 2.
+        var keep = _world.Buildings.First(b => b.Kind == BuildingKind.Keep);
+        _state.SelectedUnits.Clear();
+        _state.SelectedBuilding = keep.Id;
+        await Tap(Key.Key2, ctrl: true);
+        _state.SelectedBuilding = null;
+        await Tap(Key.Key2);
+        grouped &= _state.SelectedBuilding == keep.Id && _state.SelectedUnits.Count == 0;
+        await Tap(Key.Key1);
+        grouped &= _state.SelectedUnits.Count == soldiers && _state.SelectedBuilding == null;
         await Escape();
         bool cleared = _state.SelectedUnits.Count == 0 && _pauseMenu == null;
         // The build grid: Q (Town) then A arms a House; W (Works) then D, its third, a Barracks; Esc disarms.
@@ -805,31 +815,47 @@ public partial class Main : Node2D
     int _lastGroup;
     ulong _lastGroupAt;
 
+    /// <summary>
+    /// A control group holds soldiers, buildings or both (ids are unique across the two). Recalled,
+    /// it selects its soldiers if it has any left, and its buildings otherwise (several at once, as
+    /// a double-click does), since a selection is one or the other.
+    /// </summary>
     void ControlGroup(int group, bool set, bool add)
     {
         if (set || add)
         {
-            var ids = add ? _state.Groups.GetValueOrDefault(group, []).Concat(_state.SelectedUnits).Distinct().ToArray() : _state.SelectedUnits.ToArray();
+            var now = _state.SelectedUnits.Concat(_state.SelectedBuildings).ToArray();
+            var ids = add ? _state.Groups.GetValueOrDefault(group, []).Concat(now).Distinct().ToArray() : now;
             _state.Groups[group] = ids;
-            _state.Say($"Group {group % 10}: {ids.Length} soldier{(ids.Length == 1 ? "" : "s")}");
+            int men = ids.Count(id => _world.UnitById(id) != null), works = ids.Length - men;
+            string Of(int n, string one) => $"{n} {one}{(n == 1 ? "" : "s")}";
+            _state.Say($"Group {group % 10}: " + string.Join(" and ", new[] { men > 0 ? Of(men, "soldier") : "", works > 0 ? Of(works, "building") : "" }.Where(p => p.Length > 0).DefaultIfEmpty("empty")));
             return;
         }
-        var alive = _state.Groups.GetValueOrDefault(group, []).Where(id => _world.UnitById(id) != null).ToArray();
+        var alive = _state.Groups.GetValueOrDefault(group, []).Where(id => _world.UnitById(id) != null || _world.BuildingById(id) != null).ToArray();
         _state.Groups[group] = alive;
         if (alive.Length == 0) return;
         bool again = _lastGroup == group && Time.GetTicksMsec() - _lastGroupAt < 400;
         _lastGroup = group;
         _lastGroupAt = Time.GetTicksMsec();
-        _state.SelectedBuilding = null;
         _state.Armed = null;
+        var units = alive.Select(_world.UnitById).OfType<Unit>().ToList();
+        var buildings = alive.Select(_world.BuildingById).OfType<Building>().ToList();
         _state.SelectedUnits.Clear();
-        foreach (var id in alive) _state.SelectedUnits.Add(id);
-        if (again)
+        _state.SelectedBuilding = null;
+        Vector2 centre;
+        if (units.Count > 0)
         {
-            // Twice: the camera to the middle of them.
-            var units = alive.Select(id => _world.UnitById(id)!).ToList();
-            _camera.Position = Iso.P(units.Average(u => u.X), units.Average(u => u.Y));
+            foreach (var u in units) _state.SelectedUnits.Add(u.Id);
+            centre = new Vector2(units.Average(u => u.X), units.Average(u => u.Y));
         }
+        else
+        {
+            _state.SelectedBuilding = buildings[0].Id;
+            if (buildings.Count > 1) foreach (var b in buildings) _state.SelectedGroup.Add(b.Id);
+            centre = new Vector2(buildings.Average(b => b.CentreX), buildings.Average(b => b.CentreY));
+        }
+        if (again) _camera.Position = Iso.P(centre); // twice: the camera to the middle of them
     }
 
     /// <summary>Slot 0 is the quicksave (F5/F9); 1-3 are the pause menu's named slots.</summary>

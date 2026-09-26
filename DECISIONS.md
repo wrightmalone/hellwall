@@ -952,8 +952,10 @@ last lost by at least one).
   select). WASD no longer pans in a game. The map editor keeps WASD: it has no grid.
 - The controls self-test now also sets and recalls a control group and builds a House and a
   Barracks through the grid.
-  **Decide:** whether Esc from a building's card should go back to building (it deselects now),
-  and whether control groups should take buildings too (StarCraft's do; ours are soldiers).
+  **Decide:** whether Esc from a building's card should go back to building (it deselects now).
+- **Control groups take buildings too** (you said yes): a group holds soldiers, buildings or
+  both; recalled, it selects its soldiers if it has any left, its buildings otherwise (several
+  at once, as a double-click does), since a selection is one or the other.
 
 ## Buildings from KayKit Medieval Hexagon (you downloaded it and the Medieval Village MegaKit)
 
