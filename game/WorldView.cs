@@ -600,6 +600,10 @@ public partial class WorldView : Node2D
             if (state.Armed is { } kind)
             {
                 var def = world.Rules[kind];
+                // The ground round the cursor, tile by tile: green where a building could stand, red where not (as in They Are Billions).
+                RefreshBuildGrid(world, state.HoveredTile);
+                foreach (var (gx, gy, ok) in _buildGrid)
+                    DrawColoredPolygon(Iso.Diamond(gx, gy, 1, 1), ok ? new Color(0.3f, 1, 0.35f, 0.16f) : new Color(1, 0.25f, 0.2f, 0.16f));
                 foreach (var (tx, ty) in state.GhostTiles())
                 {
                     string? why = world.CheckPlacement(kind, tx, ty);
@@ -682,6 +686,28 @@ public partial class WorldView : Node2D
                 var width = font.GetStringSize(label, fontSize: size).X;
                 Text(font, pinned + new Vector2(-width / 2, r + 17 * scale), label, size, new Color(1, 0.8f, 0.75f));
             }
+        }
+
+        /// <summary>The build grid round the cursor, recomputed when the cursor moves to a new tile or four times a second (the pack check isn't free).</summary>
+        readonly List<(int X, int Y, bool Ok)> _buildGrid = new();
+        (int, int) _gridAt = (-1, -1);
+        ulong _gridTime;
+        const int GridRadius = 9;
+
+        void RefreshBuildGrid(World world, (int X, int Y) at)
+        {
+            ulong now = Time.GetTicksMsec();
+            if (at == _gridAt && now - _gridTime < 250) return;
+            _gridAt = at;
+            _gridTime = now;
+            _buildGrid.Clear();
+            for (int y = at.Y - GridRadius; y <= at.Y + GridRadius; y++)
+                for (int x = at.X - GridRadius; x <= at.X + GridRadius; x++)
+                {
+                    int dx = x - at.X, dy = y - at.Y;
+                    if (dx * dx + dy * dy > GridRadius * GridRadius || !world.Terrain.InBounds(x, y) || !world.Vision.IsExplored(x, y)) continue;
+                    _buildGrid.Add((x, y, world.TileBuildable(x, y)));
+                }
         }
 
         void Text(Font font, Vector2 at, string text, int size, Color colour)

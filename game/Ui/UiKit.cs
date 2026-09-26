@@ -50,7 +50,7 @@ public static class UiKit
     /// <summary>A square icon button: picture, and the hotkey in the corner.</summary>
     public static Button IconButton(Texture2D? icon, string key, int size = 52)
     {
-        var b = new Button
+        var b = new TipButton
         {
             Icon = icon, ExpandIcon = true, IconAlignment = HorizontalAlignment.Center, VerticalIconAlignment = VerticalAlignment.Center,
             CustomMinimumSize = new Vector2(size, size), FocusMode = Control.FocusModeEnum.None, ClipText = true,
@@ -68,9 +68,22 @@ public static class UiKit
         return b;
     }
 
+    /// <summary>A cost for a tooltip, what you can't pay yet in red: "60 gold, [color=...]40 stone[/color]". Needs a TipButton (BBCode).</summary>
+    public static string CostText(Hellwall.Sim.Cost cost, Hellwall.Sim.Colony colony)
+    {
+        var parts = new List<string>();
+        foreach (var r in Enum.GetValues<Hellwall.Sim.Resource>())
+        {
+            if (cost[r] <= 0) continue;
+            string part = $"{cost[r]:0} {r.ToString().ToLowerInvariant()}";
+            parts.Add(colony[r] + 1e-9 < cost[r] ? $"[color=#ff6a55]{part}[/color]" : part);
+        }
+        return parts.Count == 0 ? "free" : string.Join(", ", parts);
+    }
+
     public static Button TextButton(string text, int size = 13)
     {
-        var b = new Button { Text = text, FocusMode = Control.FocusModeEnum.None };
+        var b = new TipButton { Text = text, FocusMode = Control.FocusModeEnum.None };
         b.AddThemeFontSizeOverride("font_size", size);
         b.AddThemeStyleboxOverride("normal", Box(PanelLight, Rim, 5, 5));
         b.AddThemeStyleboxOverride("hover", Box(new Color(0.28f, 0.26f, 0.22f), Gold, 5, 5));

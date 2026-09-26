@@ -259,6 +259,7 @@ public partial class Main : Node2D
         if (options.ContainsKey("noise")) _state.ShowNoise = true;
         ForestWatch.Log = DisplayServer.GetName() == "headless";
         if (options.TryGetValue("select-group", out var groupKind) && Enum.TryParse<BuildingKind>(groupKind, true, out var gk)) _pendingGroup = gk;
+        if (options.TryGetValue("arm", out var armKind) && Enum.TryParse<BuildingKind>(armKind, true, out var toArm)) _state.Armed = toArm; // screenshots of the build grid
         if (options.ContainsKey("select-keep")) _state.SelectedBuilding = _world.Buildings.First(b => b.Kind == BuildingKind.Keep).Id; // screenshots of the inspector
         GD.Print($"hellwall: world ready seed={_world.Seed} map={_world.Map} difficulty={_world.Rules.Difficulty} endless={_world.Survival?.Endless ?? false} hash={StateHash.Hex(_world)}");
         _started = true;

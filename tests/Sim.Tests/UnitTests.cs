@@ -382,3 +382,25 @@ public class WaypointTests
         Assert.Single(copy.Units[0].Waypoints);
     }
 }
+
+public class RallyTests
+{
+    [Fact]
+    public void SoldiersFromABarracksSpreadRoundTheRallyPointInsteadOfHeapingOnIt()
+    {
+        var world = TestWorlds.Rich();
+        var barracks = TestWorlds.Built(world, BuildingKind.Barracks, TestWorlds.C + 5, TestWorlds.C + 4);
+        TestWorlds.Run(world, new SetRally(barracks.Id, TestWorlds.C - 8, TestWorlds.C + 10));
+        for (int i = 0; i < 6; i++) world.Enqueue(new TrainUnit(barracks.Id, UnitKind.Militia));
+        TestWorlds.RunSeconds(world, 6 * world.Def(UnitKind.Militia).TrainSeconds + 40);
+        Assert.Equal(6, world.Units.Count);
+        var spots = world.Units.Select(u => (u.X, u.Y)).ToList();
+        for (int a = 0; a < spots.Count; a++)
+            for (int b = a + 1; b < spots.Count; b++)
+            {
+                float dx = spots[a].X - spots[b].X, dy = spots[a].Y - spots[b].Y;
+                Assert.True(dx * dx + dy * dy > 0.25f, $"two soldiers on one spot: {spots[a]} and {spots[b]}");
+            }
+        Assert.All(world.Units, u => Assert.True(MathF.Abs(u.X - (TestWorlds.C - 7.5f)) < 4 && MathF.Abs(u.Y - (TestWorlds.C + 10.5f)) < 4, $"not at the rally point: {u.X:0.0},{u.Y:0.0}"));
+    }
+}

@@ -190,7 +190,7 @@ public partial class Inspector : PanelContainer
                 {
                     _upgrade.Disabled = !World.Colony.CanAfford(next.Cost);
                     _upgrade.Text = $"Raise the Keep: {next.Name} ({next.Cost})";
-                    _upgrade.TooltipText = $"{next.Name}: {next.Description}\n{next.Seconds:0} s";
+                    _upgrade.TooltipText = $"Costs {UiKit.CostText(next.Cost, World.Colony)}\n{next.Name}: {next.Description}\n{next.Seconds:0} s";
                 }
             }
             if (b.Def.UpgradesTo is { } to)
@@ -200,7 +200,7 @@ public partial class Inspector : PanelContainer
                 _upgrade.Disabled = b.Upgrading || locked || !World.Colony.CanAfford(upDef.Cost);
                 _upgrade.Text = b.Upgrading ? $"Upgrading to {to}... {b.UpgradeProgress / upDef.BuildSeconds:P0}"
                     : locked ? $"{to} needs {World.Rules.Tech(upDef.RequiresTech!).Name}" : $"Upgrade to {to} ({upDef.Cost})";
-                _upgrade.TooltipText = $"{to}: {Blurbs.Of(to)}\n{upDef.Hp:0} hp{Hud.Describe(upDef)}\nIt works as it is while the builders are at it.";
+                _upgrade.TooltipText = $"Costs {UiKit.CostText(upDef.Cost, World.Colony)}\n{to}: {Blurbs.Of(to)}\n{upDef.Hp:0} hp{Hud.Describe(upDef)}\nIt works as it is while the builders are at it.";
             }
             _demolish.Text = b.Possessed ? "Purge" : "Demolish";
         }

@@ -446,6 +446,16 @@ public sealed partial class World
     }
 
     /// <summary>Why a building can't go here, or null if it can. Lets the client preview placement.</summary>
+    /// <summary>
+    /// Could a building stand on this one tile, as far as the ground goes: explored, buildable,
+    /// free, holy, and no sleeping pack or demon too close (the per-tile half of CheckPlacement,
+    /// cost and kind aside). For the green and red grid shown while placing.
+    /// </summary>
+    public bool TileBuildable(int x, int y) =>
+        Terrain.InBounds(x, y) && Vision.IsExplored(x, y) && Terrain.IsBuildable(Terrain.Get(x, y))
+        && _occupancy[Terrain.Index(x, y)] == 0 && Colony.Consecrated[Terrain.Index(x, y)]
+        && PackNear(x, y, 1, 1) == null && !DemonsInRect(x, y, 1, 1);
+
     public string? CheckPlacement(BuildingKind kind, int x, int y)
     {
         if (kind == BuildingKind.Keep) return "only one Keep";
@@ -662,9 +672,42 @@ public sealed partial class World
         _units.Add(u);
         Emit(new UnitTrained(Tick, u.Id, kind, barracks.Id));
         // Off to the rally point, fighting anything on the way.
-        if (barracks.RallyX >= 0 && TryOrder(new OrderUnits([u.Id], OrderKind.AttackMove, barracks.RallyX, barracks.RallyY)) is { } why)
-            _events.Add(new CommandRejected(Tick, why, new SetRally(barracks.Id, barracks.RallyX, barracks.RallyY)));
+        if (barracks.RallyX >= 0)
+        {
+            if (TryOrder(new OrderUnits([u.Id], OrderKind.AttackMove, barracks.RallyX, barracks.RallyY)) is { } why)
+                _events.Add(new CommandRejected(Tick, why, new SetRally(barracks.Id, barracks.RallyX, barracks.RallyY)));
+            else RallySlot(u);
+        }
         return true;
+    }
+
+    /// <summary>
+    /// A soldier sent to a rally point on his own would take its very middle, as every one before
+    /// him did, and they'd stand in a heap. Instead: the nearest spot of a formation round it that
+    /// no one already there (or on the way) holds.
+    /// </summary>
+    void RallySlot(Unit u)
+    {
+        float cx = u.DestX + 0.5f, cy = u.DestY + 0.5f;
+        var held = new List<(float X, float Y)>();
+        foreach (var o in _units)
+        {
+            if (o == u || o.Hp <= 0) continue;
+            if (o.Order is OrderKind.Move or OrderKind.AttackMove && o.DestX == u.DestX && o.DestY == u.DestY) held.Add((o.SlotX, o.SlotY));
+            else if (o.Order is OrderKind.Idle or OrderKind.Hold && (o.X - cx) * (o.X - cx) + (o.Y - cy) * (o.Y - cy) < 36) held.Add((o.X, o.Y));
+        }
+        var spots = Formation(cx, cy, held.Count + 1);
+        foreach (var (sx, sy) in spots)
+        {
+            bool free = true;
+            foreach (var (hx, hy) in held)
+                if ((hx - sx) * (hx - sx) + (hy - sy) * (hy - sy) < 0.3f) { free = false; break; }
+            if (!free) continue;
+            u.SlotX = sx;
+            u.SlotY = sy;
+            return;
+        }
+        if (spots.Count > 0) (u.SlotX, u.SlotY) = spots[^1];
     }
 
     void EnsureFlow()

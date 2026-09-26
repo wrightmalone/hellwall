@@ -921,6 +921,20 @@ last lost by at least one).
   `scripts/ab.sh '<flags>' plains lakes` runs a quick sweep with and without some flags per map
   and prints them side by side. `scripts/verify.sh --fast` (about a minute) skips the full-run
   gates. Iterate with those; a full sweep and verify before a commit or build.
+- **A rally point no longer heaps soldiers on one tile** (your playtest): each soldier out of a
+  Barracks was sent there on his own, so each took its very middle. Now he takes the nearest
+  spot of a formation round it that no one there or on the way already holds, the same
+  spacing a group order gets.
+- **Hunters at work**: each lodge's two hunters (a leather-brown Ranger) walk to the edge of the
+  woods they hunt, loose arrows into the trees (you see them streak), and come home carrying
+  the kill ("+ meat" over the lodge). For the eye only, like the farmers and boats.
+- **A green and red grid while placing** (as in They Are Billions): the tiles round the cursor,
+  green where a building could stand and red where not (unexplored, water or rock, taken, off
+  holy ground, a pack or demons too close). Cost isn't part of it: that's the ghost's colour
+  and the note by the cursor. Recomputed as the cursor moves, at most four times a second.
+- **Costs you can't pay show in red** in the tooltips (build cards, soldiers, research,
+  upgrades): "60 gold, 40 stone" with the stone red when you're short of it, and "you can't
+  afford it yet" in red. The buttons' tooltips now take colour (BBCode).
 - **A hostile map at every difficulty** (you: "so filled you can often see a few demons at the
   edge of the fog"): 520 sleeping packs on Normal (was 360), from 16 tiles out (was 20: the
   start's sight is 22, so the nearest wait just past it), and 80 stray handfuls from 26 tiles
