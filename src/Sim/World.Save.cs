@@ -17,7 +17,7 @@ namespace Hellwall.Sim;
 public sealed partial class World
 {
     const uint Magic = 0x56535748; // "HWSV"
-    const int FormatVersion = 15;
+    const int FormatVersion = 16;
 
     public byte[] Save()
     {
@@ -122,6 +122,8 @@ public sealed partial class World
                 w.Write(u.AnchorX);
                 w.Write(u.AnchorY);
                 w.Write(u.Anchored);
+                w.Write(u.Waypoints.Count);
+                foreach (var p in u.Waypoints) { w.Write((byte)p.Order); w.Write(p.X); w.Write(p.Y); w.Write(p.SlotX); w.Write(p.SlotY); }
                 w.Write(u.SlotX);
                 w.Write(u.SlotY);
                 w.Write(u.Field != null);
@@ -358,8 +360,11 @@ public sealed partial class World
             var u = new Unit
             {
                 Id = id, Kind = kind, Def = world.Def(kind), X = r.ReadSingle(), Y = r.ReadSingle(), PrevX = r.ReadSingle(), PrevY = r.ReadSingle(),
-                Hp = r.ReadSingle(), Cooldown = r.ReadSingle(), Order = (OrderKind)r.ReadByte(), DestX = r.ReadInt32(), DestY = r.ReadInt32(), Kills = r.ReadInt32(), PatrolX = r.ReadInt32(), PatrolY = r.ReadInt32(), AnchorX = r.ReadSingle(), AnchorY = r.ReadSingle(), Anchored = r.ReadBoolean(), SlotX = r.ReadSingle(), SlotY = r.ReadSingle(),
+                Hp = r.ReadSingle(), Cooldown = r.ReadSingle(), Order = (OrderKind)r.ReadByte(), DestX = r.ReadInt32(), DestY = r.ReadInt32(), Kills = r.ReadInt32(), PatrolX = r.ReadInt32(), PatrolY = r.ReadInt32(), AnchorX = r.ReadSingle(), AnchorY = r.ReadSingle(), Anchored = r.ReadBoolean(),
             };
+            for (int legs = r.ReadInt32(); legs > 0; legs--) u.Waypoints.Add(new Waypoint((OrderKind)r.ReadByte(), r.ReadInt32(), r.ReadInt32(), r.ReadSingle(), r.ReadSingle()));
+            u.SlotX = r.ReadSingle();
+            u.SlotY = r.ReadSingle();
             if (r.ReadBoolean()) needsField.Add(u);
             world._units.Add(u);
         }

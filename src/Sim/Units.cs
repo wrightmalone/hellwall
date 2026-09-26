@@ -19,8 +19,13 @@ public enum OrderKind : byte
 /// tens of thousands), so they're plain objects with stable ids, which
 /// orders and selection can refer to.
 /// </summary>
+/// <summary>A move queued after the one a soldier's on (shift): where to, and its own spot there.</summary>
+public readonly record struct Waypoint(OrderKind Order, int X, int Y, float SlotX, float SlotY);
+
 public sealed class Unit
 {
+    /// <summary>Moves queued behind the current one, in order: taken one at a time as each is reached.</summary>
+    public readonly List<Waypoint> Waypoints = new();
     public int Id;
     public UnitKind Kind;
     public UnitDef Def = null!;
@@ -312,6 +317,20 @@ internal static class UnitSystem
                     u.SlotX = u.DestX + 0.5f;
                     u.SlotY = u.DestY + 0.5f;
                     u.Field = world.HumanFieldTo(u.DestX, u.DestY);
+                }
+                else if (d2 < 0.04f && u.Waypoints.Count > 0)
+                {
+                    // At its spot, with more queued: on to the next.
+                    var next = u.Waypoints[0];
+                    u.Waypoints.RemoveAt(0);
+                    u.Order = next.Order;
+                    u.PatrolX = u.DestX;
+                    u.PatrolY = u.DestY;
+                    u.DestX = next.X;
+                    u.DestY = next.Y;
+                    u.SlotX = next.SlotX;
+                    u.SlotY = next.SlotY;
+                    u.Field = world.HumanFieldTo(next.X, next.Y);
                 }
                 else if (d2 < 0.04f)
                 {

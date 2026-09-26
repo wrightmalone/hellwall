@@ -331,3 +331,54 @@ public class SteppingOutTests
         Assert.True(world.IsHumanWalkable((int)u.X, (int)u.Y), "he's on open ground");
     }
 }
+
+public class WaypointTests
+{
+    static (World World, Unit Unit) Soldier()
+    {
+        var world = TestWorlds.Rich();
+        world.TrySpawnUnit(UnitKind.Militia, world.Buildings.First(b => b.Kind == BuildingKind.Keep));
+        return (world, world.Units[0]);
+    }
+
+    [Fact]
+    public void AShiftedMoveWaitsForTheOneBeforeIt()
+    {
+        var (world, u) = Soldier();
+        int x0 = (int)u.X, y0 = (int)u.Y;
+        TestWorlds.Run(world, new OrderUnits([u.Id], OrderKind.Move, x0 + 8, y0 + 6));
+        TestWorlds.Run(world, new OrderUnits([u.Id], OrderKind.Move, x0 - 6, y0 + 8, Queue: true));
+        Assert.Equal(x0 + 8, u.DestX);
+        Assert.Single(u.Waypoints);
+        bool reachedFirst = false;
+        for (int t = 0; t < 60 * Balance.TickHz && u.Order != OrderKind.Idle; t++)
+        {
+            world.Step();
+            if (MathF.Abs(u.X - (x0 + 8.5f)) < 1 && MathF.Abs(u.Y - (y0 + 6.5f)) < 1) reachedFirst = true;
+        }
+        Assert.True(reachedFirst, "went to the first point");
+        Assert.Empty(u.Waypoints);
+        Assert.True(MathF.Abs(u.X - (x0 - 5.5f)) < 1.5f && MathF.Abs(u.Y - (y0 + 8.5f)) < 1.5f, $"ended at the second, at {u.X:0.0},{u.Y:0.0}");
+    }
+
+    [Fact]
+    public void AnOrderWithoutShiftClearsTheQueue()
+    {
+        var (world, u) = Soldier();
+        TestWorlds.Run(world, new OrderUnits([u.Id], OrderKind.Move, (int)u.X + 8, (int)u.Y));
+        TestWorlds.Run(world, new OrderUnits([u.Id], OrderKind.Move, (int)u.X, (int)u.Y + 8, Queue: true));
+        TestWorlds.Run(world, new OrderUnits([u.Id], OrderKind.Move, (int)u.X - 5, (int)u.Y));
+        Assert.Empty(u.Waypoints);
+    }
+
+    [Fact]
+    public void QueuedMovesSurviveASave()
+    {
+        var (world, u) = Soldier();
+        TestWorlds.Run(world, new OrderUnits([u.Id], OrderKind.Move, (int)u.X + 8, (int)u.Y));
+        TestWorlds.Run(world, new OrderUnits([u.Id], OrderKind.AttackMove, (int)u.X, (int)u.Y + 8, Queue: true));
+        var copy = World.Load(world.Save(), world.Rules);
+        Assert.Equal(StateHash.Hex(world), StateHash.Hex(copy));
+        Assert.Single(copy.Units[0].Waypoints);
+    }
+}

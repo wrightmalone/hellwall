@@ -1105,6 +1105,9 @@ public sealed partial class World
         return result;
     }
 
+    /// <summary>How many moves a soldier can have queued.</summary>
+    public const int MaxWaypoints = 12;
+
     string? TryOrder(OrderUnits o)
     {
         if (o.UnitIds.Length == 0) return "no units";
@@ -1137,10 +1140,19 @@ public sealed partial class World
         for (int n = 0; n < group.Count; n++)
         {
             var u = group[n];
+            var slot = slots != null && n < slots.Count ? slots[n] : (dx + 0.5f, dy + 0.5f);
+            // Shift: after the move it's on (a Hold or a stand has nothing to come after, so it starts now).
+            if (o.Queue && field != null && (u.Order is OrderKind.Move or OrderKind.AttackMove || u.Waypoints.Count > 0))
+            {
+                if (u.Waypoints.Count < MaxWaypoints) u.Waypoints.Add(new Waypoint(o.Order, dx, dy, slot.Item1, slot.Item2));
+                ordered++;
+                continue;
+            }
+            u.Waypoints.Clear();
             u.Order = o.Order;
             u.DestX = dx;
             u.DestY = dy;
-            (u.SlotX, u.SlotY) = slots != null && n < slots.Count ? slots[n] : (dx + 0.5f, dy + 0.5f);
+            (u.SlotX, u.SlotY) = slot;
             u.Field = field;
             u.PatrolX = (int)u.X;
             u.PatrolY = (int)u.Y;

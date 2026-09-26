@@ -483,6 +483,23 @@ public partial class WorldView : Node2D
                 }
             }
 
+            // Where the selected soldiers are going, and what's queued after: a line through each point (red for attack-moves).
+            foreach (var u in world.Units)
+            {
+                if (!state.SelectedUnits.Contains(u.Id) || u.Order is not (OrderKind.Move or OrderKind.AttackMove or OrderKind.Patrol)) continue;
+                var at = Iso.P(u.X, u.Y);
+                var leg = Iso.P(u.SlotX, u.SlotY);
+                var colour = u.Order == OrderKind.Move ? new Color(0.4f, 1, 0.45f, 0.35f) : new Color(1, 0.4f, 0.3f, 0.35f);
+                DrawLine(at, leg, colour, 1);
+                foreach (var p in u.Waypoints)
+                {
+                    var next = Iso.P(p.SlotX, p.SlotY);
+                    DrawLine(leg, next, p.Order == OrderKind.Move ? new Color(0.4f, 1, 0.45f, 0.35f) : new Color(1, 0.4f, 0.3f, 0.35f), 1);
+                    DrawCircle(next, 2.5f, p.Order == OrderKind.Move ? new Color(0.4f, 1, 0.45f, 0.7f) : new Color(1, 0.4f, 0.3f, 0.7f));
+                    leg = next;
+                }
+            }
+
             // The selected Barracks' rally point: a line from its door and a flag.
             if (state.SelectedBuilding is { } rs && world.BuildingById(rs) is { RallyX: >= 0 } rally)
             {

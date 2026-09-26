@@ -264,7 +264,7 @@ public partial class CommandCard : PanelContainer
 
     static readonly (int Cell, string Label, string Order, string Tip)[] Orders =
     [
-        (HotkeyGrid.Cols + 0, "Attack", "attack", "Attack-move: then click where (or shift+right-click); they fight what they meet on the way"),
+        (HotkeyGrid.Cols + 0, "Attack", "attack", "Attack-move: then click where; they fight what they meet on the way. Shift-click queues more"),
         (HotkeyGrid.Cols + 1, "Stop", "stop", "Stop where they are"),
         (HotkeyGrid.Cols + 2, "Hold", "hold", "Hold: stand and shoot, never chase"),
         (HotkeyGrid.Cols + 3, "Patrol", "patrol", "Patrol: then click; back and forth between here and there, fighting"),
@@ -358,7 +358,7 @@ public partial class CommandCard : PanelContainer
         }
         else if (_mode.StartsWith("army"))
         {
-            _hint.Text = "Right-click to move · A then click (or shift+right-click) to attack-move";
+            _hint.Text = "Right-click to move · A then click to attack-move · shift to queue after the current order";
         }
     }
 }

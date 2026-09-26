@@ -694,7 +694,8 @@ public partial class Main : Node2D
                 {
                     if (_state.SelectedUnits.Count > 0)
                     {
-                        Send(new OrderUnits(_state.SelectedUnits.ToArray(), _state.PatrolArmed ? OrderKind.Patrol : OrderKind.AttackMove, _state.HoveredTile.X, _state.HoveredTile.Y));
+                        // Shift: queued after what they're doing, and the order stays armed for the next point.
+                        Send(new OrderUnits(_state.SelectedUnits.ToArray(), _state.PatrolArmed ? OrderKind.Patrol : OrderKind.AttackMove, _state.HoveredTile.X, _state.HoveredTile.Y, Queue: mb.ShiftPressed));
                         _state.OrderPings.Add((_state.HoveredTile.X + 0.5f, _state.HoveredTile.Y + 0.5f, true, 0));
                     }
                     if (!mb.ShiftPressed) DisarmAttackMove(); // shift-click to give several in a row
@@ -731,10 +732,9 @@ public partial class Main : Node2D
                     Send(new SetRally(rb, _state.HoveredTile.X, _state.HoveredTile.Y));
                 else if (_state.SelectedUnits.Count > 0)
                 {
-                    // Right-click moves, and nothing stops a move: that's how you pull a squad out. Shift+right-click attack-moves.
-                    var order = mb.ShiftPressed ? OrderKind.AttackMove : OrderKind.Move;
-                    Send(new OrderUnits(_state.SelectedUnits.ToArray(), order, _state.HoveredTile.X, _state.HoveredTile.Y));
-                    _state.OrderPings.Add((_state.HoveredTile.X + 0.5f, _state.HoveredTile.Y + 0.5f, order != OrderKind.Move, 0));
+                    // Right-click moves, and nothing stops a move: that's how you pull a squad out. Shift queues it after the one they're on.
+                    Send(new OrderUnits(_state.SelectedUnits.ToArray(), OrderKind.Move, _state.HoveredTile.X, _state.HoveredTile.Y, Queue: mb.ShiftPressed));
+                    _state.OrderPings.Add((_state.HoveredTile.X + 0.5f, _state.HoveredTile.Y + 0.5f, false, 0));
                 }
                 else _state.SelectedBuilding = null;
                 break;
@@ -786,6 +786,9 @@ public partial class Main : Node2D
                 _state.SelectedBuilding = null;
                 break;
             case Key.Space: _paused = !_paused; break;
+            // Keyboard zoom, as well as the wheel.
+            case Key.Equal or Key.KpAdd or Key.Pageup: ZoomBy(1.15f); break;
+            case Key.Minus or Key.KpSubtract or Key.Pagedown: ZoomBy(1 / 1.15f); break;
             case Key.A when key.CtrlPressed:
                 // Every soldier.
                 _state.SelectedUnits.Clear();

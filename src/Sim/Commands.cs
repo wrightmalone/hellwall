@@ -47,4 +47,5 @@ public sealed record ChoosePatron(string TechId) : Command;
 public sealed record UpgradeBuilding(int BuildingId) : Command;
 
 /// <summary>Order soldiers to a tile. They share one route map for the order.</summary>
-public sealed record OrderUnits(int[] UnitIds, OrderKind Order, int X, int Y) : Command;
+/// <summary>Queue: after what they're doing now (shift), not instead of it: a waypoint.</summary>
+public sealed record OrderUnits(int[] UnitIds, OrderKind Order, int X, int Y, bool Queue = false) : Command;

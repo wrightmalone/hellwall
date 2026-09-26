@@ -50,12 +50,12 @@ public partial class Hud : CanvasLayer
         "KEYS    the command card (bottom) is a grid, and each key presses the cell in its place:  Q W E R T  /  A S D F G  /  Z X C V B\n" +
         "BUILD   top row: what kind (Q Town, W Works, E Holy, R Walls, T Towers); rows below: which one (a House is Q then A); click to place; drag walls for a line; right-click or Esc to stop\n" +
         "SELECT  click a building or soldier; drag to box-select soldiers (shift adds) · select a House or the Keep to upgrade it\n" +
-        "ORDER   right-click: move (they won't stop to fight) · A then click, or shift+right-click: attack-move · S stop · D hold · F then click: patrol · top row: only one kind\n" +
+        "ORDER   right-click: move (they won't stop to fight) · A then click: attack-move · S stop · D hold · F then click: patrol · Shift: queue after the current order · top row: only one kind\n" +
         "BUILDING  select it: Q upgrade · W hold · B demolish (purges a possessed one; Delete too) · a Barracks trains on the top rows, shift for five, right-click the ground for a rally point\n" +
         "GROUPS  soldiers or buildings · 1-9: select · twice: go there · Ctrl+1-9 set · Shift+1-9 add · Ctrl+A every soldier · double-click a soldier (or a building) for all of its kind on screen\n" +
         "Alerts on the left: click to go there\n" +
         "Esc or F10 menu · Space pause · Tab speed · F5 save · F9 load · F4 noise view · F3 debug\n" +
-        "CAMERA  arrow keys, screen edges or middle-drag pan · wheel zoom · minimap click to jump · Home/Backspace to the Keep\n" +
+        "CAMERA  arrow keys, screen edges or middle-drag pan · wheel, + and -, or Page Up/Down zoom · minimap click to jump · Home/Backspace to the Keep\n" +
         "Debug: F6 noise at cursor · K wave · J 20k assault\n" +
         "F1 to close";
 

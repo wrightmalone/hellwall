@@ -66,6 +66,7 @@ public static class StateHash
             h = Mix(h, Bits(u.X));
             h = Mix(h, Bits(u.Y));
             h = Mix(h, Bits(u.Hp));
+            foreach (var p in u.Waypoints) { h = MixByte(h, (byte)p.Order); h = Mix(h, (uint)p.X); h = Mix(h, (uint)p.Y); h = Mix(h, Bits(p.SlotX)); h = Mix(h, Bits(p.SlotY)); }
             h = Mix(h, Bits(u.Cooldown));
             h = Mix(h, (uint)u.Kills);
             h = Mix(h, (uint)u.PatrolX);

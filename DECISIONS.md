@@ -930,6 +930,23 @@ last lost by at least one).
   **Decide:** making the harvest the food (deliveries, as with woodsmen) would make Farms
   lumpy and raidable; worth a try once the rest settles.
 
+## From the review list (your picks: 1-4 and 6; 5 on the back burner)
+
+- **The first breach is impossible to miss.** A building with people in it isn't damaged, it's
+  taken at the first blow (as in They Are Billions), so the only fair warning comes before:
+  an alert, "Demons at the House: 6 inside will turn at the first blow", when a demon gets
+  within four tiles of one over open ground (not through a wall, or every wave at the walls
+  would set it off). Twenty seconds between repeats for the same building. In a bot game it
+  fired twice in five minutes, both real. When one is possessed: an alarm bell (three
+  strikes over the old drone), a red pulse round the screen, a ring on the minimap, and,
+  if you tick "Pause when a building is possessed" in the pause menu, the game pauses.
+- **Shift queues orders** (StarCraft's way): shift+right-click queues a move after the current
+  one, shift with A or F queues an attack-move or patrol and keeps it armed for the next
+  point. Selected soldiers show their route, green for moves and red for attack-moves. Up to
+  12 legs. **Changed:** shift+right-click used to attack-move; A then click still does.
+  Saves are format 16.
+- **Keyboard zoom**: + and - (and the keypad's), or Page Up and Page Down.
+
 ## Grid hotkeys (your call: grid only, categories first, arrows and middle-drag for the camera)
 
 - **The command card is a grid of three rows by five, and each key presses the cell in its
