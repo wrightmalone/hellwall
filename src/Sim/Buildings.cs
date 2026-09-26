@@ -64,6 +64,9 @@ public sealed class Building
     public bool Paused;
     /// <summary>A crew building (woodsmen, miners) whose crew found nothing left to work within reach: worked out.</summary>
     public bool Exhausted;
+    /// <summary>Seconds its crew stay fled from demons that came too close with no wall between (FlightSystem); nothing gathered meanwhile.</summary>
+    public float FleeTimer;
+    public bool Fleeing => FleeTimer > 0;
 
     /// <summary>Gatherers: resource per second at full sanctity, from the tiles it has claimed.</summary>
     public double Rate;

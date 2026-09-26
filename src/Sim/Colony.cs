@@ -120,7 +120,7 @@ internal static class ColonySystem
             if (!b.Active) continue;
             net[(int)Resource.Gold] += b.Def.Gold;
             if (world.HasCrew(b.Def)) delivered[(int)(b.Def.Produces ?? Resource.Wood)] += b.Rate;
-            else if (b.Def.Produces is { } res) net[(int)res] += b.Rate * colony.Power;
+            else if (b.Def.Produces is { } res && !b.Fleeing) net[(int)res] += b.Rate * colony.Power; // its crew have run from the demons
         }
         if (!colony.Starving) net[(int)Resource.Gold] += colonists * rules.ColonistGoldPerSecond * world.Tech.ColonistGoldMultiplier;
         net[(int)Resource.Food] -= colonists * rules.ColonistFoodPerSecond;

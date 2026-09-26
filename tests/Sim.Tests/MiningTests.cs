@@ -116,3 +116,47 @@ public class ConvergenceShapeTests
         Assert.Equal(wave.LandsAtTick - (int)(rules.TelegraphSeconds * Balance.TickHz), wave.AnnounceTick(rules));
     }
 }
+
+public class FlightTests
+{
+    static Rules Still() => TestWorlds.Dummies(); // demons that stand still and don't hit
+
+    [Fact]
+    public void AFarmsCrewRunFromADemonWithNothingBetweenAndItGathersNothing()
+    {
+        var world = TestWorlds.Rich(Still());
+        var farm = TestWorlds.Built(world, BuildingKind.Farm, TestWorlds.C + 6, TestWorlds.C - 1);
+        TestWorlds.RunSeconds(world, 2);
+        double before = world.Colony.NetPerSecond[(int)Resource.Food];
+        TestWorlds.Run(world, new SpawnDemons(DemonKind.Imp, TestWorlds.C + 12, TestWorlds.C, 1));
+        TestWorlds.RunSeconds(world, 2);
+        Assert.True(farm.Fleeing, "the crew should have run");
+        Assert.True(world.Colony.NetPerSecond[(int)Resource.Food] < before - farm.Rate * 0.5, "and the farm gathers nothing while they're gone");
+    }
+
+    [Fact]
+    public void AWallBetweenLetsThemKeepWorking()
+    {
+        var world = TestWorlds.Rich(Still());
+        var farm = TestWorlds.Built(world, BuildingKind.Farm, TestWorlds.C + 6, TestWorlds.C - 1);
+        for (int y = TestWorlds.C - 8; y <= TestWorlds.C + 8; y++) TestWorlds.Run(world, new PlaceBuilding(BuildingKind.Wall, TestWorlds.C + 10, y));
+        TestWorlds.RunSeconds(world, 5);
+        TestWorlds.Run(world, new SpawnDemons(DemonKind.Imp, TestWorlds.C + 12, TestWorlds.C, 1));
+        TestWorlds.RunSeconds(world, 2);
+        Assert.False(farm.Fleeing, "the wall is between them and the demon");
+    }
+
+    [Fact]
+    public void MinersRunHomeAndStayWhileTheyAreThreatened()
+    {
+        var world = TestWorlds.Rich(Still());
+        var quarry = TestWorlds.Built(world, BuildingKind.Quarry, TestWorlds.C + 5, TestWorlds.C - 1);
+        world.PlantForest(TestWorlds.C + 9, TestWorlds.C - 1, TestWorlds.C + 10, TestWorlds.C + 1, Tile.Rock);
+        TestWorlds.RunSeconds(world, 15);
+        Assert.Contains(world.Woodsmen, m => m.HomeId == quarry.Id && m.State != WoodsmanState.Home);
+        TestWorlds.Run(world, new SpawnDemons(DemonKind.Imp, TestWorlds.C + 12, TestWorlds.C + 3, 1));
+        TestWorlds.RunSeconds(world, 6);
+        Assert.True(quarry.Fleeing);
+        Assert.All(world.Woodsmen.Where(m => m.HomeId == quarry.Id), m => Assert.True(m.State is WoodsmanState.Home or WoodsmanState.Back, $"a miner still {m.State}"));
+    }
+}

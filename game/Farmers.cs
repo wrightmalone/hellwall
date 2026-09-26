@@ -58,7 +58,7 @@ public sealed class Farmers
         foreach (var (farmId, field) in _fields)
         {
             var farm = world.BuildingById(farmId);
-            bool working = farm is { Active: true };
+            bool working = farm is { Active: true, Fleeing: false }; // fled from demons: home, and quickly
             for (int i = field.Hands.Count - 1; i >= 0; i--)
             {
                 var h = field.Hands[i];
@@ -67,7 +67,7 @@ public sealed class Farmers
                 if (!working && h.Doing != Work.Home) { Release(h); h.Doing = Work.Home; }
                 if (h.Doing == Work.Home)
                 {
-                    if (farm == null || WalkTo(h, farm.CentreX, farm.CentreY + farm.H / 2f, dt)) field.Hands.RemoveAt(i);
+                    if (farm == null || WalkTo(h, farm.CentreX, farm.CentreY + farm.H / 2f, dt * (farm.Fleeing ? 1.8f : 1))) field.Hands.RemoveAt(i);
                     continue;
                 }
                 if (h.Tile < 0 && !Choose(field, h)) continue;
@@ -124,7 +124,7 @@ public sealed class Farmers
                 }
             field.Tiles = tiles.ToArray();
             foreach (int i in tiles) fieldTiles.Add(i);
-            if (!b.Active) continue;
+            if (!b.Active || b.Fleeing) continue;
             while (field.Hands.Count(h => h.Doing != Work.Home) < b.Def.Workers)
             {
                 float x0 = b.CentreX + (float)(_rng.NextDouble() - 0.5), y0 = b.CentreY + b.H / 2f;

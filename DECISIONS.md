@@ -921,6 +921,17 @@ last lost by at least one).
   `scripts/ab.sh '<flags>' plains lakes` runs a quick sweep with and without some flags per map
   and prints them side by side. `scripts/verify.sh --fast` (about a minute) skips the full-run
   gates. Iterate with those; a full sweep and verify before a commit or build.
+- **Civilians run from demons** (you asked): once a second, every gathering building looks round
+  its working ground (its gather radius and three tiles more) for a demon with an open line to
+  it, nothing of the colony's walls or gates in between. If there is one, its crew flee home for
+  8 seconds and it gathers nothing meanwhile: woodsmen and miners drop their work and run back,
+  a third faster; farmers and hunters hurry home; a boat hauls in and makes for the dock. The
+  building says "Crew fled: demons close, and no wall between", and is tagged "crew fled" on the
+  map. So a wall round your quarries and mines is worth building, and a raid into your fields
+  costs food even if it's beaten off. Soldiers standing between don't count as a wall.
+  Bot sweep: fortress 7/8, pyre 6/8, legion 3/8 (it lives on iron, and Mines out in the open
+  stop when demons come). Saves are format 18.
+  **Decide:** whether soldiers nearby should steady the crew (it would make escorts matter).
 - **Walls and gates look built, not blocked out** (your note that they stood out as
   in-progress): baked in the pieces our walls join from, a post on the tile and an arm half a
   tile toward each neighbour, so lines and corners join as before. Stone is KayKit's

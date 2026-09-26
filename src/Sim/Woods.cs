@@ -67,12 +67,13 @@ public static class WoodsSystem
                 men.RemoveAt(i);
                 continue;
             }
-            if (!home.Active && m.State is WoodsmanState.Out or WoodsmanState.Chopping) GoHome(world, m);
+            // Home, and quickly, when the lodge is idle or the demons have come: no more work till they're gone.
+            if ((!home.Active || home.Fleeing) && m.State is WoodsmanState.Out or WoodsmanState.Chopping) GoHome(world, m);
             switch (m.State)
             {
                 case WoodsmanState.Home:
                     m.Wait -= dt;
-                    if (m.Wait > 0 || !home.Active) break;
+                    if (m.Wait > 0 || !home.Active || home.Fleeing) break;
                     if (FindTree(world, home, m))
                     {
                         m.State = WoodsmanState.Out;
@@ -104,7 +105,7 @@ public static class WoodsSystem
                     break;
                 }
                 case WoodsmanState.Back:
-                    if (!Walk(world, m, forward: false, woods.Speed * dt)) break;
+                    if (!Walk(world, m, forward: false, woods.Speed * dt * (home.Fleeing ? 1.7f : 1))) break;
                     world.Colony.Stock[(int)(home.Def.Produces ?? Resource.Wood)] += m.Carry;
                     home.WoodWindow += m.Carry;
                     m.Carry = 0;

@@ -57,11 +57,14 @@ public sealed class Hunters
                 h.PrevY = h.Y;
                 if (lodge == null) continue;
                 float doorX = lodge.CentreX, doorY = lodge.Y + lodge.H + 0.3f;
+                // Demons close, and no wall between: drop everything and run home.
+                if (lodge.Fleeing && h.Doing is Work.Out or Work.Shoot) h.Doing = Work.Home;
+                float pace = lodge.Fleeing ? 1.8f : 1;
                 switch (h.Doing)
                 {
                     case Work.Rest:
                         h.Timer -= dt;
-                        if (h.Timer <= 0 && lodge.Active && Choose(world, lodge, h)) h.Doing = Work.Out;
+                        if (h.Timer <= 0 && lodge.Active && !lodge.Fleeing && Choose(world, lodge, h)) h.Doing = Work.Out;
                         break;
                     case Work.Out:
                         if (WalkTo(h, h.StandX, h.StandY, dt)) { h.Doing = Work.Shoot; h.Timer = ShootSeconds + (float)_rng.NextDouble(); }
@@ -71,7 +74,7 @@ public sealed class Hunters
                         if (h.Timer <= 0) h.Doing = Work.Home;
                         break;
                     case Work.Home:
-                        if (WalkTo(h, doorX, doorY, dt))
+                        if (WalkTo(h, doorX, doorY, dt * pace))
                         {
                             Brought.Add((new Vector2(lodge.CentreX, lodge.CentreY), 0));
                             h.Doing = Work.Rest;

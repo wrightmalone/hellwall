@@ -330,6 +330,7 @@ public sealed partial class World
         UnitSystem.TakeHits(this);
         Combat.DemonsAttackBuildings(this);
         UnitSystem.Step(this, dt);
+        FlightSystem.Step(this, dt);
         WoodsSystem.Step(this, dt);
         Vision.Step(this);
         RepairSystem.Step(this, dt);

@@ -65,6 +65,13 @@ public sealed class Fishers
             boat.PrevX = boat.X;
             boat.PrevY = boat.Y;
             var home = world.BuildingById(boat.Home);
+            // Demons on the shore: haul in and make for home.
+            if (home is { Fleeing: true } && boat.Doing is Work.Out or Work.Cast or Work.Haul)
+            {
+                boat.Path = boat.Path.Take(Math.Max(1, boat.Step)).Reverse().ToList();
+                boat.Step = 0;
+                boat.Doing = Work.Back;
+            }
             switch (boat.Doing)
             {
                 case Work.Out:
@@ -93,7 +100,7 @@ public sealed class Fishers
                     break;
                 case Work.Land:
                     boat.Timer -= dt;
-                    if (boat.Timer <= 0 && home is { Active: true }) SetOut(world, boat);
+                    if (boat.Timer <= 0 && home is { Active: true, Fleeing: false }) SetOut(world, boat);
                     break;
             }
         }
