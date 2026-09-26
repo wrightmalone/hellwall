@@ -55,6 +55,9 @@ public sealed class ClientState
     public readonly List<(float X, float Y, bool Attack, double Age)> OrderPings = new();
     /// <summary>Living woods: trees whose felling would open a way in (ForestWatch), ringed in amber.</summary>
     public IReadOnlyCollection<int> EndangeredTrees = Array.Empty<int>();
+    /// <summary>Demons per HordeColumns.Cell square, for the shadow a mass of them casts (empty until measured).</summary>
+    public int[] Density = [];
+
     /// <summary>The people working the Farms' fields (for the eye only).</summary>
     public readonly Farmers Farmers = new();
     /// <summary>Each marching wave column's centre (tiles) and head-count, for its marker.</summary>

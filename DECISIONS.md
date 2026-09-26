@@ -946,6 +946,12 @@ last lost by at least one).
   12 legs. **Changed:** shift+right-click used to attack-move; A then click still does.
   Saves are format 16.
 - **Keyboard zoom**: + and - (and the keypad's), or Page Up and Page Down.
+- **The Convergence lands like it means it**: a swelling roar, a long red pulse round the screen,
+  "THE CONVERGENCE" across the middle, and a shake. And every dense horde darkens the ground
+  under it (a shadow per crowded 4x4 square, deeper with more), so a mass reads as a mass.
+- **Screen shake, with a switch** (pause menu, "Screen shake", on by default): the Convergence
+  landing, and a wall going down on screen. It decays on its own and uses real time, so it
+  feels the same at any game speed.
 
 ## Grid hotkeys (your call: grid only, categories first, arrows and middle-drag for the camera)
 

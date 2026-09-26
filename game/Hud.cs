@@ -64,6 +64,33 @@ public partial class Hud : CanvasLayer
     /// <summary>The red glow round the screen: a possession, the Convergence landing.</summary>
     public readonly Vignette Vignette = new();
 
+    Label? _shout;
+    double _shoutLeft;
+
+    /// <summary>A big line across the middle of the screen that fades: THE CONVERGENCE.</summary>
+    public void Banner(string text, double seconds)
+    {
+        if (_shout == null)
+        {
+            _shout = Outlined(new Label { HorizontalAlignment = HorizontalAlignment.Center, MouseFilter = Control.MouseFilterEnum.Ignore }, 44);
+            _shout.AddThemeColorOverride("font_color", new Color(1, 0.35f, 0.25f));
+            AddChild(_shout);
+        }
+        _shout.Text = text;
+        _shoutLeft = seconds;
+        _shout.Visible = true;
+    }
+
+    void StepShout(double delta, Vector2 screen)
+    {
+        if (_shout == null || !_shout.Visible) return;
+        _shoutLeft -= delta;
+        _shout.Modulate = new Color(1, 1, 1, (float)Math.Clamp(_shoutLeft / 1.5, 0, 1));
+        _shout.Size = new Vector2(screen.X, 0);
+        _shout.Position = new Vector2(0, screen.Y * 0.3f);
+        if (_shoutLeft <= 0) _shout.Visible = false;
+    }
+
     /// <summary>A key on the command card's grid: true if it pressed something.</summary>
     public bool PressCard(Key key) => _card.Visible && _card.Press(key);
 
@@ -181,6 +208,7 @@ public partial class Hud : CanvasLayer
     public override void _Process(double delta)
     {
         var screen = GetViewport().GetVisibleRect().Size;
+        StepShout(delta, screen);
         _bar.Position = Vector2.Zero;
         _bar.Size = new Vector2(screen.X, 0);
         float top = _bar.Size.Y + 6;

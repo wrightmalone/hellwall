@@ -514,6 +514,7 @@ public partial class Main : Node2D
         if (_pendingGroup is { } pending) { _pendingGroup = null; SelectGroupForScreenshot(pending); }
         _view.Refresh();
         PanCamera(delta);
+        StepShake(delta);
         var coming = _world.Survival?.Next;
         var light = coming is { Announced: true } ? (coming.Final ? new Color(1, 0.78f, 0.74f) : new Color(1, 0.9f, 0.87f)) : Colors.White;
         _tint.Color = _tint.Color.Lerp(light, (float)Math.Min(1, delta * 0.8));
@@ -552,6 +553,9 @@ public partial class Main : Node2D
         {
             _columnClock = 0;
             HordeColumns.Measure(_world, _state.Columns);
+            int cells = (_world.Terrain.Width / HordeColumns.Cell) * (_world.Terrain.Height / HordeColumns.Cell);
+            if (_state.Density.Length != cells) _state.Density = new int[cells];
+            HordeColumns.Density(_world, _state.Density);
         }
         _minimapClock += GetProcessDeltaTime();
         if (_minimapStale && _minimapClock > 0.5)
@@ -575,7 +579,16 @@ public partial class Main : Node2D
                     _terrainView!.RepaintHoly();
                     _minimap.Repaint();
                     break;
-                case WaveLanded w: _state.Say(w.Final ? "The Convergence is here." : $"Wave {w.Number} has arrived"); break;
+                case WaveLanded w:
+                    _state.Say(w.Final ? "The Convergence is here." : $"Wave {w.Number} has arrived");
+                    if (w.Final)
+                    {
+                        // The Convergence: the roar (Sound), the screen, the ground shaking.
+                        _hud.Vignette.Flash(new Color(1, 0.12f, 0.05f), 6);
+                        _hud.Banner("THE CONVERGENCE", 5);
+                        Shake(0.8f);
+                    }
+                    break;
                 case DemonBurst d: _state.Bursts.Add((d, 0)); break;
                 case DemonSpat sp: _state.Spits.Add((sp, 0)); break;
                 case DemonHowled h: _state.Howls.Add((h, 0)); break;
@@ -586,6 +599,9 @@ public partial class Main : Node2D
                 case CorruptionTook c: _state.Say($"The horde is corrupted: {c.Name}"); break;
                 case ScenarioMessage m when m.Text.Length > 0:
                     _hud.Voice.Say(Campaign.Default.Speaker(m.Speaker), m.Text);
+                    break;
+                case BuildingDestroyed { Kind: BuildingKind.Wall or BuildingKind.StoneWall or BuildingKind.Gate or BuildingKind.StoneGate } fell when OnScreen(fell.X, fell.Y):
+                    Shake(0.18f);
                     break;
                 case BuildingPossessed p when _world.BuildingById(p.BuildingId) is { } turned:
                     // The breach no one should miss: the screen, the minimap, and (if asked) a pause.
@@ -873,6 +889,28 @@ public partial class Main : Node2D
             centre = new Vector2(buildings.Average(b => b.CentreX), buildings.Average(b => b.CentreY));
         }
         if (again) _camera.Position = Iso.P(centre); // twice: the camera to the middle of them
+    }
+
+    /// <summary>Screen shake, as "trauma" that decays: the shake is its square, so small knocks stay small. Off in the pause menu.</summary>
+    float _trauma;
+    readonly Random _shakeRandom = new();
+    public static bool ScreenShake => Settings.Get("screen_shake", true);
+
+    void Shake(float amount) { if (ScreenShake) _trauma = Math.Min(1, _trauma + amount); }
+
+    void StepShake(double delta)
+    {
+        float real = (float)(delta / Math.Max(0.01, Engine.TimeScale));
+        _trauma = Math.Max(0, _trauma - real * 0.9f);
+        float s = _trauma * _trauma * 16;
+        _camera.Offset = s <= 0.01f || !ScreenShake ? Vector2.Zero : new Vector2((float)(_shakeRandom.NextDouble() * 2 - 1), (float)(_shakeRandom.NextDouble() * 2 - 1)) * s / _camera.Zoom.X;
+    }
+
+    bool OnScreen(float x, float y)
+    {
+        var half = GetViewportRect().Size / _camera.Zoom / 2;
+        var p = Iso.P(x, y);
+        return MathF.Abs(p.X - _camera.Position.X) < half.X && MathF.Abs(p.Y - _camera.Position.Y) < half.Y;
     }
 
     /// <summary>Slot 0 is the quicksave (F5/F9); 1-3 are the pause menu's named slots.</summary>

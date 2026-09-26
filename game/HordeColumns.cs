@@ -13,6 +13,22 @@ public static class HordeColumns
     /// <summary>Below this many left, a column's no longer worth a marker: it's a straggle, not a threat.</summary>
     const int Least = 5;
 
+    /// <summary>Tiles a side of a density cell, for the shadow a dense horde casts on the ground.</summary>
+    public const int Cell = 4;
+
+    /// <summary>Demons per Cell-by-Cell square of the map (row-major, width/Cell a row).</summary>
+    public static void Density(World world, int[] into)
+    {
+        Array.Clear(into);
+        int cols = world.Terrain.Width / Cell, rows = world.Terrain.Height / Cell;
+        var h = world.Horde;
+        for (int i = 0; i < h.Count; i++)
+        {
+            int cx = (int)h.X[i] / Cell, cy = (int)h.Y[i] / Cell;
+            if (cx >= 0 && cy >= 0 && cx < cols && cy < rows) into[cy * cols + cx]++;
+        }
+    }
+
     public static void Measure(World world, List<(int Column, Vector2 Centre, int Count)> into)
     {
         into.Clear();

@@ -106,6 +106,7 @@ public partial class PauseMenu : CanvasLayer
         box.AddChild(Display.MusicRow());
         box.AddChild(Display.UiScaleRow());
         box.AddChild(Toggle("Pause when a building is possessed", "pause_on_possession", false));
+        box.AddChild(Toggle("Screen shake", "screen_shake", true));
 
         box.AddChild(new HSeparator());
 

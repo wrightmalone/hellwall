@@ -11,7 +11,7 @@ namespace Hellwall.Game;
 /// </summary>
 public partial class Sound : Node2D
 {
-    public enum Cue { Shot, Boom, Horn, Howl, Burst, Built, Possessed, Fallen, Promoted, Felled, Voice, Victory }
+    public enum Cue { Shot, Boom, Horn, Howl, Burst, Built, Possessed, Fallen, Promoted, Felled, Voice, Victory, Roar }
 
     const int Rate = 22050;
     readonly Dictionary<Cue, AudioStreamWav> _streams = new();
@@ -52,6 +52,14 @@ public partial class Sound : Node2D
         _streams[Cue.Felled] = Make(0.6, (t, n) => (Math.Sin(2 * Math.PI * (180 - 120 * t) * t) * 0.25 * Envelope(t, 0.02, 0.3) + (n * 0.5 + Math.Sin(2 * Math.PI * 60 * t)) * 0.4 * Math.Exp(-Math.Max(0, t - 0.3) * 12) * (t > 0.3 ? 1 : 0)));
         // A soft two-tone blip under a spoken line.
         _streams[Cue.Voice] = Make(0.25, (t, _) => (Math.Sin(2 * Math.PI * 440 * t) * Envelope(t, 0.01, 0.1) + Math.Sin(2 * Math.PI * 587 * t) * Envelope(t - 0.08, 0.01, 0.15)) * 0.15);
+        // A roar from every side, swelling and falling: the Convergence lands. Low rumble, grinding voices over it.
+        double rumble = 0;
+        _streams[Cue.Roar] = Make(4.5, (t, n) =>
+        {
+            rumble = rumble * 0.985 + n * 0.015; // noise, heavily smoothed: a low rumble
+            double voices = Saw(52, t) * 0.3 + Saw(55.5, t) * 0.25 + Saw(78, t * (1 + 0.02 * Math.Sin(t * 5))) * 0.15;
+            return (rumble * 5 + voices * (0.5 + 0.5 * n)) * 0.45 * Envelope(t, 1.2, 4.5);
+        });
         // A major chord, swelling: the colony endures.
         _streams[Cue.Victory] = Make(2.2, (t, _) => (Math.Sin(2 * Math.PI * 262 * t) + Math.Sin(2 * Math.PI * 330 * t) * 0.8 + Math.Sin(2 * Math.PI * 392 * t) * 0.7) * 0.18 * Envelope(t, 0.3, 2.2));
 
@@ -96,6 +104,7 @@ public partial class Sound : Node2D
         {
             case ShotFired s: Play(s.Splash > 0 ? Cue.Boom : Cue.Shot, new Vector2(s.FromX, s.FromY)); break;
             case WaveAnnounced: Play(Cue.Horn); break;
+            case WaveLanded { Final: true }: Play(Cue.Roar); break;
             case CorruptionAnnounced: Play(Cue.Possessed); break;
             case DemonHowled h: Play(Cue.Howl, new Vector2(h.X, h.Y)); break;
             case DemonBurst b: Play(Cue.Burst, new Vector2(b.X, b.Y)); break;

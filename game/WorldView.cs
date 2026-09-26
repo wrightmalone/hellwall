@@ -297,6 +297,21 @@ public partial class WorldView : Node2D
                 }
             }
 
+            // A mass of demons darkens the ground under it: a shadow per crowded square, deeper the more there are.
+            var crowd = View.State.Density;
+            if (crowd.Length > 0)
+            {
+                int cs = HordeColumns.Cell, cols = world.Terrain.Width / cs;
+                for (int i = 0; i < crowd.Length; i++)
+                {
+                    int n = crowd[i];
+                    if (n < 8) continue;
+                    float cx = (i % cols) * cs + cs / 2f, cy = (i / cols) * cs + cs / 2f;
+                    if (!world.Vision.IsVisible(cx, cy)) continue;
+                    Iso.Ellipse(this, new Vector2(cx, cy), cs * 0.75f, new Color(0.08f, 0.02f, 0.02f, Mathf.Min(0.42f, n / 90f)), filled: true);
+                }
+            }
+
             // Where demons fell: dark splashes that fade.
             foreach (var (x, y, size, age) in View.State.Marks)
             {
