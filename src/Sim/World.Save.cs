@@ -17,7 +17,7 @@ namespace Hellwall.Sim;
 public sealed partial class World
 {
     const uint Magic = 0x56535748; // "HWSV"
-    const int FormatVersion = 16;
+    const int FormatVersion = 17;
 
     public byte[] Save()
     {
@@ -195,6 +195,7 @@ public sealed partial class World
             }
             foreach (bool done in GoalsDone) w.Write(done);
             foreach (bool fired in TriggersFired) w.Write(fired);
+            foreach (int due in RaidDue) w.Write(due);
             SaveWoods(w);
             foreach (bool seen in Vision.Explored) w.Write(seen);
             w.Write(PatronsTaken);
@@ -429,6 +430,7 @@ public sealed partial class World
 
         for (int i = 0; i < world.GoalsDone.Length; i++) world.GoalsDone[i] = r.ReadBoolean();
         for (int i = 0; i < world.TriggersFired.Length; i++) world.TriggersFired[i] = r.ReadBoolean();
+        for (int i = 0; i < world.RaidDue.Length; i++) world.RaidDue[i] = r.ReadInt32();
         world.LoadWoods(r);
         var explored = new bool[world.Vision.Explored.Length];
         for (int i = 0; i < explored.Length; i++) explored[i] = r.ReadBoolean();

@@ -18,6 +18,20 @@ public enum MapKind : byte
     Highlands,
     /// <summary>Deep forest: wood everywhere, little open ground, and demons slowed in the trees.</summary>
     Wildwood,
+    /// <summary>
+    /// A river down the middle and the Keep on a land bridge across it; cliffs along the east and
+    /// west edges. Waves come from the north and the south, down both banks, through gaps in the
+    /// ridges that cross each bank: four chokepoints, easier held the further out you reach.
+    /// </summary>
+    Causeway,
+    /// <summary>
+    /// Waves from the east and the west only. To the north, behind a rock wall with two passes, a
+    /// broad country rich in iron, stone and silver, and thick with sleeping demons: worth
+    /// clearing, a piece at a time, if you can spare the soldiers. A lake shore to the south.
+    /// </summary>
+    TwoFronts,
+    /// <summary>A river to the east with one bridge over it. Every wave comes from the east, over the bridge, and so does the Convergence.</summary>
+    Crossing,
 }
 
 public static class MapGen
@@ -63,12 +77,131 @@ public static class MapGen
             }
         }
 
+        Shape(terrain, kind, seed);
         // Rich iron out in the wilds first, so the fairness pass sees (and never counts on) it.
         PlaceOre(terrain, seed);
+        if (kind == MapKind.TwoFronts) EnrichNorth(terrain, seed);
         MakeFair(terrain, seed);
         PlaceSilver(terrain, seed);
         return terrain;
     }
+
+    // --- shaped maps: the noise fills them in, the shape decides where the horde can come ---
+
+    /// <summary>A few tiles of seeded wobble, so a shape's edges read as ground, not ruler lines.</summary>
+    static int Wobble(uint seed, int a, int b, int amount) => (int)((Fbm(seed ^ 0x5A17u, a, b) - 0.5) * 2 * amount);
+
+    static void Shape(Terrain t, MapKind kind, uint seed)
+    {
+        int s = t.Width, c = s / 2;
+        int clear = Balance.KeepClearRadius;
+        bool Home(int x, int y) => (x - c) * (x - c) + (y - c) * (y - c) <= clear * clear;
+        void Put(int x, int y, Tile tile) { if (t.InBounds(x, y) && !Home(x, y)) t.Set(x, y, tile); }
+        switch (kind)
+        {
+            case MapKind.Causeway:
+            {
+                int river = s * 13 / 256, bridge = s * 13 / 256, cliff = s * 7 / 256;
+                int ridge = s * 44 / 256, gap = 4;
+                int westMid = (cliff + c - river) / 2, eastMid = s - 1 - westMid;
+                for (int y = 0; y < s; y++)
+                    for (int x = 0; x < s; x++)
+                    {
+                        int w = Wobble(seed, x, y, 2);
+                        if (Math.Abs(x - c) < river + w && Math.Abs(y - c) >= bridge + Wobble(seed, y, x, 2)) Put(x, y, Tile.Water);
+                        else if (x < cliff + w || x > s - 1 - cliff - w) Put(x, y, Tile.Rock);
+                        // A ridge across each bank, north and south of the bridge, with one gap in each: the four chokepoints.
+                        else if (Math.Abs(Math.Abs(y - c) - ridge) <= 2 + Wobble(seed, x, 7, 1)
+                                 && Math.Abs(x - (x < c ? westMid : eastMid)) > gap) Put(x, y, Tile.Rock);
+                    }
+                break;
+            }
+            case MapKind.TwoFronts:
+            {
+                int wallAt = c - s * 32 / 256, shore = c + s * 46 / 256, pass = s * 30 / 256;
+                for (int y = 0; y < s; y++)
+                    for (int x = 0; x < s; x++)
+                    {
+                        int w = Wobble(seed, x, y, 3);
+                        if (y > shore + w) Put(x, y, Tile.Water);
+                        // The wall to the north country, two passes through it.
+                        else if (Math.Abs(y - wallAt) <= 2 + Wobble(seed, x, 3, 1) && Math.Abs(Math.Abs(x - c) - pass) > 3) Put(x, y, Tile.Rock);
+                    }
+                break;
+            }
+            case MapKind.Crossing:
+            {
+                int river = c + s * 38 / 256, width = s * 6 / 256, bridge = 3;
+                for (int y = 0; y < s; y++)
+                    for (int x = river - width; x <= river + width; x++)
+                        if (Math.Abs(x - river) <= width + Wobble(seed, x, y, 1) && Math.Abs(y - c) > bridge) Put(x, y, Tile.Water);
+                // The bridge itself is open ground, whatever the noise put there.
+                for (int y = c - bridge; y <= c + bridge; y++)
+                    for (int x = river - width - 2; x <= river + width + 2; x++) Put(x, y, Tile.Grass);
+                break;
+            }
+        }
+    }
+
+    /// <summary>Two Fronts' north country: more iron and stone than anywhere, for whoever clears it.</summary>
+    static void EnrichNorth(Terrain t, uint seed)
+    {
+        int s = t.Width, northEdge = s / 2 - s * 36 / 256;
+        for (int i = 0; i < 9; i++)
+        {
+            int x = 12 + (int)(Lattice(seed ^ 0x40E7u, i, 1) * (s - 24));
+            int y = 8 + (int)(Lattice(seed ^ 0x40E7u, i, 2) * (northEdge - 16));
+            Stamp(t, x, y, 3 + (int)(Lattice(seed ^ 0x40E7u, i, 3) * 2), i % 3 == 0 ? Tile.Rock : Tile.Ore);
+        }
+    }
+
+    /// <summary>The sides waves may come from on this kind of map (every side, most).</summary>
+    public static Side[] WaveSides(MapKind kind) => kind switch
+    {
+        MapKind.Causeway => [Side.North, Side.South],
+        MapKind.TwoFronts => [Side.East, Side.West],
+        MapKind.Crossing => [Side.East],
+        _ => [Side.North, Side.East, Side.South, Side.West],
+    };
+
+    /// <summary>Where a side's share of a wave comes onto the map: the middle of the edge, or (Causeway) down each bank.</summary>
+    public static (int X, int Y)[] Entries(MapKind kind, Side side, int size, int inset = 6)
+    {
+        int c = size / 2;
+        if (kind == MapKind.Causeway && side is Side.North or Side.South)
+        {
+            int westMid = (size * 7 / 256 + c - size * 13 / 256) / 2, eastMid = size - 1 - westMid;
+            int y = side == Side.North ? inset : size - 1 - inset;
+            return [(westMid, y), (eastMid, y)];
+        }
+        return [side switch
+        {
+            Side.North => (c, inset),
+            Side.South => (c, size - 1 - inset),
+            Side.West => (inset, c),
+            _ => (size - 1 - inset, c),
+        }];
+    }
+
+    /// <summary>
+    /// May a Hellgate stand here on this kind of map: where its bands come the way the waves do
+    /// (beyond Causeway's ridges, out in Two Fronts' flanks, over the Crossing's river).
+    /// </summary>
+    public static bool GateAllowed(MapKind kind, int x, int y, int size)
+    {
+        int c = size / 2;
+        return kind switch
+        {
+            MapKind.Causeway => Math.Abs(y - c) > size * 50 / 256,
+            MapKind.TwoFronts => Math.Abs(x - c) > size * 70 / 256 && y > c - size * 30 / 256,
+            MapKind.Crossing => x > c + size * 46 / 256,
+            _ => true,
+        };
+    }
+
+    /// <summary>Ground far thicker with sleeping demons than the rest (Two Fronts' north country).</summary>
+    public static bool Infested(MapKind kind, int x, int y, int size) =>
+        kind == MapKind.TwoFronts && y < size / 2 - size * 36 / 256;
 
     /// <summary>
     /// Silver lies only in the outer band of the map, past 80% of the way from

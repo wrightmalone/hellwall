@@ -182,7 +182,8 @@ internal static class SurvivalSystem
             if (wave.Landed) continue;
             if (!wave.Announced && world.Tick >= wave.AnnounceTick(s.Rules))
             {
-                wave.Sides = wave.Final ? MainSideFirst(world) : wave.Surge ? Enum.GetValues<Side>() : DrawSides(world, SidesFor(s.Rules, wave.Number));
+                var allowed = MapGen.WaveSides(world.Map);
+                wave.Sides = wave.Final ? MainSideFirst(world, allowed) : wave.Surge ? allowed : DrawSides(world, allowed, SidesFor(s.Rules, wave.Number));
                 // Corruptions that swell the tide apply from the announcement, so the size shown is the size that comes.
                 wave.Size = (int)Math.Round(wave.Size * CorruptionSystem.WaveMultiplier(world));
                 wave.Announced = true;
@@ -210,18 +211,18 @@ internal static class SurvivalSystem
     static int SidesFor(SurvivalRules rules, int number) =>
         Math.Min(rules.MaxSides, 1 + (number - 1) / Math.Max(1, rules.WavesPerExtraSide));
 
-    /// <summary>Every side, the one most of them come from first.</summary>
-    static Side[] MainSideFirst(World world)
+    /// <summary>Every side the map allows, the one most of them come from first.</summary>
+    static Side[] MainSideFirst(World world, Side[] allowed)
     {
-        var sides = Enum.GetValues<Side>().ToList();
+        var sides = allowed.ToList();
         var main = sides[world.Rng.NextInt(sides.Count)];
         sides.Remove(main);
         return [main, .. sides];
     }
 
-    static Side[] DrawSides(World world, int count)
+    static Side[] DrawSides(World world, Side[] allowed, int count)
     {
-        var sides = Enum.GetValues<Side>().ToList();
+        var sides = allowed.ToList();
         var chosen = new List<Side>();
         for (int i = 0; i < count && sides.Count > 0; i++)
         {
@@ -238,17 +239,23 @@ internal static class SurvivalSystem
         int spawned = 0;
         for (int i = 0; i < wave.Sides.Length; i++)
         {
-            int share = wave.ShareOf(i, world.Survival!.Rules);
-            world.SpawnColumn = Horde.ColumnOf(wave.Number, wave.Sides[i]);
-            int imps = share;
-            foreach (var m in mix)
+            int sideShare = wave.ShareOf(i, world.Survival!.Rules);
+            // A side may have more than one way onto the map (Causeway's two banks): the share splits between them, a column each.
+            var entries = MapGen.Entries(world.Map, wave.Sides[i], world.Terrain.Width);
+            for (int e = 0; e < entries.Length; e++)
             {
-                if (wave.Number < m.FromWave) continue;
-                int n = Math.Min(imps, (int)Math.Round(share * m.Share));
-                spawned += world.SpawnAtEdge(wave.Sides[i], m.Kind, n);
-                imps -= n;
+                int share = sideShare / entries.Length + (e < sideShare % entries.Length ? 1 : 0);
+                world.SpawnColumn = Horde.ColumnOf(wave.Number, wave.Sides[i], e);
+                int imps = share;
+                foreach (var m in mix)
+                {
+                    if (wave.Number < m.FromWave) continue;
+                    int n = Math.Min(imps, (int)Math.Round(share * m.Share));
+                    spawned += world.SpawnAt(entries[e].X, entries[e].Y, m.Kind, n);
+                    imps -= n;
+                }
+                spawned += world.SpawnAt(entries[e].X, entries[e].Y, DemonKind.Imp, imps);
             }
-            spawned += world.SpawnAtEdge(wave.Sides[i], DemonKind.Imp, imps);
         }
         world.SpawnColumn = 0;
         return spawned;

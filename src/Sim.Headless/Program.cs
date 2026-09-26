@@ -13,6 +13,7 @@ if (args.Length > 0 && args[0] == "town") return TownProbe.Run(ParseArgs(args[1.
 if (args.Length > 0 && args[0] == "run") return RunProbe.Run(ParseArgs(args[1..]));
 if (args.Length > 0 && args[0] == "paths") return RunProbe.Paths(ParseArgs(args[1..]));
 if (args.Length > 0 && args[0] == "maps") return MapReport.Run(ParseArgs(args[1..]));
+if (args.Length > 0 && args[0] == "mapimage") return MapImage.Run(ParseArgs(args[1..]));
 if (args.Length > 0 && args[0] == "endless") return RunProbe.Endless(ParseArgs(args[1..]));
 if (args.Length > 0 && args[0] == "campaign") return RunProbe.Campaign(ParseArgs(args[1..]));
 

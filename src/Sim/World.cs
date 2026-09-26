@@ -70,6 +70,8 @@ public sealed partial class World
     public ObjectiveDef[] Goals { get; }
     public bool[] GoalsDone { get; }
     public bool[] TriggersFired { get; }
+    /// <summary>Per trigger, the tick its announced raid lands (0: none coming, -1: landed).</summary>
+    public int[] RaidDue { get; }
 
     public DemonDef Def(DemonKind kind) => Demons[(int)kind];
 
@@ -266,6 +268,7 @@ public sealed partial class World
         Goals = Scenario?.Goals ?? (options.Survival ? [new ObjectiveDef { Kind = ObjectiveKind.Survive }] : []);
         GoalsDone = new bool[Goals.Length];
         TriggersFired = new bool[Scenario?.Triggers.Length ?? 0];
+        RaidDue = new int[TriggersFired.Length];
         Tech.Recompute(Rules);
         Demons = Rules.Demons;
     }
@@ -288,6 +291,7 @@ public sealed partial class World
                 for (int i = 0; i < start.Count; i++) world.TrySpawnUnit(start.Kind, keep);
         }
         world.ScatterPacks(options.DormantPacks > 0 ? options.DormantPacks : options.Survival ? world.Rules.Wilds.Packs : 0);
+        if (options.Survival && options.DormantPacks == 0) world.Infest(world.Rules.Wilds.Packs / 2);
         if (options.Survival && options.DormantPacks == 0) world.ScatterStrays(world.Rules.Wilds.Strays);
         if (options.Survival && options.DormantPacks == 0) RuinSystem.Place(world);
         if (options.Scenario is { } s)
@@ -385,15 +389,14 @@ public sealed partial class World
 
     internal int SpawnAtEdge(Side side, DemonKind kind, int count, int inset = 6)
     {
+        var (x, y) = MapGen.Entries(Map, side, Terrain.Width, inset)[0];
+        return SpawnAt(x, y, kind, count);
+    }
+
+    /// <summary>A cluster of demons as near (x, y) as there's ground that reaches the colony.</summary>
+    internal int SpawnAt(int x, int y, DemonKind kind, int count)
+    {
         if (count <= 0) return 0;
-        int size = Terrain.Width, c = size / 2;
-        var (x, y) = side switch
-        {
-            Side.North => (c, inset),
-            Side.South => (c, size - 1 - inset),
-            Side.West => (inset, c),
-            _ => (size - 1 - inset, c),
-        };
         var tile = FindReachableTileNear(x, y, maxRadius: 40);
         if (tile == null) return 0;
         int spawned = SpawnCluster(kind, tile.Value.X, tile.Value.Y, count);
@@ -1329,12 +1332,12 @@ public sealed partial class World
     /// each able to reach the colony.
     /// </summary>
     /// <summary>
-    /// Steps a soldier walks from the Keep to each tile (open ground only: the woods block them
-    /// where they block the horde), -1 where he can't get. For placing what soldiers must reach,
+    /// Steps a soldier walks from the Keep to each tile, over any ground but water and rock
+    /// (forest included: woodcutters clear a way), -1 where he can't get. For placing what soldiers must reach,
     /// Hellgates and ruins, so none stands in a pocket of forest or behind a long way round.
     /// Allocates; setup only.
     /// </summary>
-    internal int[] WalkFromKeep()
+    internal int[] WalkFromKeep(bool throughForest = true)
     {
         var dist = new int[Terrain.Width * Terrain.Height];
         Array.Fill(dist, -1);
@@ -1352,7 +1355,8 @@ public sealed partial class World
                 int nx = x + ox, ny = y + oy;
                 if (!Terrain.InBounds(nx, ny)) continue;
                 int n = Terrain.Index(nx, ny);
-                if (dist[n] >= 0 || Blocked(Terrain.Tiles[n])) continue;
+                // Forest may count as a way through: it's felled in time, where water and rock never go.
+                if (dist[n] >= 0 || (throughForest ? !Terrain.IsWalkable(Terrain.Tiles[n]) : Blocked(Terrain.Tiles[n]))) continue;
                 dist[n] = dist[i] + 1;
                 queue.Enqueue(n);
             }
@@ -1365,7 +1369,13 @@ public sealed partial class World
 
     void PlaceGates()
     {
-        var walk = WalkFromKeep();
+        // Open ground first, where soldiers can walk today; through the woods (felled in time) only if that leaves too few places.
+        PlaceGates(WalkFromKeep(throughForest: false));
+        if (_gates.Count < Rules.Hellgates.Count && Scenario is not { PlacedGates.Length: > 0 }) PlaceGates(WalkFromKeep(throughForest: true));
+    }
+
+    void PlaceGates(int[] walk)
+    {
         var rules = Rules.Hellgates;
         if (Scenario is { PlacedGates.Length: > 0 } s)
         {
@@ -1381,11 +1391,12 @@ public sealed partial class World
         }
         int centre = Terrain.Width / 2;
         int min2 = rules.MinDistance * rules.MinDistance;
-        for (int n = 0, attempts = 0; n < rules.Count && attempts < rules.Count * 400; attempts++)
+        for (int n = _gates.Count, attempts = 0; n < rules.Count && attempts < rules.Count * 400; attempts++)
         {
             int x = Rng.NextInt(Terrain.Width - Hellgate.Size), y = Rng.NextInt(Terrain.Height - Hellgate.Size);
             int dx = x - centre, dy = y - centre;
             if (dx * dx + dy * dy < min2) continue;
+            if (!MapGen.GateAllowed(Map, x + 1, y + 1, Terrain.Width)) continue; // where its bands come the way the waves do
             if (_gates.Any(g => Math.Abs(g.X - x) + Math.Abs(g.Y - y) < 40)) continue;
             bool clear = true;
             for (int ty = y; ty < y + Hellgate.Size && clear; ty++)
@@ -1510,6 +1521,45 @@ public sealed partial class World
             {
                 pack.EliteKind = elite.Kind;
                 pack.EliteCount = Math.Min(size, Math.Max(1, (int)MathF.Round(size * elite.Share)));
+            }
+            _packs.Add(pack);
+        }
+    }
+
+    /// <summary>
+    /// Extra packs, bigger and with the far wilds' elites, on the ground a map marks infested
+    /// (Two Fronts' north country): nowhere else is so thick with them.
+    /// </summary>
+    void Infest(int count)
+    {
+        if (count <= 0) return;
+        int size = Terrain.Width, centre = size / 2;
+        var spots = new List<(int X, int Y)>();
+        for (int y = 2; y < size - 2; y += 5)
+            for (int x = 2; x < size - 2; x += 5)
+            {
+                if (!MapGen.Infested(Map, x, y, size)) continue; // before any draw: other maps' streams stay as they were
+                int px = x + Rng.NextInt(3) - 1, py = y + Rng.NextInt(3) - 1;
+                if (!MapGen.Infested(Map, px, py, size) || !IsWalkable(px, py) || Flow.DistAt(px, py) == FlowField.Unreachable) continue;
+                spots.Add((px, py));
+            }
+        if (spots.Count == 0) return;
+        for (int i = spots.Count - 1; i > 0; i--)
+        {
+            int j = Rng.NextInt(i + 1);
+            (spots[i], spots[j]) = (spots[j], spots[i]);
+        }
+        var wilds = Rules.Wilds;
+        for (int n = 0; n < spots.Count && n < count; n++)
+        {
+            var (x, y) = spots[n];
+            float far = 0.6f + 0.4f * (float)Rng.NextDouble();
+            int packSize = Math.Max(1, (int)(wilds.NearCount + (wilds.FarCount - wilds.NearCount) * far * 1.2f));
+            var pack = new Pack { Id = _nextId++, X = x, Y = y, Count = packSize, Kind = Rng.Chance(wilds.HoundChance) ? DemonKind.Hound : DemonKind.Imp };
+            if (Elite(far) is { } elite)
+            {
+                pack.EliteKind = elite.Kind;
+                pack.EliteCount = Math.Min(packSize, Math.Max(1, (int)MathF.Round(packSize * elite.Share)));
             }
             _packs.Add(pack);
         }

@@ -123,7 +123,10 @@ public partial class AlertFeed : VBoxContainer
                 break;
             case ScenarioMessage m when m.Spawned > 0:
                 // The line itself is spoken in the talking head; the feed keeps a card to jump to where they're coming from.
-                Push("script-" + m.Index, $"{m.Spawned} demons from the {m.Side.ToString().ToLowerInvariant()}", Gold, EdgeOf(m.Side), 16);
+                Push("script-" + m.Index, $"{m.Spawned} {m.Kind}s from the {UiKit.SideOnScreen(m.Side)} in {UiKit.Clock(Campaign.RaidLeadSeconds)}", Red, EdgeOf(m.Side), Campaign.RaidLeadSeconds);
+                break;
+            case RaidLanded r:
+                Push("raid-" + r.Index, $"{r.Spawned} {r.Kind}s are here, from the {UiKit.SideOnScreen(r.Side)}", Red, EdgeOf(r.Side), 12);
                 break;
             case PatronOffered:
                 Push("patron", "A patron saint offers a blessing: choose one (top of the screen)", Gold, null, 12);

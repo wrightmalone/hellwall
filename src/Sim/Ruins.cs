@@ -22,13 +22,19 @@ internal static class RuinSystem
     /// <summary>Scatter the map's ruins, each with its guard pack, between RuinMinDistance and RuinMaxDistance of the Keep.</summary>
     public static void Place(World world)
     {
+        // Open ground first, where soldiers can walk to loot today; through the woods only if that leaves too few.
+        Place(world, world.WalkFromKeep(throughForest: false));
+        if (world.RuinList.Count < world.Rules.Wilds.Ruins) Place(world, world.WalkFromKeep(throughForest: true));
+    }
+
+    static void Place(World world, int[] walk)
+    {
         var wilds = world.Rules.Wilds;
         var t = world.Terrain;
         int c = t.Width / 2;
         float scale = t.Width / 256f;
-        var walk = world.WalkFromKeep(); // ruins are for soldiers to loot: none in a pocket of forest
         int min = (int)(wilds.RuinMinDistance * scale), max = (int)(wilds.RuinMaxDistance * scale);
-        for (int n = 0, attempts = 0; n < wilds.Ruins && attempts < wilds.Ruins * 400; attempts++)
+        for (int n = world.RuinList.Count, attempts = 0; n < wilds.Ruins && attempts < wilds.Ruins * 400; attempts++)
         {
             int x = world.Rng.NextInt(t.Width), y = world.Rng.NextInt(t.Height);
             int dx = x - c, dy = y - c, d2 = dx * dx + dy * dy;

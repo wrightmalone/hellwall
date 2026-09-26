@@ -139,6 +139,7 @@ public static class StateHash
         }
         foreach (bool done in world.GoalsDone) h = MixByte(h, done ? (byte)1 : (byte)0);
         foreach (bool fired in world.TriggersFired) h = MixByte(h, fired ? (byte)1 : (byte)0);
+        foreach (int due in world.RaidDue) h = Mix(h, (uint)due);
         h = Mix(h, (uint)world.TreesFelled);
         h = Mix(h, (uint)world.DepositsWorn);
         h = Mix(h, (uint)world.Stats.History.Count);

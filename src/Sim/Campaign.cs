@@ -165,6 +165,30 @@ public sealed record ScenarioDef
 
     public static string EncodeTiles(Tile[] tiles) => Convert.ToBase64String(Array.ConvertAll(tiles, t => (byte)t));
 
+    /// <summary>
+    /// Everything that will come at you, said before you begin: where the waves come from, the
+    /// Hellgates, when and how big the Convergence is, and every raid the mission holds. No
+    /// mission hides a spawn you can only learn about by losing to it.
+    /// </summary>
+    public IEnumerable<string> Threats(Rules rules)
+    {
+        var r = RulesFrom(rules).ForDifficulty(Difficulty);
+        var sides = MapGen.WaveSides(Map);
+        string Names(IEnumerable<Side> s) => string.Join(" and ", s.Select(x => x.ToString().ToLowerInvariant()));
+        yield return sides.Length == 4 ? "Waves from any side, one or two at a time, each told a minute ahead" : $"Waves only from the {Names(sides)}, each told a minute ahead";
+        if (r.Hellgates.Count > 0) yield return $"{r.Hellgates.Count} Hellgate{(r.Hellgates.Count == 1 ? "" : "s")} feeding the waves (close them and the waves shrink)";
+        if (!Endless)
+        {
+            int size = (int)Math.Round(r.Survival.ConvergenceSize / 100.0) * 100;
+            yield return $"The Convergence on day {r.Survival.Days}: about {size:N0}, most from one side, told ten minutes ahead";
+        }
+        foreach (var t in Triggers.Where(t => t.SpawnCount > 0))
+        {
+            string when = t.Day > 0 ? $"on day {t.Day}" : t.AfterGoal >= 0 && t.AfterGoal < Goals.Length ? $"once you've done this: {Goals[t.AfterGoal].Describe().ToLowerInvariant()}" : "during the mission";
+            yield return $"{t.SpawnCount} {t.SpawnKind}s from the {t.SpawnSide.ToString().ToLowerInvariant()} {when}, told {Campaign.RaidLeadSeconds:0} seconds ahead";
+        }
+    }
+
     /// <summary>Map sizes the game makes: a shared map must be one of them.</summary>
     public static readonly int[] MapSizes = [128, 192, 256, 320];
 
@@ -200,6 +224,9 @@ public sealed record ScenarioDef
 /// <summary>A campaign: missions and the order they open in. The default ships inside the assembly (data/campaign.json).</summary>
 public sealed class Campaign
 {
+    /// <summary>A mission's raid is told this long before it comes: never a surprise you only learn by losing to it.</summary>
+    public const float RaidLeadSeconds = 45;
+
     public string Id { get; init; } = "";
     public string Name { get; init; } = "";
     public ScenarioDef[] Scenarios { get; init; } = [];
@@ -281,21 +308,29 @@ internal static class ObjectiveSystem
         else if (world.Survival is { ConvergenceSpent: true }) world.Lose();
     }
 
-    /// <summary>A mission's triggers whose moment has come, each once.</summary>
+    /// <summary>A mission's triggers whose moment has come, each once; and the raids they told of, when theirs has.</summary>
     static void Fire(World world)
     {
         if (world.Scenario is not { } s) return;
         var fired = world.TriggersFired;
         for (int i = 0; i < s.Triggers.Length; i++)
         {
-            if (fired[i]) continue;
             var t = s.Triggers[i];
+            if (world.RaidDue[i] > 0 && world.Tick >= world.RaidDue[i])
+            {
+                world.RaidDue[i] = -1;
+                world.SpawnColumn = Horde.ColumnOf(1000 + i, t.SpawnSide);
+                int spawned = world.SpawnAtEdge(t.SpawnSide, t.SpawnKind, t.SpawnCount);
+                world.SpawnColumn = 0;
+                world.Emit(new RaidLanded(world.Tick, i, spawned, t.SpawnSide, t.SpawnKind));
+            }
+            if (fired[i]) continue;
             bool due = (t.Day > 0 && world.Day >= t.Day) || (t.AfterGoal >= 0 && t.AfterGoal < world.GoalsDone.Length && world.GoalsDone[t.AfterGoal]);
             if (!due) continue;
             fired[i] = true;
-            int spawned = t.SpawnCount > 0 ? world.SpawnAtEdge(t.SpawnSide, t.SpawnKind, t.SpawnCount) : 0;
+            if (t.SpawnCount > 0) world.RaidDue[i] = world.Tick + (int)(Campaign.RaidLeadSeconds * Balance.TickHz);
             if (t.Give != null) world.Colony.Refund(t.Give, 1);
-            world.Emit(new ScenarioMessage(world.Tick, i, t.Say, spawned, t.SpawnSide, t.Speaker));
+            world.Emit(new ScenarioMessage(world.Tick, i, t.Say, t.SpawnCount, t.SpawnSide, t.Speaker, t.SpawnKind));
         }
     }
 

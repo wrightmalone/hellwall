@@ -272,34 +272,42 @@ public partial class Hud : CanvasLayer
     void UpdateEdgeWarnings(Vector2 screen)
     {
         foreach (var w in _edgeWarnings.Values) w.Visible = false;
-        if (World.Survival is not { } s) return;
-        foreach (var wave in s.Waves)
+        // Whatever comes soonest from each side: a wave (the Convergence is told ten minutes ahead, so it mustn't hide the next wave) or a mission's raid.
+        var soonest = new Dictionary<Side, (int Count, int Ticks, string What)>();
+        void Offer(Side side, int count, int ticks, string what)
         {
-            if (!wave.Announced || wave.Landed) continue;
-            string eta = UiKit.Clock((wave.LandsAtTick - World.Tick) / (double)Balance.TickHz);
-            for (int i = 0; i < wave.Sides.Length; i++)
+            if (!soonest.TryGetValue(side, out var had) || ticks < had.Ticks) soonest[side] = (count, ticks, what);
+        }
+        if (World.Survival is { } s)
+            foreach (var wave in s.Waves)
             {
-                var side = wave.Sides[i];
-                var label = _edgeWarnings[side];
-                label.Visible = true;
-                int share = wave.ShareOf(i, s.Rules);
-                // In the isometric view each map side lies along a screen diagonal.
-                label.Text = side switch
-                {
-                    Side.North => $"{share} from the NORTH  >>\n{eta}",
-                    Side.East => $"{share} from the EAST  >>\n{eta}",
-                    Side.South => $"<<  {share} from the SOUTH\n{eta}",
-                    _ => $"<<  {share} from the WEST\n{eta}",
-                };
-                label.Size = new Vector2(300, 0);
-                label.Position = side switch
-                {
-                    Side.North => new Vector2(screen.X * 0.7f, screen.Y * 0.28f),
-                    Side.East => new Vector2(screen.X * 0.7f, screen.Y * 0.62f),
-                    Side.South => new Vector2(screen.X * 0.3f - 300, screen.Y * 0.62f),
-                    _ => new Vector2(screen.X * 0.3f - 300, screen.Y * 0.28f),
-                };
+                if (!wave.Announced || wave.Landed) continue;
+                for (int i = 0; i < wave.Sides.Length; i++) Offer(wave.Sides[i], wave.ShareOf(i, s.Rules), wave.LandsAtTick - World.Tick, wave.Final ? " (the Convergence)" : "");
             }
+        if (World.Scenario is { } mission)
+            for (int i = 0; i < mission.Triggers.Length; i++)
+                if (World.RaidDue[i] > 0) Offer(mission.Triggers[i].SpawnSide, mission.Triggers[i].SpawnCount, World.RaidDue[i] - World.Tick, $" {mission.Triggers[i].SpawnKind}s");
+        foreach (var (side, (share, ticks, what)) in soonest)
+        {
+            var label = _edgeWarnings[side];
+            label.Visible = true;
+            string eta = UiKit.Clock(ticks / (double)Balance.TickHz);
+            // In the isometric view each map side lies along a screen diagonal.
+            label.Text = side switch
+            {
+                Side.North => $"{share}{what} from the NORTH  >>\n{eta}",
+                Side.East => $"{share}{what} from the EAST  >>\n{eta}",
+                Side.South => $"<<  {share}{what} from the SOUTH\n{eta}",
+                _ => $"<<  {share}{what} from the WEST\n{eta}",
+            };
+            label.Size = new Vector2(300, 0);
+            label.Position = side switch
+            {
+                Side.North => new Vector2(screen.X * 0.7f, screen.Y * 0.28f),
+                Side.East => new Vector2(screen.X * 0.7f, screen.Y * 0.62f),
+                Side.South => new Vector2(screen.X * 0.3f - 300, screen.Y * 0.62f),
+                _ => new Vector2(screen.X * 0.3f - 300, screen.Y * 0.28f),
+            };
         }
     }
 }

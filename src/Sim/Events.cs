@@ -76,7 +76,10 @@ public sealed record TreeFelled(int Tick, int X, int Y) : SimEvent(Tick);
 public sealed record DepositWorn(int Tick, int X, int Y, Tile Was) : SimEvent(Tick);
 
 /// <summary>A mission trigger fired: its message, and how many demons it brought (from Side).</summary>
-public sealed record ScenarioMessage(int Tick, int Index, string Text, int Spawned, Side Side, string Speaker = "") : SimEvent(Tick);
+/// <summary>A mission's trigger speaks; Spawned demons (of Kind) will come from Side RaidLeadSeconds later.</summary>
+public sealed record ScenarioMessage(int Tick, int Index, string Text, int Spawned, Side Side, string Speaker = "", DemonKind Kind = DemonKind.Imp) : SimEvent(Tick);
+/// <summary>A mission's announced raid has come onto the map.</summary>
+public sealed record RaidLanded(int Tick, int Index, int Spawned, Side Side, DemonKind Kind) : SimEvent(Tick);
 
 /// <summary>A mission goal was met (index into the world's Goals).</summary>
 public sealed record ObjectiveCompleted(int Tick, int Index, ObjectiveKind Kind) : SimEvent(Tick);

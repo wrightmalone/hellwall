@@ -116,7 +116,8 @@ public partial class CampaignMap : CanvasLayer
             + (Settings.Get("sk_living_woods", true) ? "" : " · living woods off")
             + (Settings.Get("sk_mining", true) ? "" : " · miners off");
         _brief.Text = open ? s.Briefing : $"Win {string.Join(" and ", s.Requires.Select(r => _campaign.Find(r)!.Name))} to open this mission.";
-        _goals.Text = string.Join("\n", s.Goals.Select(g => "·  " + g.Describe()));
+        _goals.Text = string.Join("\n", s.Goals.Select(g => "·  " + g.Describe()))
+            + (open ? "\n\nWhat's coming:\n" + string.Join("\n", s.Threats(Rules.Default).Select(t => "·  " + t)) : "");
         _begin.Disabled = !open;
         _begin.Text = _won.Contains(s.Id) ? "Play again" : "Begin";
         _board.QueueRedraw();

@@ -61,13 +61,12 @@ public sealed class Horde
     /// </summary>
     public float[] Hunt;
     /// <summary>
-    /// Which wave column it marched in with: a wave's number times four plus
-    /// its side plus one (Column(wave, side)); 0 for the wilds. For the
+    /// Which wave column it marched in with (ColumnOf: its wave, its side, and
+    /// which of the side's ways onto the map); 0 for the wilds. For the
     /// client's marker on each column's centre.
     /// </summary>
     public int[] Column;
-    public static int ColumnOf(int wave, Side side) => wave * 4 + (int)side + 1;
-    public static (int Wave, Side Side) FromColumn(int column) => ((column - 1) / 4, (Side)((column - 1) % 4));
+    public static int ColumnOf(int wave, Side side, int entry = 0) => (wave * 4 + (int)side) * 4 + entry + 1;
     public float[] HuntX;
     public float[] HuntY;
 

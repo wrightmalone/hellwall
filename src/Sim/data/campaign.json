@@ -204,6 +204,34 @@
       ]
     },
     {
+      "id": "causeway",
+      "name": "The Causeway",
+      "mapX": 0.52,
+      "mapY": 0.5,
+      "requires": [
+        "drowned"
+      ],
+      "briefing": "A town on a causeway across a river, cliffs east and west. They will come down both banks from the north and the south, through the gaps in the ridges: four gaps to hold, and the further out you hold them, the more room you have behind.",
+      "seed": 911,
+      "map": "Causeway",
+      "difficulty": "Normal",
+      "days": 40,
+      "waves": 0.85,
+      "convergence": 0.42,
+      "objectives": [
+        {
+          "kind": "Survive"
+        }
+      ],
+      "triggers": [
+        {
+          "day": 6,
+          "say": "Four gaps in the ridges, two on each bank. Wall them, and the banks between are ours.",
+          "speaker": "captain"
+        }
+      ]
+    },
+    {
       "id": "the-pass",
       "name": "The Pass",
       "mapX": 0.6,
@@ -240,6 +268,34 @@
         {
           "day": 20,
           "say": "Scouts report green things among the horde that spit bile over the walls. Keep the towers back from the parapet.",
+          "speaker": "scout"
+        }
+      ]
+    },
+    {
+      "id": "two-fronts",
+      "name": "Two Fronts",
+      "mapX": 0.74,
+      "mapY": 0.17,
+      "requires": [
+        "the-pass"
+      ],
+      "briefing": "The waves will come from the east and the west, and only there. North, behind the old wall, is the richest country in the march: iron, stone, silver. It is also thick with them, asleep. Clear it a piece at a time if you can spare the soldiers.",
+      "seed": 912,
+      "map": "TwoFronts",
+      "difficulty": "Normal",
+      "days": 45,
+      "waves": 0.8,
+      "convergence": 0.45,
+      "objectives": [
+        {
+          "kind": "Survive"
+        }
+      ],
+      "triggers": [
+        {
+          "day": 10,
+          "say": "The north is waking to the noise of the town. Go in when you choose, not when they do.",
           "speaker": "scout"
         }
       ]
@@ -364,12 +420,40 @@
       ]
     },
     {
+      "id": "the-bridge",
+      "name": "The Bridge",
+      "mapX": 0.86,
+      "mapY": 0.72,
+      "requires": [
+        "long-siege"
+      ],
+      "briefing": "One bridge over the river to the east, and everything in the east will come across it. Every wave, and at the end the Convergence, all of it over that bridge. Build for that day.",
+      "seed": 913,
+      "map": "Crossing",
+      "difficulty": "Normal",
+      "days": 50,
+      "waves": 0.7,
+      "convergence": 0.32,
+      "objectives": [
+        {
+          "kind": "Survive"
+        }
+      ],
+      "triggers": [
+        {
+          "day": 40,
+          "say": "Ten days. Whatever you mean to have at the bridge, build it now.",
+          "speaker": "captain"
+        }
+      ]
+    },
+    {
       "id": "hellwall",
       "name": "The Hellwall",
       "mapX": 0.93,
       "mapY": 0.42,
       "requires": [
-        "long-siege"
+        "the-bridge"
       ],
       "briefing": "The last line. Four Hellgates, a harder horde, sixty days. Close every gate, and survive what comes through before you do.",
       "seed": 808,

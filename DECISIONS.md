@@ -946,6 +946,38 @@ last lost by at least one).
   12 legs. **Changed:** shift+right-click used to attack-move; A then click still does.
   Saves are format 16.
 - **Keyboard zoom**: + and - (and the keypad's), or Page Up and Page Down.
+- **Three shaped maps, as new map kinds** (so skirmish has them too, and they're generated, not
+  hand-painted): `MapGen.Shape` lays the shape over the usual noise, and each kind says which
+  sides waves may come from, where they come onto the map, and where Hellgates may stand.
+  - **Causeway** (your first TAB map): a river down the middle, the Keep on a land bridge across
+    it, cliffs on the east and west edges. Waves come from the north and the south, splitting
+    down both banks (a marker each), through gaps in ridges that cross the banks: four
+    chokepoints, easier held the further out you reach.
+  - **Two Fronts** (your second): waves from the east and west only. North, behind a rock wall
+    with two passes, a country with extra iron and stone and silver, and an extra half again
+    as many packs, bigger and full of the far wilds' elites. Its Hellgates stand out on the
+    flanks, so their bands come the way the waves do. A lake shore to the south.
+  - **The Crossing**: a river to the east with one bridge; every wave, and the Convergence, over
+    it. Its Hellgates are across the river.
+  - `hellwall-sim mapimage --map=causeway --seed=11` draws one (terrain, packs, gates, ruins,
+    wave entries) for looking at new shapes.
+- **Three new missions on them**, with working briefings until your narrative friends take a
+  pass: The Causeway (after The Drowned Lands), Two Fronts (after The Pass), and The Bridge,
+  which now stands between The Long Siege and The Hellwall as the climax before the finale.
+  Bot results: the Causeway won by every path, Two Fronts by two of three. **The Bridge is lost
+  by all three**, and not for its numbers (easing the Convergence didn't change the day they
+  fall): the bot rings its whole town in walls when everything comes over one bridge. A player
+  fortifies the bridge. **Decide:** its difficulty after you've played it.
+- **Every mission says what's coming before you begin**: the briefing lists where waves come
+  from, the Hellgates, the Convergence's day and size, and every raid it holds, from the
+  mission's own data so it can't go stale.
+- **No raid you only learn about by losing to it**: a mission's scripted raids (Hounds in Iron
+  Hills, Gargoyles over the water, Howlers in the Wildwood) are told 45 seconds ahead, with the
+  edge label counting down ("40 Hounds from the EAST 0:32"), then land with a marker. The edge
+  labels now show whatever is soonest on each side, so the Convergence's ten-minute warning
+  doesn't hide the next wave. Saves are format 17.
+- **Hellgates and ruins prefer open ground** soldiers can walk to today, and only go behind the
+  woods when that leaves too few places (the Causeway's bridge is ringed with trees).
 - **The Convergence lands like it means it**: a swelling roar, a long red pulse round the screen,
   "THE CONVERGENCE" across the middle, and a shake. And every dense horde darkens the ground
   under it (a shadow per crowded 4x4 square, deeper with more), so a mass reads as a mass.
