@@ -921,6 +921,16 @@ last lost by at least one).
   `scripts/ab.sh '<flags>' plains lakes` runs a quick sweep with and without some flags per map
   and prints them side by side. `scripts/verify.sh --fast` (about a minute) skips the full-run
   gates. Iterate with those; a full sweep and verify before a commit or build.
+- **A hostile map at every difficulty** (you: "so filled you can often see a few demons at the
+  edge of the fog"): 520 sleeping packs on Normal (was 360), from 16 tiles out (was 20: the
+  start's sight is 22, so the nearest wait just past it), and 80 stray handfuls from 26 tiles
+  out (strays were off). Difficulty now sets how many as well as how big: Easy 0.8x packs and
+  half the strays, Hard 1.3x and 1.5x, Nightmare 1.6x and 2.2x. Plains seed 11: 7,100 sleeping
+  demons on Easy, 11,000 on Normal, 26,600 on Nightmare (asleep they're only numbers, so it
+  costs nothing until they wake). The nearest packs wake to a growing town and trickle in,
+  which is what you liked in your skirmish. Bot quick sweeps: Easy 12/12, Normal 11/12, Hard
+  9/12, so it's more to fight, not a wall in the first minutes.
+  **Decide:** after a game, whether it's full enough (`wilds.packs`, `minDistance`, `strays`).
 - **Farmers no longer flicker and jump** (your playtest): a figure's walk frame was its id's
   remainder, and the client's own figures (farmers, boats) have negative ids, so some frames
   pointed off the sheet and the figure vanished for them; farmers' ids could also collide

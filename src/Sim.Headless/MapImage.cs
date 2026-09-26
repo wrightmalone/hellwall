@@ -17,7 +17,8 @@ public static class MapImage
         uint seed = uint.Parse(args.GetValueOrDefault("seed", "11"), CultureInfo.InvariantCulture);
         int scale = int.Parse(args.GetValueOrDefault("scale", "3"), CultureInfo.InvariantCulture);
         string output = args.GetValueOrDefault("out", $"out/map-{kind}-{seed}.bmp");
-        var world = World.Create(new WorldOptions(seed, 256, 0, Rules.Default, Survival: true, Map: kind));
+        var difficulty = Enum.Parse<Difficulty>(args.GetValueOrDefault("difficulty", "normal"), ignoreCase: true);
+        var world = World.Create(new WorldOptions(seed, 256, 0, Rules.Default, Survival: true, Difficulty: difficulty, Map: kind));
         var t = world.Terrain;
         int n = t.Width;
         var px = new (byte R, byte G, byte B)[n * n];

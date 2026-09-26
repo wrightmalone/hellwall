@@ -187,6 +187,9 @@ public sealed record DifficultyDef
     public double Convergence { get; init; } = 1;
     /// <summary>Sleeping packs' sizes.</summary>
     public double Packs { get; init; } = 1;
+    /// <summary>How many sleeping packs there are, and stray handfuls: a harder map is fuller, not only its packs bigger.</summary>
+    public double PackCount { get; init; } = 1;
+    public double Strays { get; init; } = 1;
     /// <summary>Hellgate bands.</summary>
     public double Gates { get; init; } = 1;
     /// <summary>Starting resources.</summary>
@@ -389,7 +392,12 @@ public sealed class Rules
         var d = Difficulties.GetValueOrDefault(level) ?? new DifficultyDef();
         int Round(double v) => Math.Max(1, (int)Math.Round(v));
         var survival = Survival with { FirstWaveSize = Round(Survival.FirstWaveSize * d.Waves), ConvergenceSize = Round(Survival.ConvergenceSize * d.Convergence) };
-        var wilds = Wilds with { NearCount = Round(Wilds.NearCount * d.Packs), FarCount = Round(Wilds.FarCount * d.Packs) };
+        var wilds = Wilds with
+        {
+            NearCount = Round(Wilds.NearCount * d.Packs), FarCount = Round(Wilds.FarCount * d.Packs),
+            // Counts may be none (a hand-made map that wants only its own packs): a zero stays a zero.
+            Packs = (int)Math.Round(Wilds.Packs * d.PackCount), Strays = (int)Math.Round(Wilds.Strays * d.Strays),
+        };
         var gates = Hellgates with { BandSize = Round(Hellgates.BandSize * d.Gates) };
         var start = StartingResources.Scale(d.Start);
         var scaled = Copy(r => { r.Survival = survival; r.Wilds = wilds; r.Hellgates = gates; r.StartingResources = start; });

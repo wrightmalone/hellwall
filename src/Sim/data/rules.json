@@ -7,10 +7,10 @@
   "startingUnits": [ { "kind": "Militia", "count": 4 } ],
 
   "difficulties": {
-    "Easy":      { "waves": 0.7, "convergence": 0.7, "packs": 0.8, "gates": 0.7,  "start": 1.5 },
+    "Easy":      { "waves": 0.7, "convergence": 0.7, "packs": 0.8, "packCount": 0.8, "strays": 0.5, "gates": 0.7,  "start": 1.5 },
     "Normal":    { },
-    "Hard":      { "waves": 1.2, "convergence": 1.3, "packs": 1.2, "gates": 1.25, "start": 1.0 },
-    "Nightmare": { "waves": 1.5, "convergence": 1.8, "packs": 1.5, "gates": 1.5,  "start": 0.8 }
+    "Hard":      { "waves": 1.2, "convergence": 1.3, "packs": 1.2, "packCount": 1.3, "strays": 1.5, "gates": 1.25, "start": 1.0 },
+    "Nightmare": { "waves": 1.5, "convergence": 1.8, "packs": 1.5, "packCount": 1.6, "strays": 2.2, "gates": 1.5,  "start": 0.8 }
   },
 
   "corruptions": [
@@ -37,9 +37,9 @@
   ],
 
   "wilds": {
-    "packs": 360, "minDistance": 20, "spacing": 8, "nearCount": 5, "farCount": 40,
+    "packs": 520, "minDistance": 16, "spacing": 8, "nearCount": 5, "farCount": 40,
     "houndChance": 0.15, "clearRadius": 10, "wakeRadius": 7,
-    "sleepDensity": 0.45, "strays": 0, "strayMax": 4, "strayMinDistance": 40, "wakeSpread": 0.4,
+    "sleepDensity": 0.45, "strays": 80, "strayMax": 4, "strayMinDistance": 26, "wakeSpread": 0.4,
     "ruins": 5, "ruinGuards": 45, "ruinMinDistance": 40, "ruinMaxDistance": 95,
     "ruinLoot": { "gold": 250, "wood": 100, "stone": 100, "iron": 40 }
   },
