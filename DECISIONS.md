@@ -921,6 +921,13 @@ last lost by at least one).
   `scripts/ab.sh '<flags>' plains lakes` runs a quick sweep with and without some flags per map
   and prints them side by side. `scripts/verify.sh --fast` (about a minute) skips the full-run
   gates. Iterate with those; a full sweep and verify before a commit or build.
+- **Walls and gates look built, not blocked out** (your note that they stood out as
+  in-progress): baked in the pieces our walls join from, a post on the tile and an arm half a
+  tile toward each neighbour, so lines and corners join as before. Stone is KayKit's
+  crenellated castle wall and its arched gate, stretched from its hexagon edges to our square
+  grid. Timber is a palisade of sharpened logs, uneven, bound with a dark band, and its gate
+  is two plank doors with iron straps under a log: built from shapes in the baker, as KayKit's
+  wooden fence, stretched to a wall, read as salmon brick. `tools/bake_walls.gd`.
 - **More on the end screen**: "Play it again" for every kind of run (the same map and settings
   from the start; missions had it, survival and skirmish didn't), "Main menu", "Load last save"
   (the newest of your saves and autosaves), "Look at the field" (hides the results so you can
