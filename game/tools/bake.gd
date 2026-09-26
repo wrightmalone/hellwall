@@ -37,6 +37,9 @@ var variants := [
 	["unit-farmer-plant", RP + "Monk.gltf", Color(0.78, 0.66, 0.36), 1.0, ["", ""], 0.9, "PickUp", 0.5], # stoops to sow, and to gather
 	["unit-farmer-water", RP + "Monk.gltf", Color(0.78, 0.66, 0.36), 1.0, ["", ""], 0.9, "Idle", 0.5], # stands and waters (the water's drawn)
 	["unit-farmer-reap", RP + "Monk.gltf", Color(0.78, 0.66, 0.36), 1.0, ["", ""], 0.9, "Attack", 0.5], # a sweep, as with a sickle
+	["unit-hunter", RP + "Ranger.gltf", Color(0.45, 0.36, 0.22), 1.0, ["", ""], 0.9, "Walk", 0.5], # leather brown: a hunter, not a Marksman
+	["unit-hunter-shoot", RP + "Ranger.gltf", Color(0.45, 0.36, 0.22), 1.0, ["", ""], 0.9, "Bow_Shoot", 0.5],
+	["unit-hunter-carry", RP + "Ranger.gltf", Color(0.45, 0.36, 0.22), 1.0, ["", ""], 0.9, "Run_Holding", 0.5], # home with the kill
 	# The Fishery's boat: no pack has one, so it's built from shapes (make_model), rocking on the water.
 	["unit-boat", "proc:boat", null, 1.0, ["", ""]],
 	["unit-miner", RP + "Warrior.gltf", Color(0.55, 0.5, 0.44), 1.0, ["", ""], 0.9, "Walk", 0.5], # stone-dust grey: a miner, not a Templar

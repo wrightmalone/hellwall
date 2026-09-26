@@ -143,6 +143,14 @@ public partial class WorldView : Node2D
             Figure(seen, step, m.Id, sheet, Art.UnitScale * 0.8f, m.X, m.Y, m.PrevX, m.PrevY,
                 chopping ? new Vector2(m.Tree % w + 0.5f - m.X, m.Tree / w + 0.5f - m.Y) : null);
         }
+        // Hunters: leather brown; at the woods' edge they face the trees and loose arrows, and come home carrying the kill.
+        foreach (var h in State.Hunters.All)
+        {
+            bool shooting = h.Doing == Hunters.Work.Shoot && h.Tree >= 0;
+            string sheet = shooting ? "res://art/baked/unit-hunter-shoot.png" : h.Doing == Hunters.Work.Home ? "res://art/baked/unit-hunter-carry.png" : "res://art/baked/unit-hunter.png";
+            Figure(seen, step, h.Id, sheet, Art.UnitScale * 0.8f, h.X, h.Y, h.PrevX, h.PrevY,
+                shooting ? new Vector2(h.Tree % w + 0.5f - h.X, h.Tree / w + 0.5f - h.Y) : null, ticked: false);
+        }
         // Fishing boats: always rocking (their "walk" is the swell), facing the way they last sailed.
         foreach (var boat in State.Fishers.All)
         {
@@ -470,6 +478,20 @@ public partial class WorldView : Node2D
                         DrawCircle(Iso.P(at + new Vector2(Mathf.Cos(a), Mathf.Sin(a)) * r * 0.4f), 1.8f, new Color(0.8f, 0.85f, 0.95f));
                     }
             }
+            // A hunter's arrow: a short streak from the bow into the trees, once a draw; "+ meat" over the lodge when he's home.
+            foreach (var h in state.Hunters.All)
+            {
+                if (h.Doing != Hunters.Work.Shoot || h.Tree < 0) continue;
+                int hw = world.Terrain.Width;
+                float t = (float)(Time.GetTicksMsec() / 600.0 + h.Id * 0.37) % 1f;
+                if (t < 0.55f) continue;
+                var from = Iso.P(h.X, h.Y) - new Vector2(0, 16);
+                var to = Iso.P(h.Tree % hw + 0.5f, h.Tree / hw + 0.5f) - new Vector2(0, 14);
+                var head = from.Lerp(to, (t - 0.55f) / 0.45f);
+                DrawLine(head - (to - from).Normalized() * 7, head, new Color(0.95f, 0.9f, 0.7f), 1.5f);
+            }
+            foreach (var (at, age) in state.Hunters.Brought)
+                Text(font, Iso.P(at) + new Vector2(-12, -30 - age * 18), "+ meat", 13, new Color(1, 0.85f, 0.75f, 1 - age / 1.6f));
             foreach (var (at, age) in state.Fishers.Landed)
                 Text(font, Iso.P(at) + new Vector2(-10, -30 - age * 18), "+ fish", 13, new Color(0.9f, 0.95f, 1f, 1 - age / 1.6f));
 

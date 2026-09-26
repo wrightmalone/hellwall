@@ -58,6 +58,9 @@ public sealed class ClientState
     /// <summary>Demons per HordeColumns.Cell square, for the shadow a mass of them casts (empty until measured).</summary>
     public int[] Density = [];
 
+    /// <summary>The Hunters' crews (for the eye only).</summary>
+    public readonly Hunters Hunters = new();
+
     /// <summary>The Fisheries' boats (for the eye only).</summary>
     public readonly Fishers Fishers = new();
 
