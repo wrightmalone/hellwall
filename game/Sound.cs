@@ -33,7 +33,18 @@ public partial class Sound : Node2D
         _streams[Cue.Howl] = Make(1.1, (t, _) => Math.Sin(2 * Math.PI * (320 + 180 * Math.Sin(Math.PI * t / 1.1) + 12 * Math.Sin(2 * Math.PI * 7 * t)) * t) * 0.3 * Envelope(t, 0.15, 1.1));
         _streams[Cue.Burst] = Make(0.3, (t, n) => (n * 0.6 + Math.Sin(2 * Math.PI * 90 * t) * 0.5) * Math.Exp(-t * 14));
         _streams[Cue.Built] = Make(0.5, (t, _) => (Math.Sin(2 * Math.PI * 660 * t) * Envelope(t, 0.01, 0.25) + Math.Sin(2 * Math.PI * 880 * t) * Envelope(t - 0.12, 0.01, 0.35)) * 0.25);
-        _streams[Cue.Possessed] = Make(1.0, (t, _) => (Math.Sin(2 * Math.PI * 98 * t) + Math.Sin(2 * Math.PI * 104 * t)) * 0.3 * Envelope(t, 0.05, 1.0));
+        // An alarm bell struck three times over a low drone: a building is possessed.
+        _streams[Cue.Possessed] = Make(1.6, (t, _) =>
+        {
+            double bell = 0;
+            for (int k = 0; k < 3; k++)
+            {
+                double s = t - k * 0.32;
+                if (s < 0) continue;
+                bell += (Math.Sin(2 * Math.PI * 880 * s) * 0.5 + Math.Sin(2 * Math.PI * 1320 * s) * 0.25 + Math.Sin(2 * Math.PI * 1760 * s) * 0.12) * Math.Exp(-s * 9);
+            }
+            return bell * 0.32 + (Math.Sin(2 * Math.PI * 98 * t) + Math.Sin(2 * Math.PI * 104 * t)) * 0.18 * Envelope(t, 0.05, 1.6);
+        });
         _streams[Cue.Fallen] = Make(2.5, (t, n) => (Saw(55, t) * 0.35 + n * 0.1) * Envelope(t, 0.05, 2.5));
         // A rising three-note chime: a soldier made rank.
         _streams[Cue.Promoted] = Make(0.6, (t, _) => (Math.Sin(2 * Math.PI * 523 * t) * Envelope(t, 0.01, 0.2) + Math.Sin(2 * Math.PI * 659 * t) * Envelope(t - 0.12, 0.01, 0.2) + Math.Sin(2 * Math.PI * 784 * t) * Envelope(t - 0.24, 0.01, 0.35)) * 0.22);

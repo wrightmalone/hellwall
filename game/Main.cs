@@ -532,6 +532,8 @@ public partial class Main : Node2D
 
     /// <summary>Living woods: warns before the woodsmen cut a way in for the horde.</summary>
     readonly ForestWatch _forest = new();
+    readonly BreachWatch _breach = new();
+    double _forestClockLast;
     double _forestClock, _columnClock;
 
     void HandleEvents()
@@ -539,9 +541,11 @@ public partial class Main : Node2D
         _forestClock += GetProcessDeltaTime();
         if (_forestClock > 0.5)
         {
+            _forestClockLast = _forestClock;
             _forestClock = 0;
             _forest.Step(_world, _hud.Alerts);
             _state.EndangeredTrees = _forest.Endangered;
+            _breach.Step(_world, _hud.Alerts, _forestClockLast);
         }
         _columnClock += GetProcessDeltaTime();
         if (_columnClock > 0.2)
@@ -582,6 +586,16 @@ public partial class Main : Node2D
                 case CorruptionTook c: _state.Say($"The horde is corrupted: {c.Name}"); break;
                 case ScenarioMessage m when m.Text.Length > 0:
                     _hud.Voice.Say(Campaign.Default.Speaker(m.Speaker), m.Text);
+                    break;
+                case BuildingPossessed p when _world.BuildingById(p.BuildingId) is { } turned:
+                    // The breach no one should miss: the screen, the minimap, and (if asked) a pause.
+                    _hud.Vignette.Flash(new Color(1, 0.08f, 0.05f), 3.5);
+                    _minimap.Alarm(new Vector2(turned.CentreX, turned.CentreY));
+                    if (BreachWatch.PauseOnPossession && _bot == null && !_paused)
+                    {
+                        _paused = true;
+                        _state.Say($"Paused: a {turned.Kind} is possessed. Space to go on");
+                    }
                     break;
                 case TreeFelled f:
                     _forest.Felled(f, _world.Terrain.Width, _hud.Alerts);

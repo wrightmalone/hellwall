@@ -26,6 +26,11 @@ public partial class Minimap : Control
     ImageTexture? _terrain;
     readonly Dictionary<int, float> _lastHp = new();
     readonly Dictionary<int, (Vector2 At, float Life)> _pings = new();
+    /// <summary>Big slow rings where something's gone badly wrong (a possession): seconds left, from Alarm.</summary>
+    readonly List<(Vector2 At, float Life)> _alarms = new();
+    const float AlarmSeconds = 6;
+
+    public void Alarm(Vector2 tile) => _alarms.Add((tile, AlarmSeconds));
 
     public override void _Ready()
     {
@@ -168,6 +173,17 @@ public partial class Minimap : Control
             if (life <= 0) { _pings.Remove(id); continue; }
             _pings[id] = (at, life);
             DrawArc(M(at), 3 + (1.5f - life) * 6, 0, Mathf.Tau, 16, new Color(1, 0.3f, 0.2f, life / 1.5f), 1.5f);
+        }
+
+        for (int i = _alarms.Count - 1; i >= 0; i--)
+        {
+            var (at, life) = _alarms[i];
+            life -= (float)GetProcessDeltaTime();
+            if (life <= 0) { _alarms.RemoveAt(i); continue; }
+            _alarms[i] = (at, life);
+            float t = (AlarmSeconds - life) % 1f;
+            DrawArc(M(at), 4 + t * 18, 0, Mathf.Tau, 24, new Color(1, 0.15f, 0.1f, (1 - t) * Mathf.Min(1, life)), 2.5f);
+            DrawCircle(M(at), 3, new Color(1, 0.2f, 0.1f));
         }
 
         // The camera's view: the screen's corners on the ground.

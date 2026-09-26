@@ -61,6 +61,9 @@ public partial class Hud : CanvasLayer
 
     public void ToggleHelp() => _help.Visible = !_help.Visible;
 
+    /// <summary>The red glow round the screen: a possession, the Convergence landing.</summary>
+    public readonly Vignette Vignette = new();
+
     /// <summary>A key on the command card's grid: true if it pressed something.</summary>
     public bool PressCard(Key key) => _card.Visible && _card.Press(key);
 
@@ -96,6 +99,7 @@ public partial class Hud : CanvasLayer
             _edgeWarnings[side] = warning;
         }
 
+        AddChild(Vignette);
         _help = Outlined(new Label { Visible = false, Text = HelpText }, 16);
         AddChild(_help);
 

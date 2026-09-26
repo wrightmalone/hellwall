@@ -105,11 +105,20 @@ public partial class PauseMenu : CanvasLayer
         box.AddChild(row);
         box.AddChild(Display.MusicRow());
         box.AddChild(Display.UiScaleRow());
+        box.AddChild(Toggle("Pause when a building is possessed", "pause_on_possession", false));
 
         box.AddChild(new HSeparator());
 
         box.AddChild(Confirming("Quit to main menu", "Leave this run? Click again  (unsaved progress is lost)", () => QuitToMenu()));
         box.AddChild(Confirming("Exit game", "Exit to the desktop? Click again", () => GetTree().Quit()));
+    }
+
+    /// <summary>A setting that's on or off, saved the moment it's flipped.</summary>
+    public static CheckButton Toggle(string text, string key, bool fallback)
+    {
+        var check = new CheckButton { Text = text, ButtonPressed = Settings.Get(key, fallback), FocusMode = Control.FocusModeEnum.None };
+        check.Toggled += on => Settings.Set(key, on);
+        return check;
     }
 
     /// <summary>A button that asks once before it acts: the first click relabels it, the second does it.</summary>
