@@ -46,17 +46,17 @@ internal static class TestWorlds
         return events;
     }
 
-    public static Building Place(World world, BuildingKind kind, int x, int y)
+    public static Building Place(World world, BuildingKind kind, int x, int y, bool turned = false)
     {
-        var events = Run(world, new PlaceBuilding(kind, x, y));
+        var events = Run(world, new PlaceBuilding(kind, x, y, turned));
         var rejected = events.OfType<CommandRejected>().FirstOrDefault();
         Assert.True(rejected == null, $"{kind} at ({x},{y}) rejected: {rejected?.Reason}");
         return world.Buildings.Single(b => b.Id == events.OfType<BuildingPlaced>().Single().BuildingId);
     }
 
-    public static Building Built(World world, BuildingKind kind, int x, int y)
+    public static Building Built(World world, BuildingKind kind, int x, int y, bool turned = false)
     {
-        var b = Place(world, kind, x, y);
+        var b = Place(world, kind, x, y, turned);
         RunSeconds(world, b.Def.BuildSeconds + 0.2);
         Assert.True(b.Complete);
         return b;

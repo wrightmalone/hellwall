@@ -17,7 +17,7 @@ namespace Hellwall.Sim;
 public sealed partial class World
 {
     const uint Magic = 0x56535748; // "HWSV"
-    const int FormatVersion = 18;
+    const int FormatVersion = 19;
 
     public byte[] Save()
     {
@@ -75,6 +75,7 @@ public sealed partial class World
                 w.Write((byte)b.Kind);
                 w.Write(b.X);
                 w.Write(b.Y);
+                w.Write(b.Turned);
                 w.Write(b.Hp);
                 w.Write(b.Built);
                 w.Write(b.Complete);
@@ -326,10 +327,11 @@ public sealed partial class World
             var def = world.Def(kind);
             var b = new Building
             {
-                Id = id, Kind = kind, Def = def, X = r.ReadInt32(), Y = r.ReadInt32(), W = def.W, H = def.H,
+                Id = id, Kind = kind, Def = def, X = r.ReadInt32(), Y = r.ReadInt32(), Turned = r.ReadBoolean(),
                 Hp = r.ReadSingle(), Built = r.ReadSingle(), Complete = r.ReadBoolean(), OnGround = r.ReadBoolean(),
                 Staffed = r.ReadBoolean(), Rate = r.ReadDouble(), Cooldown = r.ReadSingle(), TrainProgress = r.ReadSingle(),
             };
+            (b.W, b.H) = world.Footprint(kind, b.Turned);
             int queued = r.ReadInt32();
             for (int q = 0; q < queued; q++) b.Queue.Add((UnitKind)r.ReadByte());
             b.RallyX = r.ReadInt32();

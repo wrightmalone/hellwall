@@ -105,6 +105,13 @@ public static class UiKit
 
     public static Texture2D Building(BuildingKind kind)
     {
+        // Walls and gates as they stand (tools/bake_walls.gd): a stretch of wall, a shut gate.
+        if (kind is BuildingKind.Wall or BuildingKind.StoneWall or BuildingKind.Gate or BuildingKind.StoneGate)
+        {
+            string set = kind is BuildingKind.StoneWall or BuildingKind.StoneGate ? "stone" : "wood";
+            string piece = kind is BuildingKind.Gate or BuildingKind.StoneGate ? "gate-x-0" : "icon";
+            return Trimmed(Art.Tex($"res://art/baked/walls/{set}-{piece}.png"), "w-" + kind);
+        }
         if (Art.BakedBuilding(kind.ToString()) is { } baked) return Trimmed(baked.Texture, "bb-" + kind);
         var pieces = Art.BuildingPieces(kind);
         string path = kind == BuildingKind.Farm && Art.Ground(kind) is { } g ? g : pieces[^1];

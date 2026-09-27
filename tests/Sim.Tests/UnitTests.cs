@@ -48,9 +48,7 @@ public class UnitTests
         var barracks = Built(world, BuildingKind.Barracks, 59, 66);
         // Ring 8 out with a gate on the east side.
         foreach (var c in Scenarios.WallRing(world, 8, Side.East)) world.Enqueue(c);
-        world.Enqueue(new PlaceBuilding(BuildingKind.Gate, C + 8, C));
-        world.Enqueue(new PlaceBuilding(BuildingKind.Wall, C + 8, C - 1));
-        world.Enqueue(new PlaceBuilding(BuildingKind.Wall, C + 8, C + 1));
+        world.Enqueue(new PlaceBuilding(BuildingKind.Gate, C + 8, C - 1, Turned: true)); // across the gap, its way through at (C + 8, C)
         RunSeconds(world, 5);
         var soldier = Train(world, barracks, UnitKind.Militia);
 
@@ -78,7 +76,7 @@ public class UnitTests
     public void DemonsCannotUseGates()
     {
         var world = Rich(Rules.Default.Harmless());
-        Built(world, BuildingKind.Gate, C, C - 8);
+        Built(world, BuildingKind.Gate, C - 1, C - 8); // its way through at (C, C - 8)
         // For demons a gate is a wall: stepping onto it costs a wall's worth.
         int onto = world.Flow.DistAt(C, C - 8) - world.Flow.DistAt(C, C - 7);
         Assert.True(onto >= Balance.CostStraight * Balance.WallCostMultiplier);

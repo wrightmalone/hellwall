@@ -428,10 +428,21 @@ public sealed partial class World
     {
         if (!Terrain.InBounds(x, y) || Blocked(Terrain.Get(x, y)) || _gateTile[Terrain.Index(x, y)]) return false;
         int id = _occupancy[Terrain.Index(x, y)];
-        return id == 0 || _buildingById[id].IsGate;
+        return id == 0 || _buildingById[id].IsDoorway(x, y);
     }
 
-    internal bool IsWallAt(int x, int y)
+    /// <summary>How much ground a kind covers, laid as given: turned swaps its width and depth.</summary>
+    public (int W, int H) Footprint(BuildingKind kind, bool turned = false)
+    {
+        var def = Def(kind);
+        return turned ? (def.H, def.W) : (def.W, def.H);
+    }
+
+    /// <summary>A gate can go over a stretch of wall, which it replaces: a way through an existing line.</summary>
+    bool GateReplaces(BuildingKind kind, int id) =>
+        kind is BuildingKind.Gate or BuildingKind.StoneGate && _buildingById[id] is { Kind: BuildingKind.Wall or BuildingKind.StoneWall, Possessed: false };
+
+    public bool IsWallAt(int x, int y)
     {
         int id = BuildingIdAt(x, y);
         return id != 0 && _buildingById[id].IsWallLike;
@@ -457,26 +468,28 @@ public sealed partial class World
         && _occupancy[Terrain.Index(x, y)] == 0 && Colony.Consecrated[Terrain.Index(x, y)]
         && PackNear(x, y, 1, 1) == null && !DemonsInRect(x, y, 1, 1);
 
-    public string? CheckPlacement(BuildingKind kind, int x, int y)
+    public string? CheckPlacement(BuildingKind kind, int x, int y, bool turned = false)
     {
         if (kind == BuildingKind.Keep) return "only one Keep";
         if (Def(kind).UpgradeOnly) return "upgrade a building to get one";
         if (Scenario?.Locks(kind) == true) return "not in this mission";
         var def = Def(kind);
+        var (fw, fh) = Footprint(kind, turned);
         if (def.RequiresTech is { } needs && !Tech.Has(needs)) return $"needs {Rules.Tech(needs).Name}";
-        if (x < 0 || y < 0 || x + def.W > Terrain.Width || y + def.H > Terrain.Height) return "out of bounds";
-        if (!Vision.IsExplored(x, y) || !Vision.IsExplored(x + def.W - 1, y + def.H - 1)) return "unexplored ground";
-        for (int ty = y; ty < y + def.H; ty++)
+        if (x < 0 || y < 0 || x + fw > Terrain.Width || y + fh > Terrain.Height) return "out of bounds";
+        if (!Vision.IsExplored(x, y) || !Vision.IsExplored(x + fw - 1, y + fh - 1)) return "unexplored ground";
+        for (int ty = y; ty < y + fh; ty++)
         {
-            for (int tx = x; tx < x + def.W; tx++)
+            for (int tx = x; tx < x + fw; tx++)
             {
                 if (!Terrain.IsBuildable(Terrain.Get(tx, ty))) return "terrain not buildable";
-                if (_occupancy[Terrain.Index(tx, ty)] != 0) return "tile occupied";
+                int occupant = _occupancy[Terrain.Index(tx, ty)];
+                if (occupant != 0 && !GateReplaces(kind, occupant)) return "tile occupied";
             }
         }
-        if (!FootprintConsecrated(x, y, def.W, def.H)) return "not on consecrated ground";
-        if (PackNear(x, y, def.W, def.H) != null) return "demons sleep nearby: clear them first";
-        if (DemonsInRect(x, y, def.W, def.H)) return "demons in the way";
+        if (!FootprintConsecrated(x, y, fw, fh)) return "not on consecrated ground";
+        if (PackNear(x, y, fw, fh) != null) return "demons sleep nearby: clear them first";
+        if (DemonsInRect(x, y, fw, fh)) return "demons in the way";
         return Colony.Shortfall(def.Cost);
     }
 
@@ -487,13 +500,14 @@ public sealed partial class World
     /// Walls are meant to shut things out, so ground beyond holy ground doesn't count. For the
     /// placement preview; the sim never refuses a placement for it.
     /// </summary>
-    public (int Buildings, int Tiles) CutOff(BuildingKind kind, int x, int y)
+    public (int Buildings, int Tiles) CutOff(BuildingKind kind, int x, int y, bool turned = false)
     {
-        var def = Def(kind);
+        var (fw, fh) = Footprint(kind, turned);
+        bool gate = kind is BuildingKind.Gate or BuildingKind.StoneGate;
         if (_buildings.FirstOrDefault(b => b.Kind == BuildingKind.Keep) is not { } keep) return (0, 0);
         const int R = 50;
         int ox = (int)keep.CentreX - R, oy = (int)keep.CentreY - R, side = R * 2 + 1;
-        bool Blocked(int tx, int ty, bool placed) => placed && tx >= x && tx < x + def.W && ty >= y && ty < y + def.H;
+        bool Blocked(int tx, int ty, bool placed) => placed && tx >= x && tx < x + fw && ty >= y && ty < y + fh && !(gate && tx == x + fw / 2 && ty == y + fh / 2);
         bool[] Reach(bool placed)
         {
             var seen = new bool[side * side];
@@ -778,7 +792,7 @@ public sealed partial class World
     {
         string? reason = command switch
         {
-            PlaceBuilding p => TryPlace(p.Kind, p.X, p.Y),
+            PlaceBuilding p => TryPlace(p.Kind, p.X, p.Y, p.Turned),
             Demolish d => TryDemolish(d.BuildingId),
             SpawnDemons s => TrySpawn(s),
             MakeNoise m => TryNoise(m.X + 0.5f, m.Y + 0.5f, m.Radius, m.Intensity),
@@ -795,27 +809,35 @@ public sealed partial class World
         if (reason != null) _events.Add(new CommandRejected(Tick, reason, command));
     }
 
-    string? TryPlace(BuildingKind kind, int x, int y)
+    string? TryPlace(BuildingKind kind, int x, int y, bool turned = false)
     {
-        string? reason = CheckPlacement(kind, x, y);
+        string? reason = CheckPlacement(kind, x, y, turned);
         if (reason != null) return reason;
 
         var def = Def(kind);
+        // A gate over a wall: the stretch it covers comes down first, paid back as if demolished.
+        var (fw, fh) = Footprint(kind, turned);
+        var under = new List<int>();
+        for (int ty = y; ty < y + fh; ty++)
+            for (int tx = x; tx < x + fw; tx++)
+                if (_occupancy[Terrain.Index(tx, ty)] is var id and not 0 && !under.Contains(id)) under.Add(id);
+        foreach (var id in under) TryDemolish(id);
         Colony.Pay(def.Cost);
-        var building = AddBuilding(kind, x, y);
+        var building = AddBuilding(kind, x, y, turned);
         if (def.BuildSeconds <= 0)
         {
             building.Complete = true;
             MarkNetworkDirty();
         }
-        TryNoise(x + def.W / 2f, y + def.H / 2f, Balance.BuildNoiseRadius, Balance.BuildNoiseIntensity);
+        TryNoise(building.CentreX, building.CentreY, Balance.BuildNoiseRadius, Balance.BuildNoiseIntensity);
         return null;
     }
 
-    Building AddBuilding(BuildingKind kind, int x, int y)
+    Building AddBuilding(BuildingKind kind, int x, int y, bool turned = false)
     {
         var def = Def(kind);
-        var building = new Building { Id = _nextId++, Kind = kind, Def = def, X = x, Y = y, W = def.W, H = def.H, Hp = def.Hp };
+        var (w, h) = Footprint(kind, turned);
+        var building = new Building { Id = _nextId++, Kind = kind, Def = def, X = x, Y = y, W = w, H = h, Turned = turned, Hp = def.Hp };
         _buildings.Add(building);
         _buildingById[building.Id] = building;
         Stamp(building, building.Id);

@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://dcw8bf742n26p"
-path="res://.godot/imported/wood-gate-z.png-633e0039850858e72ba94ce88104b00c.ctex"
+uid="uid://df7wgdwyove1s"
+path="res://.godot/imported/wood-gate-z-2.png-e750a36c39fdeb39b4f8712dc4857f67.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://art/baked/walls/wood-gate-z.png"
-dest_files=["res://.godot/imported/wood-gate-z.png-633e0039850858e72ba94ce88104b00c.ctex"]
+source_file="res://art/baked/walls/wood-gate-z-2.png"
+dest_files=["res://.godot/imported/wood-gate-z-2.png-e750a36c39fdeb39b4f8712dc4857f67.ctex"]
 
 [params]
 

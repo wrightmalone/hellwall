@@ -604,13 +604,17 @@ public partial class WorldView : Node2D
                 RefreshBuildGrid(world, state.HoveredTile);
                 foreach (var (gx, gy, ok) in _buildGrid)
                     DrawColoredPolygon(Iso.Diamond(gx, gy, 1, 1), ok ? new Color(0.3f, 1, 0.35f, 0.16f) : new Color(1, 0.25f, 0.2f, 0.16f));
-                foreach (var (tx, ty) in state.GhostTiles())
+                var ghosts = state.Ghosts(world).ToList();
+                foreach (var (tx, ty, turned) in ghosts)
                 {
-                    string? why = world.CheckPlacement(kind, tx, ty);
-                    DrawColoredPolygon(Iso.Diamond(tx, ty, def.W, def.H), why == null ? Palette.GhostOk : Palette.GhostBad);
+                    string? why = world.CheckPlacement(kind, tx, ty, turned);
+                    var (gw, gh) = world.Footprint(kind, turned);
+                    DrawColoredPolygon(Iso.Diamond(tx, ty, gw, gh), why == null ? Palette.GhostOk : Palette.GhostBad);
                 }
-                var (hx, hy) = state.HoveredTile;
-                string? reason = world.CheckPlacement(kind, hx, hy);
+                // The note and the lanes check go by the one under the cursor (or the drag's first).
+                var (hx, hy, hturned) = ghosts[0];
+                var (fw, fh) = world.Footprint(kind, hturned);
+                string? reason = world.CheckPlacement(kind, hx, hy, hturned);
                 double free = 1;
                 string note = reason ?? (def.Produces is { } res ? $"+{world.EstimateGathering(kind, hx, hy, out free):0.00} {res.ToString().ToLowerInvariant()}/s" : "");
                 // Gatherers split their ground: say so when most of it is already worked, before a crew is wasted on it.
@@ -618,7 +622,7 @@ public partial class WorldView : Node2D
                 // Lanes: warn before a building shuts soldiers out of part of the town (a building, or a patch of holy ground).
                 if (reason == null)
                 {
-                    if (_cutKey != (kind, hx, hy, world.Tick / 20)) { _cutKey = (kind, hx, hy, world.Tick / 20); _cut = world.CutOff(kind, hx, hy); }
+                    if (_cutKey != (kind, hx, hy, world.Tick / 20)) { _cutKey = (kind, hx, hy, world.Tick / 20); _cut = world.CutOff(kind, hx, hy, hturned); }
                     var (cutBuildings, cutTiles) = _cut;
                     if (kind is BuildingKind.Wall or BuildingKind.StoneWall) cutTiles = 0; // walls are meant to shut ground out; only a building cut off matters
                     if (cutBuildings > 0 || cutTiles >= 4)
@@ -628,9 +632,9 @@ public partial class WorldView : Node2D
                         free = 0; // amber, like the shared-ground warning
                     }
                 }
-                if (def.Weapon is { } weapon) Iso.Ellipse(this, new Vector2(hx + def.W / 2f, hy + def.H / 2f), weapon.Range, new Color(1, 1, 1, 0.35f), 1);
-                if (def.SlowRadius > 0) Iso.Ellipse(this, new Vector2(hx + def.W / 2f, hy + def.H / 2f), def.SlowRadius, new Color(0.6f, 0.8f, 1, 0.35f), 1);
-                if (note.Length > 0) Text(font, Iso.P(hx + def.W, hy) + new Vector2(8, 0), note, 13, reason != null ? new Color(1, 0.6f, 0.6f) : free < 0.6 ? new Color(1, 0.8f, 0.4f) : Colors.White);
+                if (def.Weapon is { } weapon) Iso.Ellipse(this, new Vector2(hx + fw / 2f, hy + fh / 2f), weapon.Range, new Color(1, 1, 1, 0.35f), 1);
+                if (def.SlowRadius > 0) Iso.Ellipse(this, new Vector2(hx + fw / 2f, hy + fh / 2f), def.SlowRadius, new Color(0.6f, 0.8f, 1, 0.35f), 1);
+                if (note.Length > 0) Text(font, Iso.P(hx + fw, hy) + new Vector2(8, 0), note, 13, reason != null ? new Color(1, 0.6f, 0.6f) : free < 0.6 ? new Color(1, 0.8f, 0.4f) : Colors.White);
             }
         }
 

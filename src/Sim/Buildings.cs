@@ -48,6 +48,8 @@ public sealed class Building
     public int Y;
     public int W;
     public int H;
+    /// <summary>Laid the other way: a 3x1 Gate turned to run north to south (World.Footprint).</summary>
+    public bool Turned;
 
     public float Hp;
 
@@ -120,6 +122,8 @@ public sealed class Building
 
     public bool IsWallLike => Kind is BuildingKind.Wall or BuildingKind.Gate or BuildingKind.StoneWall or BuildingKind.StoneGate;
     public bool IsGate => Kind is BuildingKind.Gate or BuildingKind.StoneGate;
+    /// <summary>A gate's way through: the middle tile of its three. The two either side are wall.</summary>
+    public bool IsDoorway(int x, int y) => IsGate && x == X + W / 2 && y == Y + H / 2;
 
     /// <summary>What the horde paths to: anything built except walls and gates (which it paths through) and what it already holds.</summary>
     public bool IsDemonTarget => !IsWallLike && !Possessed;

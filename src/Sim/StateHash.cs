@@ -33,6 +33,7 @@ public static class StateHash
             h = Mix(h, (uint)b.Kind);
             h = Mix(h, (uint)b.X);
             h = Mix(h, (uint)b.Y);
+            h = MixByte(h, b.Turned ? (byte)1 : (byte)0);
             h = Mix(h, Bits(b.Hp));
             h = Mix(h, Bits(b.Built));
             h = MixByte(h, (byte)((b.Complete ? 1 : 0) | (b.OnGround ? 2 : 0) | (b.Staffed ? 4 : 0)));

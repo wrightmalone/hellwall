@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://di4f4w8m0yl5r"
-path="res://.godot/imported/stone-gate-x.png-d3b86777248d7c1bb888d6cd47fa6700.ctex"
+uid="uid://n5xvx5d6bmrn"
+path="res://.godot/imported/stone-gate-z-4.png-484f71669f1bdde82e28595b0a31943a.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://art/baked/walls/stone-gate-x.png"
-dest_files=["res://.godot/imported/stone-gate-x.png-d3b86777248d7c1bb888d6cd47fa6700.ctex"]
+source_file="res://art/baked/walls/stone-gate-z-4.png"
+dest_files=["res://.godot/imported/stone-gate-z-4.png-484f71669f1bdde82e28595b0a31943a.ctex"]
 
 [params]
 

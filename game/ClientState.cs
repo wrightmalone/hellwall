@@ -80,21 +80,45 @@ public sealed class ClientState
     /// <summary>
     /// Where the armed building would go: under the cursor, or for walls and
     /// gates being dragged, a straight line from where the drag began along
-    /// whichever axis the drag has moved furthest.
+    /// whichever axis the drag has moved furthest. A gate is three tiles wide
+    /// with its way through in the middle, under the cursor: it lies along the
+    /// wall there (or along the drag), and a dragged line of them goes every
+    /// three tiles. Each is its top-left tile and whether it's turned.
     /// </summary>
-    public IEnumerable<(int X, int Y)> GhostTiles()
+    public IEnumerable<(int X, int Y, bool Turned)> Ghosts(World world)
     {
+        bool gate = Armed is BuildingKind.Gate or BuildingKind.StoneGate;
         bool line = Armed is BuildingKind.Wall or BuildingKind.Gate or BuildingKind.StoneWall or BuildingKind.StoneGate && DragStart != null;
+        (int, int, bool) Gate(int x, int y, bool turned) => turned ? (x, y - 1, true) : (x - 1, y, false);
         if (!line)
         {
-            yield return HoveredTile;
+            yield return gate ? Gate(HoveredTile.X, HoveredTile.Y, RunsNorthSouth(world, HoveredTile.X, HoveredTile.Y)) : (HoveredTile.X, HoveredTile.Y, false);
             yield break;
         }
         var (sx, sy) = DragStartTile;
         var (ex, ey) = HoveredTile;
-        if (Math.Abs(ex - sx) >= Math.Abs(ey - sy))
-            for (int x = Math.Min(sx, ex); x <= Math.Max(sx, ex); x++) yield return (x, sy);
+        bool along = Math.Abs(ex - sx) >= Math.Abs(ey - sy);
+        // A single click (no drag yet) on a gate: lie along the wall, as when hovering.
+        if (gate && ex == sx && ey == sy) { yield return Gate(sx, sy, RunsNorthSouth(world, sx, sy)); yield break; }
+        int step = gate ? 3 : 1;
+        if (along)
+        {
+            int dir = Math.Sign(ex - sx), n = Math.Abs(ex - sx) / step;
+            for (int k = 0; k <= n; k++) yield return gate ? Gate(sx + dir * k * step, sy, false) : (sx + dir * k, sy, false);
+        }
         else
-            for (int y = Math.Min(sy, ey); y <= Math.Max(sy, ey); y++) yield return (sx, y);
+        {
+            int dir = Math.Sign(ey - sy), n = Math.Abs(ey - sy) / step;
+            for (int k = 0; k <= n; k++) yield return gate ? Gate(sx, sy + dir * k * step, true) : (sx, sy + dir * k, false);
+        }
+    }
+
+    /// <summary>Does the wall at this tile run north to south: more wall (or unwalkable ground) above and below it than either side.</summary>
+    public static bool RunsNorthSouth(World world, int x, int y)
+    {
+        int Solid(int tx, int ty) => !world.Terrain.InBounds(tx, ty) ? 0 : world.IsWallAt(tx, ty) ? 2 : !Terrain.IsWalkable(world.Terrain.Get(tx, ty)) ? 1 : 0;
+        int ns = Solid(x, y - 1) + Solid(x, y + 1) + Solid(x, y - 2) + Solid(x, y + 2);
+        int ew = Solid(x - 1, y) + Solid(x + 1, y) + Solid(x - 2, y) + Solid(x + 2, y);
+        return ns > ew;
     }
 }

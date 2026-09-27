@@ -12,7 +12,8 @@ namespace Hellwall.Sim;
 public abstract record Command;
 
 /// <summary>Place a building with its top-left corner at (X, Y).</summary>
-public sealed record PlaceBuilding(BuildingKind Kind, int X, int Y) : Command;
+/// <summary>Turned: a building longer one way (a Gate) laid north to south instead of east to west.</summary>
+public sealed record PlaceBuilding(BuildingKind Kind, int X, int Y, bool Turned = false) : Command;
 
 public sealed record Demolish(int BuildingId) : Command;
 

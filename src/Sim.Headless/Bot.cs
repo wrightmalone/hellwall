@@ -381,14 +381,20 @@ public sealed class Bot
         }
         // Every tenth tile of the ring is a Gate, where there's open ground on both sides of it: soldiers
         // have to get out to clear the wilds, and a gate onto the trees (which block them) is only a wall.
+        // A gate is three tiles wide, its way through on the ring tile, and lies across the way it opens.
+        // A wall ordered beside it either goes first (and the gate replaces it) or finds the gate there.
         foreach (var (x, y) in tiles.Take(budget).ToList())
-            Do(new PlaceBuilding((x + y) % 10 == 0 && OpensBothWays(x, y) && _world.CheckPlacement(BuildingKind.Gate, x, y) == null ? BuildingKind.Gate : wall, x, y));
+            if ((x + y) % 10 == 0 && GateAt(x, y) is { } g) Do(new PlaceBuilding(BuildingKind.Gate, g.X, g.Y, g.Turned));
+            else Do(new PlaceBuilding(wall, x, y));
     }
 
-    bool OpensBothWays(int x, int y)
+    /// <summary>A gate with its way through here, if there's open ground on both sides of it: its top-left tile and whether it's turned.</summary>
+    (int X, int Y, bool Turned)? GateAt(int x, int y)
     {
         bool Open(int tx, int ty) => _world.Terrain.InBounds(tx, ty) && Terrain.IsWalkable(_world.Terrain.Get(tx, ty)) && !(_world.ForestBlocks && _world.Terrain.Get(tx, ty) == Tile.Forest) && _world.BuildingIdAt(tx, ty) == 0;
-        return (Open(x - 1, y) && Open(x + 1, y)) || (Open(x, y - 1) && Open(x, y + 1));
+        if (Open(x, y - 1) && Open(x, y + 1) && _world.CheckPlacement(BuildingKind.Gate, x - 1, y) == null) return (x - 1, y, false);
+        if (Open(x - 1, y) && Open(x + 1, y) && _world.CheckPlacement(BuildingKind.Gate, x, y - 1, true) == null) return (x, y - 1, true);
+        return null;
     }
 
     List<(int X, int Y, bool Hole)>? _perimeterCache;

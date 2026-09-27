@@ -1207,7 +1207,7 @@ public partial class Main : Node2D
 
     void PlaceLine(BuildingKind kind)
     {
-        foreach (var (x, y) in _state.GhostTiles()) Send(new PlaceBuilding(kind, x, y));
+        foreach (var (x, y, turned) in _state.Ghosts(_world)) Send(new PlaceBuilding(kind, x, y, turned));
     }
 
     /// <summary>A click selects what's under the cursor; a drag box-selects soldiers.</summary>
@@ -1329,8 +1329,9 @@ public partial class Main : Node2D
             for (int x = c - 8; x <= c + 8; x++)
             {
                 if (Math.Max(Math.Abs(x - c), Math.Abs(y - c)) != 8) continue;
-                bool gate = y == c - 8 && Math.Abs(x - c) <= 1;
-                Send(new PlaceBuilding(gate ? BuildingKind.Gate : BuildingKind.Wall, x, y));
+                bool gate = y == c - 8 && Math.Abs(x - c) <= 1; // one gate, three tiles wide
+                if (!gate) Send(new PlaceBuilding(BuildingKind.Wall, x, y));
+                else if (x == c - 1) Send(new PlaceBuilding(BuildingKind.Gate, x, y));
             }
         foreach (var (x, y) in new[] { (c - 6, c - 6), (c + 5, c - 6), (c - 6, c + 5), (c + 5, c + 5) }) Send(new PlaceBuilding(BuildingKind.Watchtower, x, y));
         Send(new PlaceBuilding(BuildingKind.Bombard, c - 1, c - 5));

@@ -1,11 +1,12 @@
 extends SceneTree
 # Bakes the walls and gates from KayKit Medieval Hexagon (CC0) in the pieces our walls join
 # from: a post on the tile, and an arm half a tile long toward each neighbour it joins
-# (north, east, south, west); a gate spans its whole tile, one way or the other. KayKit's own
+# (north, east, south, west). A gate is three tiles long, one way or the other: wall either side
+# of a doorway in the middle, its doors baked in frames from shut to open. KayKit's own
 # walls sit on hexagon edges, so each straight piece is stretched to fit our square grid.
 # Every piece is drawn from the terrain's isometric angle at its scale (132 px across a tile's
-# diamond, shown at half size) on the same canvas, with the tile's centre at the same point:
-# walls.json says where. Run with a display:
+# diamond, shown at half size) on the same canvas, with the tile's centre at the same point
+# (gates on a bigger canvas of their own): walls.json says where. Run with a display:
 #   Godot --path game --script res://tools/bake_walls.gd
 
 const K := "res://art/kaykit-medieval/neutral/"
@@ -13,6 +14,10 @@ const PX_PER_UNIT := 132.0 / sqrt(2.0)
 const W := 156
 const TALL := 176
 const OVERLAP := 0.06 # arms reach a little into the post, so no seam shows
+const GW := 280 # the gates' canvas: three tiles along one axis
+const GTALL := 250
+const GATE_FOOT := 80 # the doorway's centre this far above the gates' canvas bottom
+const FRAMES := 5 # doors shut (0) to open (FRAMES - 1)
 
 # set, model for arms and post, gate model, height, thickness (tile units). "proc:" models are
 # built here from shapes: KayKit's wooden fence, stretched to a wall, read as salmon brick, so
@@ -36,14 +41,9 @@ func _initialize():
 	camera = Camera3D.new()
 	camera.projection = Camera3D.PROJECTION_ORTHOGONAL
 	camera.keep_aspect = Camera3D.KEEP_HEIGHT
-	camera.size = TALL / PX_PER_UNIT
 	viewport.add_child(camera)
-	var pitch := deg_to_rad(30.0)
-	var dir := Vector3(1, 0, 1).normalized() * cos(pitch) + Vector3(0, sin(pitch), 0)
 	# The tile's centre a half-diamond and a margin above the canvas bottom.
-	var drop := (TALL / 2.0 - 33 - 12) / PX_PER_UNIT
-	var target := Vector3(0, drop / cos(pitch), 0)
-	camera.look_at_from_position(target + dir * 20.0, target)
+	aim(TALL, 33 + 12)
 	var sun := DirectionalLight3D.new()
 	sun.rotation_degrees = Vector3(-55, 20, 0)
 	sun.light_energy = 1.1
@@ -56,6 +56,15 @@ func _initialize():
 	env.environment.ambient_light_energy = 0.6
 	viewport.add_child(env)
 	bake.call_deferred()
+
+# The camera from the terrain's angle, for a canvas `tall` high with the tile's centre `foot` above its bottom.
+func aim(tall: int, foot: float):
+	camera.size = tall / PX_PER_UNIT
+	var pitch := deg_to_rad(30.0)
+	var dir := Vector3(1, 0, 1).normalized() * cos(pitch) + Vector3(0, sin(pitch), 0)
+	var drop := (tall / 2.0 - foot) / PX_PER_UNIT
+	var target := Vector3(0, drop / cos(pitch), 0)
+	camera.look_at_from_position(target + dir * 20.0, target)
 
 func bake():
 	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path("res://art/baked/walls"))
@@ -71,15 +80,134 @@ func bake():
 		await piece(s[0] + "-arm-n", s[1], Vector3(0, 0, -arm / 2), 90, arm, h, t)
 		# The post: a pillar a little taller and wider than the wall.
 		await piece(s[0] + "-post", s[1], Vector3.ZERO, 0, t + 0.08, h + 0.08, t + 0.08)
-		# A gate across the whole tile: east to west, or north to south.
-		await piece(s[0] + "-gate-x", s[2], Vector3.ZERO, 0, 1.0 + OVERLAP, h + 0.06, t + 0.04)
-		await piece(s[0] + "-gate-z", s[2], Vector3.ZERO, 90, 1.0 + OVERLAP, h + 0.06, t + 0.04)
-		count += 7
+		count += 5
 	var base := camera.unproject_position(Vector3.ZERO)
+	# The gates, on their own canvas: three tiles east to west (x) or north to south (z), centred
+	# on the doorway, in frames from shut to open.
+	viewport.size = Vector2i(GW, GTALL)
+	aim(GTALL, GATE_FOOT)
+	await RenderingServer.frame_post_draw
+	for s in sets:
+		for axis in [["x", 0.0], ["z", 90.0]]:
+			for frame in FRAMES:
+				await gate("%s-gate-%s-%d" % [s[0], axis[0], frame], s, axis[1], frame / float(FRAMES - 1))
+				count += 1
+	# The build menu's pictures: a short straight stretch of each wall (a gate's is its shut frame).
+	for s in sets:
+		await wall_icon(s[0] + "-icon", s)
+		count += 1
+	var gate_base := camera.unproject_position(Vector3.ZERO)
 	var f := FileAccess.open("res://art/baked/walls/walls.json", FileAccess.WRITE)
-	f.store_string(JSON.stringify({"base": [base.x, base.y], "size": [W, TALL]}))
-	print("baked ", count, " wall pieces; tile centre at ", base)
+	f.store_string(JSON.stringify({"base": [base.x, base.y], "size": [W, TALL], "gateBase": [gate_base.x, gate_base.y], "gateSize": [GW, GTALL], "gateFrames": FRAMES}))
+	print("baked ", count, " wall pieces; tile centre at ", base, ", gates' at ", gate_base)
 	quit()
+
+# A gate three tiles long along x, turned `yaw` about the up axis: a stretch of wall either side,
+# a post each side of the doorway, a beam over it, and two doors `open` (0 to 1) swung back.
+func gate(name: String, s: Array, yaw: float, open: float):
+	var outer := Node3D.new()
+	outer.rotation_degrees.y = yaw
+	var h: float = s[3]
+	var t: float = s[4]
+	var r := t * 0.5
+	var high := h * 1.3 # the posts stand above the wall
+	if s[0] == "wood":
+		var bark := mat(Color(0.36, 0.23, 0.13))
+		var cut := mat(Color(0.62, 0.47, 0.3))
+		for side in [-1, 1]:
+			var run := palisade(1.0 + OVERLAP, h, t, false, false)
+			run.position.x = side * 1.0
+			outer.add_child(run)
+			log_at(outer, side * 0.5, r * 1.4, high, bark, cut)
+		var beam := CylinderMesh.new()
+		beam.top_radius = r * 0.55
+		beam.bottom_radius = r * 0.55
+		beam.height = 1.1
+		add_mesh(outer, beam, bark, Vector3(0, high * 0.92, 0), Vector3(0, 0, 90))
+		doors(outer, 0.5 - r * 1.2, h * 0.9, t * 0.5, open)
+	else:
+		var stone := mat(Color(0.66, 0.72, 0.78)) # KayKit's pale blue-grey
+		for side in [-1, 1]:
+			var run := await fitted(s[1], 1.0 + OVERLAP, h, t)
+			run.position.x = side * 1.0
+			outer.add_child(run)
+			var tower := await fitted(s[1], t + 0.12, high + 0.06, t + 0.12)
+			tower.position.x = side * 0.5
+			outer.add_child(tower)
+		var lintel := BoxMesh.new()
+		lintel.size = Vector3(1.0, h * 0.16, t * 0.9)
+		add_mesh(outer, lintel, stone, Vector3(0, high - h * 0.1, 0), Vector3.ZERO)
+		doors(outer, 0.5 - t * 0.55, high - h * 0.18, t * 0.4, open)
+	viewport.add_child(outer)
+	await RenderingServer.frame_post_draw
+	await RenderingServer.frame_post_draw
+	save(name)
+	outer.queue_free()
+	await process_frame
+
+# Two tiles of straight wall along x with a post at each end, for the build menu.
+func wall_icon(name: String, s: Array):
+	var outer := Node3D.new()
+	var h: float = s[3]
+	var t: float = s[4]
+	if s[0] == "wood":
+		outer.add_child(palisade(2.0, h, t, false, false))
+		for side in [-1, 1]:
+			var post := palisade(0.0, h, t, false, true)
+			post.position.x = side * 1.0
+			outer.add_child(post)
+	else:
+		outer.add_child(await fitted(s[1], 2.0, h, t))
+		for side in [-1, 1]:
+			var post := await fitted(s[1], t + 0.08, h + 0.08, t + 0.08)
+			post.position.x = side * 1.0
+			outer.add_child(post)
+	viewport.add_child(outer)
+	await RenderingServer.frame_post_draw
+	await RenderingServer.frame_post_draw
+	save(name)
+	outer.queue_free()
+	await process_frame
+
+# Two plank doors with iron straps, hung at x = -half and +half, meeting in the middle when shut,
+# swung back (away from the camera, toward -z) by `open` of the way to 85 degrees.
+func doors(root3: Node3D, half: float, height: float, thick: float, open: float):
+	var wood := mat(Color(0.46, 0.3, 0.16))
+	var iron := mat(Color(0.22, 0.22, 0.24))
+	for side in [-1, 1]:
+		var hinge := Node3D.new()
+		hinge.position = Vector3(side * half, 0, 0)
+		# Left door (side -1) reaches +x from its hinge and turns +; right, -x and -: both swing to -z.
+		hinge.rotation_degrees.y = -side * open * 85.0
+		root3.add_child(hinge)
+		var leaf := BoxMesh.new()
+		leaf.size = Vector3(half, height, thick)
+		add_mesh(hinge, leaf, wood, Vector3(-side * half / 2, height / 2, 0), Vector3.ZERO)
+		for strap in [0.22, 0.7]:
+			var band := BoxMesh.new()
+			band.size = Vector3(half * 0.96, height * 0.06, thick * 1.2)
+			add_mesh(hinge, band, iron, Vector3(-side * half / 2, height * strap, 0), Vector3.ZERO)
+
+# A KayKit model stretched to length (along x) x height x thickness, standing on the ground at the origin.
+func fitted(model_name: String, length: float, height: float, thick: float) -> Node3D:
+	var holder := Node3D.new()
+	var mid := Node3D.new()
+	holder.add_child(mid)
+	var model: Node3D = load(K + model_name + ".gltf").instantiate()
+	mid.add_child(model)
+	viewport.add_child(holder)
+	await process_frame
+	var box := bounds(model)
+	if box.size.z > box.size.x:
+		model.rotation_degrees.y = 90
+		await process_frame
+		box = bounds(model)
+	var sc := Vector3(length / max(box.size.x, 0.001), height / max(box.size.y, 0.001), thick / max(box.size.z, 0.001))
+	mid.scale = sc
+	var c := box.position + box.size / 2
+	mid.position = Vector3(-c.x * sc.x, -box.position.y * sc.y, -c.z * sc.z)
+	viewport.remove_child(holder)
+	return holder
 
 # One piece: `model` turned so its length runs along x, stretched to length x height x thickness,
 # then turned `yaw` degrees about the up axis and centred on `at`.

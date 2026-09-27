@@ -1150,6 +1150,40 @@ last lost by at least one).
   both; recalled, it selects its soldiers if it has any left, its buildings otherwise (several
   at once, as a double-click does), since a selection is one or the other.
 
+## Gates three tiles wide, opening for your people (your walls pass after 0.24.1)
+
+- **Why 3x1:** a 1x1 gate had to guess which way it ran from its neighbours, so a wall
+  against its back turned it side-on (your line of fences with gates one row north).
+  A gate now lies along its wall, like They Are Billions' gates.
+  - It's a building three tiles long, east to west, or turned north to south
+    (`Building.Turned`; `PlaceBuilding(..., Turned)`).
+  - Only its middle tile is the way through, and the two either side are wall, so paths
+    match the picture.
+  - Walls join a gate only at its ends. A wall against its side stands on its own.
+- **Placing one:**
+  - It turns itself to follow the wall under the cursor. Dragging a line of gates lays
+    one every three tiles along the drag.
+  - A gate can go straight onto a stretch of wall and replaces it. The walls come down
+    as if demolished (the usual refund) and the gate goes up.
+- **Its numbers:** a gate stands in for three wall tiles, so it costs and holds about
+  that much.
+  - Gate: wood 16, stone 4; 1,200 hp; 8 s.
+  - Stone gate: wood 8, stone 30; 3,600 hp; 12 s.
+- **Opening:** a gate's doors swing open over about 0.4 s while a soldier, woodsman or
+  miner is within 2.2 tiles of the doorway, and shut again after. They never open for
+  demons.
+- **Art:** baked by tools/bake_walls.gd on a canvas of their own, in 5 frames each way,
+  from shut to open. The timber gate has log gateposts and a beam; the stone gate has
+  KayKit wall either side, squat towers and a lintel. Doors are plank with iron straps.
+- **Build menu:** Wall and Stone Wall now show a short stretch of the baked wall, and the
+  two gates show their shut frame, instead of the old placeholders.
+- **The bot:** its ring gates are 3-wide, laid across the way they open.
+- **Save format:** 19. Older saves don't load.
+- **Attack-move (A):** I couldn't find a cause. The key reaches the command card through
+  the ordinary path, and the self-test that selects soldiers and presses A passes. You
+  said it came back after a pause. If it happens again, note what came just before it:
+  a load, a hint, or a click on a panel.
+
 ## Buildings from KayKit Medieval Hexagon (you downloaded it and the Medieval Village MegaKit)
 
 - **Every building but walls and gates is now a baked KayKit model** (`tools/bake_buildings.gd`,

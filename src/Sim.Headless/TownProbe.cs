@@ -137,8 +137,9 @@ public static class TownProbe
             {
                 bool edge = x == C - 8 || x == C + 8 || y == C - 8 || y == C + 8;
                 if (!edge) continue;
-                bool gate = y == C - 8 && Math.Abs(x - C) <= 1;
-                cmds.Add(new PlaceBuilding(gate ? BuildingKind.Gate : BuildingKind.Wall, x, y));
+                bool gate = y == C - 8 && Math.Abs(x - C) <= 1; // one gate, three tiles wide
+                if (!gate) cmds.Add(new PlaceBuilding(BuildingKind.Wall, x, y));
+                else if (x == C - 1) cmds.Add(new PlaceBuilding(BuildingKind.Gate, x, y));
             }
         foreach (var (x, y) in new[] { (58, 58), (69, 58), (58, 69), (69, 69) }) cmds.Add(new PlaceBuilding(BuildingKind.Watchtower, x, y));
         cmds.Add(new PlaceBuilding(BuildingKind.Bombard, 63, 59));

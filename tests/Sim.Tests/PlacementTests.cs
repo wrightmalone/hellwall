@@ -133,9 +133,48 @@ public class StoneGateTests
         world.Grant("masonry");
         var gate = TestWorlds.Built(world, BuildingKind.StoneGate, TestWorlds.C + 6, TestWorlds.C);
         Assert.True(gate.IsWallLike && gate.IsGate);
-        Assert.True(world.IsHumanWalkable(gate.X, gate.Y));
-        Assert.False(world.IsWalkable(gate.X, gate.Y));
+        // Three tiles wide; the way through is the middle one, and the two either side are wall.
+        Assert.Equal((3, 1), (gate.W, gate.H));
+        Assert.True(world.IsHumanWalkable(gate.X + 1, gate.Y));
+        Assert.False(world.IsHumanWalkable(gate.X, gate.Y));
+        Assert.False(world.IsHumanWalkable(gate.X + 2, gate.Y));
+        Assert.False(world.IsWalkable(gate.X + 1, gate.Y));
         Assert.True(gate.Def.Hp > world.Def(BuildingKind.Gate).Hp);
+    }
+}
+
+public class GateTests
+{
+    [Fact]
+    public void AGateLaidOverAWallReplacesTheStretchItCovers()
+    {
+        var world = TestWorlds.Rich();
+        int x = TestWorlds.C + 6, y = TestWorlds.C - 3;
+        for (int ty = y; ty < y + 5; ty++) TestWorlds.Built(world, BuildingKind.Wall, x, ty);
+        // Turned, it runs north to south, along the wall: the middle three walls come down for it.
+        var gate = TestWorlds.Place(world, BuildingKind.Gate, x, y + 1, turned: true);
+        Assert.Equal((1, 3), (gate.W, gate.H));
+        Assert.Equal(2, world.Buildings.Count(b => b.Kind == BuildingKind.Wall));
+        Assert.Equal(gate.Id, world.BuildingIdAt(x, y + 2));
+        Assert.Equal(BuildingKind.Wall, world.BuildingById(world.BuildingIdAt(x, y))!.Kind);
+        Assert.Equal(BuildingKind.Wall, world.BuildingById(world.BuildingIdAt(x, y + 4))!.Kind);
+        // Nothing else is replaced: not over a House.
+        TestWorlds.Place(world, BuildingKind.House, x + 3, y);
+        Assert.Equal("tile occupied", world.CheckPlacement(BuildingKind.Gate, x + 2, y));
+    }
+
+    [Fact]
+    public void ATurnedGateKeepsItsWayRoundThroughASave()
+    {
+        var world = TestWorlds.Rich();
+        TestWorlds.Built(world, BuildingKind.Gate, TestWorlds.C + 6, TestWorlds.C - 1, turned: true);
+        var loaded = World.Load(world.Save(), world.Rules);
+        var gate = loaded.Buildings.Single(b => b.Kind == BuildingKind.Gate);
+        Assert.True(gate.Turned);
+        Assert.Equal((1, 3), (gate.W, gate.H));
+        Assert.True(loaded.IsHumanWalkable(TestWorlds.C + 6, TestWorlds.C));
+        Assert.False(loaded.IsHumanWalkable(TestWorlds.C + 6, TestWorlds.C - 1));
+        Assert.Equal(StateHash.Compute(world), StateHash.Compute(loaded));
     }
 }
 
