@@ -1123,7 +1123,9 @@ public partial class Main : Node2D
     // --- the scenes behind the main menu ---
 
     /// <summary>The backdrop's scenes (hellwall-sim menuscenes, made for each build): a save each, where to look, and how close.</summary>
-    static List<(string File, Vector2 At, float Zoom)>? _scenes;
+    static List<(string File, Vector2 At, float Zoom, bool Fall)>? _scenes;
+    /// <summary>Seconds a scene goes on after its run has ended (a fall: to see the Keep go).</summary>
+    double _afterEnd;
     int _scene = -1;
     double _sceneLeft, _fadeIn = 1;
     Vector2 _sceneAt;
@@ -1132,15 +1134,15 @@ public partial class Main : Node2D
     /// <summary>The rules the scenes were made under: the defaults with fog off (as MenuScenes.BackdropRules).</summary>
     static Rules BackdropRules => Rules.Default.WithFog(f => f with { Enabled = false });
 
-    static List<(string File, Vector2 At, float Zoom)> LoadSceneList()
+    static List<(string File, Vector2 At, float Zoom, bool Fall)> LoadSceneList()
     {
-        var list = new List<(string File, Vector2 At, float Zoom)>();
+        var list = new List<(string File, Vector2 At, float Zoom, bool Fall)>();
         if (!Godot.FileAccess.FileExists("res://menu/scenes.json")) return list;
         var json = Json.ParseString(Godot.FileAccess.GetFileAsString("res://menu/scenes.json")).AsGodotDictionary();
         foreach (var entry in json["scenes"].AsGodotArray())
         {
             var e = entry.AsGodotDictionary();
-            list.Add((e["file"].AsString(), new Vector2((float)e["x"].AsDouble(), (float)e["y"].AsDouble()), (float)e["zoom"].AsDouble()));
+            list.Add((e["file"].AsString(), new Vector2((float)e["x"].AsDouble(), (float)e["y"].AsDouble()), (float)e["zoom"].AsDouble(), e.ContainsKey("fall") && e["fall"].AsBool()));
         }
         return list;
     }
@@ -1151,7 +1153,9 @@ public partial class Main : Node2D
         while (_scenes is { Count: > 0 })
         {
             int pick = _scenes.Count == 1 ? 0 : (_scene + 1 + _sceneRandom.Next(_scenes.Count - 1)) % _scenes.Count;
-            var (file, at, zoom) = _scenes[pick];
+            // --scene=name: that one first (screenshots, and checking a scene plays as meant).
+            if (_scene < 0 && _options.TryGetValue("scene", out var wanted) && _scenes.FindIndex(x => x.File.StartsWith(wanted)) is >= 0 and var named) pick = named;
+            var (file, at, zoom, fall) = _scenes[pick];
             try
             {
                 var loaded = World.Load(Godot.FileAccess.GetFileAsBytes("res://menu/" + file), BackdropRules);
@@ -1162,7 +1166,9 @@ public partial class Main : Node2D
                 _sceneAt = at;
                 _camera.Zoom = Vector2.One * zoom / Display.UiScale;
                 _camera.Position = Iso.P(at);
-                _sceneLeft = 15 + _sceneRandom.NextDouble() * 5;
+                // A town falling plays until it falls (and a moment after); the rest, 15 to 20 seconds.
+                _sceneLeft = fall ? 45 : 15 + _sceneRandom.NextDouble() * 5;
+                _afterEnd = 3;
                 _fadeIn = 0;
                 if (DisplayServer.GetName() == "headless") GD.Print($"hellwall: backdrop scene {file} (day {loaded.Day})");
                 return true;
@@ -1184,7 +1190,12 @@ public partial class Main : Node2D
         if (_scenes is { Count: > 0 })
         {
             _sceneLeft -= real;
-            if ((_sceneLeft <= 0 || _world.Outcome != Outcome.Running) && !NextScene()) _scenes = null;
+            if (_world.Outcome != Outcome.Running) { _afterEnd -= real; _sceneLeft = Math.Min(_sceneLeft, _afterEnd); }
+            if (_sceneLeft <= 0)
+            {
+                if (DisplayServer.GetName() == "headless") GD.Print($"hellwall: backdrop scene ends: {_world.Outcome} on day {_world.Day}");
+                if (!NextScene()) _scenes = null;
+            }
             // A slow drift round what the scene is about.
             float angle = (float)(Time.GetTicksMsec() / 1000.0 * Mathf.Tau / 60);
             _camera.Position = Iso.P(_sceneAt + new Vector2(Mathf.Cos(angle), Mathf.Sin(angle)) * 3);

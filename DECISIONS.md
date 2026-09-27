@@ -936,6 +936,14 @@ last lost by at least one).
   its own rules, so they're made afresh each build and kept out of git; if one ever won't
   load, it's dropped, and with none the backdrop plays a live run as before. The menu's
   version line now matches the build (export.sh keeps project.godot in step).
+- **The menu's scenes are closer fights, and some are lost** (you: the "player" had it too
+  easy): the wave scenes and the Convergence play at Hard (Two Fronts' wave is 800 demons, the
+  Convergence 18,000), and three new scenes are a town falling: a Nightmare run played until
+  the Keep falls, keeping a snapshot every ten seconds, and the scene starts the one taken
+  about half a minute before. A falling scene plays until the Keep goes (and three seconds
+  more), not on the 15 to 20 second clock. Checked: all three fall when played on behind the
+  menu (the bot there is a fresh one, so it could have gone otherwise). Eleven scenes: three
+  towns, five fights, three falls. `--scene=fall-lakes` starts on a given one.
 - **Living woods and miners are the game now** (you: commit to resources running out and
   opening ways in): the new-game switches and their saved settings are gone; forest is always a
   wall that woodsmen fell, and rock and iron always wear away. `--no-woods` and `--no-mining`
