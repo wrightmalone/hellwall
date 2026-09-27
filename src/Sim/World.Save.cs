@@ -44,6 +44,7 @@ public sealed partial class World
 
             w.Write(Tick);
             w.Write((byte)Outcome);
+            w.Write(Aftermath);
             w.Write(Rng.State);
             w.Write(_nextId);
             w.Write(NetworkDirty);
@@ -293,6 +294,7 @@ public sealed partial class World
         var world = new World(new WorldOptions(seed, size, 0, rules, survival, difficulty, endless, map, scenario));
         world.Tick = r.ReadInt32();
         world.Outcome = (Outcome)r.ReadByte();
+        world.Aftermath = r.ReadBoolean();
         world.Rng.State = r.ReadUInt32();
         world._nextId = r.ReadInt32();
         world.NetworkDirty = r.ReadBoolean();

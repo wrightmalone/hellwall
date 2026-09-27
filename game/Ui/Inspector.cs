@@ -137,7 +137,7 @@ public partial class Inspector : PanelContainer
             _upgrade.Text = locked ? $"{target} needs {World.Rules.Tech(def.RequiresTech!).Name}"
                 : n == eligible.Count ? $"Upgrade {n} to {target} ({def.Cost} each)"
                 : $"Upgrade {n} of {eligible.Count} to {target} ({def.Cost} each; that's all you can pay for)";
-            _upgrade.TooltipText = $"{target}: {Blurbs.Of(target)}\nThey work as they are while the builders are at it.";
+            _upgrade.TooltipText = $"Costs {UiKit.CostText(def.Cost, World.Colony)} each\n{target}: {Blurbs.Of(target)}\nThey work as they are while the builders are at it.";
         }
     }
 

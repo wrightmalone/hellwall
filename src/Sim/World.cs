@@ -42,6 +42,21 @@ public sealed partial class World
     public Rules Rules { get; }
     public Terrain Terrain { get; }
     public Outcome Outcome { get; private set; } = Outcome.Running;
+
+    /// <summary>
+    /// Won, and playing on to clear the map: no more waves, and the mission's goals and
+    /// triggers are done with. The win stands; only the Keep falling ends it now.
+    /// </summary>
+    public bool Aftermath { get; private set; }
+
+    /// <summary>After a win, carry on in the Aftermath. Called by the player's choice, not a command: nothing runs once a game's over.</summary>
+    public void PlayOn()
+    {
+        if (Outcome != Outcome.Won) return;
+        Outcome = Outcome.Running;
+        Aftermath = true;
+        _events.Add(new OutcomeChanged(Tick, Outcome));
+    }
     public Colony Colony { get; }
     public WorldStats Stats { get; } = new();
 
@@ -316,9 +331,12 @@ public sealed partial class World
         Noise.Decay();
         WakePacks();
         HellgateSystem.Step(this, dt);
-        SurvivalSystem.Step(this);
-        CorruptionSystem.Step(this);
-        ObjectiveSystem.Step(this);
+        if (!Aftermath)
+        {
+            SurvivalSystem.Step(this);
+            CorruptionSystem.Step(this);
+            ObjectiveSystem.Step(this);
+        }
 
         Spatial.Build(Horde);
         _spatialStale = false;

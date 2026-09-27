@@ -1184,6 +1184,30 @@ last lost by at least one).
   said it came back after a pause. If it happens again, note what came just before it:
   a load, a hint, or a click on a panel.
 
+## After a win, and costs in red (your notes on 0.25.0)
+
+- **Continue campaign:** a won mission's end screen now says "Continue campaign"
+  instead of "Back to the campaign". A lost mission still says "Back to the campaign".
+- **Keep playing:** after any win (campaign, skirmish or survival) you can play on
+  to clear the map.
+  - What stops: waves, Hellgate bands, corruptions, and the mission's goals and
+    triggers (`World.Aftermath`).
+  - What stays: sleeping packs and strays remain to be hunted, and Hellgates stand
+    to be destroyed.
+  - The win is recorded when it happens, and nothing afterwards changes it, even the
+    Keep falling.
+  - Once you're playing on, the pause menu has "Continue campaign" to move on.
+  - It's a direct call on the world, not a command, because commands aren't applied
+    once a game is over. The flag is saved.
+- **Costs in red:**
+  - The per-resource red was right in the build and train buttons. The building-mode
+    card's Upgrade cell repeated the Inspector button's label first, which gives the
+    cost in plain text, for example "Upgrade to Cottage (30 wood, 20 stone)". That's
+    what you were reading.
+  - That tooltip now drops the plain cost and gives the coloured "Costs" line.
+  - A group upgrade also gets a coloured cost line; it had none.
+  - If you still see an uncoloured cost, tell me which button.
+
 ## Buildings from KayKit Medieval Hexagon (you downloaded it and the Medieval Village MegaKit)
 
 - **Every building but walls and gates is now a baked KayKit model** (`tools/bake_buildings.gd`,

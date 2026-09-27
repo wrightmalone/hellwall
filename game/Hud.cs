@@ -50,6 +50,17 @@ public partial class Hud : CanvasLayer
     PanelContainer _end = null!;
     Button? _showEnd;
     bool _endShown;
+    Button? _campaignButton;
+    Button _playOn = null!;
+
+    void PlayOn()
+    {
+        World.PlayOn();
+        _end.Visible = false;
+        _showEnd!.Visible = false;
+        _banner.Visible = false;
+        _card.Visible = true;
+    }
     readonly Dictionary<Side, Label> _edgeWarnings = new();
 
     const string HelpText =
@@ -152,9 +163,9 @@ public partial class Hud : CanvasLayer
         {
             if (Campaign.Default.Contains(World.Scenario))
             {
-                var campaign = UiKit.TextButton("Back to the campaign", 15);
-                campaign.Pressed += () => BackToCampaign();
-                endRow.AddChild(campaign);
+                _campaignButton = UiKit.TextButton("Back to the campaign", 15);
+                _campaignButton.Pressed += () => BackToCampaign();
+                endRow.AddChild(_campaignButton);
             }
             else
             {
@@ -176,6 +187,11 @@ public partial class Hud : CanvasLayer
             menu.Pressed += () => NewRun();
             endRow.AddChild(menu);
         }
+        // After a win: carry on with no more waves, to clear the map at leisure.
+        _playOn = UiKit.TextButton("Keep playing", 15);
+        _playOn.TooltipText = "No more waves: clear the map at your leisure. The win is already yours";
+        _playOn.Pressed += PlayOn;
+        endRow.AddChild(_playOn);
         endBox.AddChild(endRow);
         var moreRow = new HBoxContainer { Alignment = BoxContainer.AlignmentMode.Center };
         moreRow.AddThemeConstantOverride("separation", 8);
@@ -287,6 +303,9 @@ public partial class Hud : CanvasLayer
                     (Names(t => t.KeepLevel > 0, "") is { Length: > 0 } raised ? $"\nThe Keep raised: {raised}" : "") +
                     $"{corruptions}{opens}";
                 _chart.Refresh();
+                bool victory = World.Outcome == Outcome.Won;
+                if (_campaignButton != null) _campaignButton.Text = victory ? "Continue campaign" : "Back to the campaign";
+                _playOn.Visible = victory;
                 _end.Visible = true;
                 _card.Visible = false; // the run is over: nothing to build, and it would cover the buttons
                 Voice.Silence();

@@ -12,6 +12,8 @@ public partial class PauseMenu : CanvasLayer
 {
     public Action Resume = null!;
     public Action QuitToMenu = null!;
+    /// <summary>A won mission played on: the way on to the next one. Null otherwise.</summary>
+    public Action? ContinueCampaign;
     public Action Controls = null!;
     public string BestiaryText = "";
     public Action<int> SaveSlot = null!, LoadSlot = null!;
@@ -128,6 +130,12 @@ public partial class PauseMenu : CanvasLayer
 
         box.AddChild(new HSeparator());
 
+        if (ContinueCampaign is { } onward)
+        {
+            var next = UiKit.TextButton("Continue campaign", 15);
+            next.Pressed += () => onward();
+            box.AddChild(next);
+        }
         box.AddChild(Confirming("Quit to main menu", "Leave this run? Click again  (unsaved progress is lost)", () => QuitToMenu()));
         box.AddChild(Confirming("Exit game", "Exit to the desktop? Click again", () => GetTree().Quit()));
     }

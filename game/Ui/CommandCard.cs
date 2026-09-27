@@ -315,7 +315,9 @@ public partial class CommandCard : PanelContainer
             cell.Disabled = !source.Visible || source.Disabled;
             cell.Modulate = source.Visible ? Colors.White : new Color(1, 1, 1, 0.25f);
             cell.Text = source == Inspector.DemolishButton && source.Text.Contains("Purge") ? "Purge" : source == Inspector.HoldButton && source.Text.Contains("Back") ? "Resume" : shortName;
-            cell.TooltipText = source.Visible ? source.Text + (source.TooltipText.Length > 0 ? "\n" + source.TooltipText : "") : "";
+            // The button's own words without the cost it states in plain text: the tooltip gives the cost, what's short in red.
+            string title = source.Text.Contains(" (") && source.TooltipText.Contains("Costs") ? source.Text[..source.Text.IndexOf(" (")] : source.Text;
+            cell.TooltipText = source.Visible ? title + (source.TooltipText.Length > 0 ? "\n" + source.TooltipText : "") : "";
         }
 
         var b = State.SelectedBuilding is { } id ? World.BuildingById(id) : null;

@@ -704,9 +704,13 @@ public partial class Main : Node2D
                 case DemonBurst d: _state.Bursts.Add((d, 0)); break;
                 case DemonSpat sp: _state.Spits.Add((sp, 0)); break;
                 case DemonHowled h: _state.Howls.Add((h, 0)); break;
+                case OutcomeChanged { Outcome: Outcome.Running }:
+                    _state.Say("The field is yours: no more waves. Clear it at your leisure.");
+                    break;
                 case OutcomeChanged o:
                     _state.Say(o.Outcome == Outcome.Lost ? $"The Keep has fallen on day {_world.Day}." : "Victory.");
-                    if (_world.Scenario is { } done && Campaign.Default.Contains(done)) CampaignProgress.Record(Campaign.Default.Id, done.Id, o.Outcome == Outcome.Won, _world.Day);
+                    // Played on after a win: the win stands, whatever happens after.
+                    if (!_world.Aftermath && _world.Scenario is { } done && Campaign.Default.Contains(done)) CampaignProgress.Record(Campaign.Default.Id, done.Id, o.Outcome == Outcome.Won, _world.Day);
                     break;
                 case CorruptionTook c: _state.Say($"The horde is corrupted: {c.Name}"); break;
                 case ScenarioMessage m when m.Text.Length > 0:
@@ -762,7 +766,9 @@ public partial class Main : Node2D
         _state.Armed = null;
         _pauseMenu = new PauseMenu
         {
-            Resume = ClosePauseMenu, QuitToMenu = NewRun, Controls = () => _hud.ToggleHelp(), BestiaryText = Blurbs.Bestiary(_world),
+            Resume = ClosePauseMenu, QuitToMenu = NewRun,
+            ContinueCampaign = _world.Aftermath && _world.Scenario is { } s && Campaign.Default.Contains(s) ? BackToCampaign : null,
+            Controls = () => _hud.ToggleHelp(), BestiaryText = Blurbs.Bestiary(_world),
             SaveSlot = slot => SaveTo(slot),
             LoadSlot = slot => { ClosePauseMenu(); LoadFrom(slot); },
         };

@@ -43,6 +43,23 @@ public class SurvivalTests
     }
 
     [Fact]
+    public void AWonGamePlayedOnHasNoMoreWaves()
+    {
+        var world = Run(Quick());
+        world.Win();
+        Assert.Equal(Outcome.Won, world.Outcome);
+        world.PlayOn();
+        Assert.Equal(Outcome.Running, world.Outcome);
+        Assert.True(world.Aftermath);
+        var events = RunSeconds(world, 60);
+        Assert.DoesNotContain(events, e => e is WaveAnnounced or WaveLanded);
+        Assert.Equal(0, world.Horde.Count);
+        var loaded = World.Load(world.Save(), world.Rules);
+        Assert.True(loaded.Aftermath);
+        Assert.Equal(StateHash.Compute(world), StateHash.Compute(loaded));
+    }
+
+    [Fact]
     public void WithoutASurvivalScheduleNoWavesCome()
     {
         var world = Run(Quick(), survival: false);

@@ -21,6 +21,7 @@ public static class StateHash
         h = Mix(h, world.Seed);
         h = Mix(h, world.Rng.State);
         h = Mix(h, (uint)world.Outcome);
+        h = MixByte(h, world.Aftermath ? (byte)1 : (byte)0);
         h = Mix(h, (uint)world.Rules.Hash);
         h = Mix(h, (uint)(world.Rules.Hash >> 32));
         h = Mix(h, (uint)world.Terrain.Width);

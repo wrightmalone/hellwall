@@ -63,7 +63,7 @@ internal static class HellgateSystem
         var rules = world.Rules.Hellgates;
         if (world.Day <= rules.FirstBandDay) return;
         // The gates pour everything into the Convergence; after it, nothing more comes through.
-        if (world.Survival is { FinalLanded: true }) return;
+        if (world.Survival is { FinalLanded: true } || world.Aftermath) return; // nor once a won game plays on
         int band = (int)Math.Round(rules.BandSize * Tier(world) * CorruptionSystem.GateMultiplier(world));
         foreach (var gate in world.GateList)
         {
