@@ -1220,6 +1220,18 @@ last lost by at least one).
   look as before.
 - The threat card in the corner still shows the Convergence throughout.
 
+## The bottom of the screen rearranged (your note: the build panel in the middle was odd)
+
+- **Minimap:** doubled, to 640 wide. Narrow it from here if it's too much.
+- **Command card:** the grid with the hotkeys is now in the bottom-right corner, as in
+  StarCraft and They Are Billions.
+- **Selection panel:** what's selected (count, health, state) sits in the middle,
+  between the minimap and the card.
+- **Hints:** the card's hint ("Right-click to move · A then click...") is out of the
+  panel, so the card is shorter. It's one outlined line just above the card, beside the
+  buttons it explains. Hover tooltips are unchanged.
+- **Edge warnings:** a south-side warning keeps clear of the bigger minimap.
+
 ## Buildings from KayKit Medieval Hexagon (you downloaded it and the Medieval Village MegaKit)
 
 - **Every building but walls and gates is now a baked KayKit model** (`tools/bake_buildings.gd`,

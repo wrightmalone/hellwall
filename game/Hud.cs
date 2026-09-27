@@ -127,6 +127,11 @@ public partial class Hud : CanvasLayer
         AddChild(_inspector);
         _card = new CommandCard { World = World, State = State, Send = Send, Order = Order, Inspector = _inspector };
         AddChild(_card);
+        _card.Hint.HorizontalAlignment = HorizontalAlignment.Right;
+        _card.Hint.AddThemeConstantOverride("outline_size", 4);
+        _card.Hint.AddThemeColorOverride("font_outline_color", new Color(0, 0, 0, 0.85f));
+        _card.Hint.MouseFilter = Control.MouseFilterEnum.Ignore;
+        AddChild(_card.Hint);
 
         _debug = Outlined(new Label { Visible = false }, 12);
         AddChild(_debug);
@@ -256,11 +261,18 @@ public partial class Hud : CanvasLayer
         _threat.Position = new Vector2(screen.X - _threat.Size.X - 8, top);
         Alerts.Position = new Vector2(8, top);
         Minimap.Position = new Vector2(8, screen.Y - Minimap.Size.Y - 8);
-        _inspector.Position = new Vector2(screen.X - _inspector.Size.X - 8, screen.Y - _inspector.Size.Y - 8);
-        _card.Position = new Vector2(Mathf.Max(Minimap.Size.X + 16, (screen.X - _card.Size.X) / 2), screen.Y - _card.Size.Y - 8);
+        // As in most RTS games: the command card in the bottom-right corner, what's selected in the middle beside the minimap.
+        _card.Position = new Vector2(screen.X - _card.Size.X - 8, screen.Y - _card.Size.Y - 8);
+        float middleLeft = Minimap.Size.X + 16, middleRight = _card.Position.X - 8;
+        _inspector.Position = new Vector2(Mathf.Max(middleLeft, (middleLeft + middleRight - _inspector.Size.X) / 2), screen.Y - _inspector.Size.Y - 8);
+        // The card's hint on one line just above it, right-aligned to it, outside the panel.
+        _card.Hint.Visible = _card.Visible && _card.Hint.Text.Length > 0;
+        _card.Hint.Size = new Vector2(Mathf.Min(screen.X - middleLeft, 720), 0);
+        _card.Hint.Position = new Vector2(screen.X - 8 - _card.Hint.Size.X, _card.Position.Y - _card.Hint.Size.Y - 2);
         _notices.Text = string.Join("\n", State.Log.TakeLast(3).Select(l => l.Text));
         _notices.Size = new Vector2(screen.X, 0);
-        _notices.Position = new Vector2(0, _card.Position.Y - _notices.Size.Y - 6);
+        float lowest = Mathf.Min(_card.Hint.Position.Y, _inspector.Visible ? _inspector.Position.Y : screen.Y);
+        _notices.Position = new Vector2(0, lowest - _notices.Size.Y - 6);
         _debug.Visible = ShowDebug;
         _debug.Text = DebugText;
         _debug.Position = new Vector2(8, top + Alerts.Size.Y + 8);
@@ -366,7 +378,7 @@ public partial class Hud : CanvasLayer
             {
                 Side.North => new Vector2(screen.X * 0.7f, screen.Y * 0.28f),
                 Side.East => new Vector2(screen.X * 0.7f, screen.Y * 0.62f),
-                Side.South => new Vector2(screen.X * 0.3f - 300, screen.Y * 0.62f),
+                Side.South => new Vector2(screen.X * 0.3f - 300, Mathf.Min(screen.Y * 0.62f, Minimap.Position.Y - 56)), // clear of the minimap
                 _ => new Vector2(screen.X * 0.3f - 300, screen.Y * 0.28f),
             };
         }

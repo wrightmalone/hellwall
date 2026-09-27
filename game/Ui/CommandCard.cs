@@ -37,7 +37,10 @@ public partial class CommandCard : PanelContainer
     readonly List<Button> _tabs = new();
     /// <summary>The Inspector's buttons this card is showing, each with the cell it mirrors.</summary>
     readonly List<(Button Cell, Button Source, string Short)> _mirrors = new();
-    Label _title = null!, _hint = null!;
+    Label _title = null!;
+    /// <summary>What to do with what's selected, one line: the HUD shows it just above the card, not in it, so the card stays short.</summary>
+    public readonly Label Hint = UiKit.Label("", 13, UiKit.Muted);
+    Label _hint => Hint;
     ProgressBar? _progress;
 
     public override void _Ready()
@@ -125,10 +128,6 @@ public partial class CommandCard : PanelContainer
             }
             _grid.AddChild(_cells[i]);
         }
-        _hint = UiKit.Label("", 12, UiKit.Muted);
-        _hint.AutowrapMode = TextServer.AutowrapMode.WordSmart;
-        _hint.CustomMinimumSize = new Vector2(HotkeyGrid.Cols * (CellW + 4), 0);
-        _body.AddChild(_hint);
     }
 
     /// <summary>Put a button in a cell, with its key in the corner, doing `act` when clicked or keyed.</summary>

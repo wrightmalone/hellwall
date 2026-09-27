@@ -15,7 +15,7 @@ namespace Hellwall.Game;
 public partial class Minimap : Control
 {
     /// <summary>The diamond is W wide and W/2 tall, like a tile.</summary>
-    const float W = 320, H = W / 2;
+    const float W = 640, H = W / 2;
 
     public World World = null!;
     public Camera2D Camera = null!;
