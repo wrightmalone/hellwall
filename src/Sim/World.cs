@@ -1699,6 +1699,7 @@ public sealed partial class World
         foreach (var pack in _packs)
         {
             if (pack.Awake) continue;
+            if (RisingNow(pack)) { WakePack(pack); continue; }
             float wake = Rules.Wilds.WakeRadius + Rules.Wilds.WakeSpread * pack.Spread(Rules.Wilds.SleepDensity), wake2 = wake * wake;
             bool woken = Noise.LevelAtTile(pack.X, pack.Y) >= Balance.WakeThreshold;
             if (!woken && checkUnits)
@@ -1708,11 +1709,32 @@ public sealed partial class World
                     if (dx * dx + dy * dy <= wake2) { woken = true; break; }
                 }
             if (!woken) continue;
-            pack.Awake = true;
-            int spawned = SpawnPack(pack);
-            _events.Add(new PackWoke(Tick, pack.Id, pack.X, pack.Y, spawned));
+            WakePack(pack);
         }
     }
+
+    void WakePack(Pack pack)
+    {
+        pack.Awake = true;
+        int spawned = SpawnPack(pack);
+        _events.Add(new PackWoke(Tick, pack.Id, pack.X, pack.Y, spawned));
+    }
+
+    /// <summary>
+    /// The Convergence has landed and everything still asleep rises with it, spread over RiseSeconds so
+    /// it comes as a flood, not all on one tick: each pack at its own moment in that span, from its id
+    /// (so nothing extra is saved, and a replay rises the same).
+    /// </summary>
+    bool RisingNow(Pack pack)
+    {
+        if (!Rules.Wilds.RiseWithConvergence || Survival is not { FinalLanded: true } s) return false;
+        double span = Math.Max(1, Rules.Wilds.RiseSeconds * Balance.TickHz);
+        double phase = (uint)(pack.Id * 2654435761u) / (double)uint.MaxValue;
+        return Tick - s.FinalLandedTick >= phase * span;
+    }
+
+    /// <summary>Demons still asleep in the wilds: all of them rise when the Convergence lands (if the rules say so).</summary>
+    public int Sleeping => _packs.Where(p => !p.Awake).Sum(p => p.Count);
 
     /// <summary>The nearest sleeping pack within ClearRadius of a footprint, if any: its ground can't be built on yet.</summary>
     public Pack? PackNear(int x, int y, int w, int h)

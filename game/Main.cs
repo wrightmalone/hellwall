@@ -698,6 +698,11 @@ public partial class Main : Node2D
                     break;
                 case WaveLanded w:
                     _state.Say(w.Final ? "The Convergence is here." : $"Wave {w.Number} has arrived");
+                    if (w.Final && _world.Rules.Wilds.RiseWithConvergence && _world.Sleeping > 0)
+                    {
+                        _state.Say($"The wilds rise with it: {_world.Sleeping:N0} demons wake across the map.");
+                        _hud.Alerts.Push("rising", $"THE WILDS RISE: {_world.Sleeping:N0} demons wake across the map", AlertFeed.Red, null, 12);
+                    }
                     if (w.Final)
                     {
                         // The Convergence: the roar (Sound), the screen, the ground shaking.

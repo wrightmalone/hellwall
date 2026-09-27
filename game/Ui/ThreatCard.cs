@@ -13,7 +13,7 @@ public partial class ThreatCard : PanelContainer
 {
     public World World = null!;
 
-    Label _day = null!, _next = null!, _detail = null!, _corrupt = null!, _goals = null!;
+    Label _day = null!, _next = null!, _detail = null!, _corrupt = null!, _goals = null!, _asleep = null!;
     Timeline _line = null!;
 
     public override void _Ready()
@@ -34,6 +34,9 @@ public partial class ThreatCard : PanelContainer
         box.AddChild(_line);
         _detail = UiKit.Label("", 13, UiKit.Muted);
         box.AddChild(_detail);
+        _asleep = UiKit.Label("", 13, new Color(0.9f, 0.5f, 0.42f));
+        _asleep.AutowrapMode = TextServer.AutowrapMode.WordSmart;
+        box.AddChild(_asleep);
         _goals = UiKit.Label("", 13, UiKit.Gold);
         box.AddChild(_goals);
         _corrupt = UiKit.Label("", 13, new Color(0.85f, 0.55f, 0.95f));
@@ -70,6 +73,11 @@ public partial class ThreatCard : PanelContainer
             _detail.Text = $"About {next.Size}, sighted in {UiKit.Clock((next.AnnounceTick(s.Rules) - World.Tick) / tps)}{Kinds(s, next)}";
         }
         if (World.Gates.Count > 0) _detail.Text += $"  ·  Hellgates {World.Gates.Count(g => g.Alive)}/{World.Gates.Count}";
+
+        // What's still asleep in the wilds: it all rises when the Convergence lands, so every pack cleared now is fewer then.
+        int sleeping = World.Rules.Wilds.RiseWithConvergence && !s.Endless ? World.Sleeping : 0;
+        _asleep.Visible = sleeping > 0;
+        _asleep.Text = s.FinalLanded ? $"The wilds are rising: {sleeping:N0} still to wake" : $"{sleeping:N0} asleep in the wilds: they rise with the Convergence";
 
         string corrupt = "";
         if (s.Endless)

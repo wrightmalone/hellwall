@@ -137,6 +137,9 @@ public sealed record MiningRules
 
 public sealed record WildsRules
 {
+    /// <summary>When the Convergence lands, every pack still asleep rises and comes, over RiseSeconds: the cost of leaving the wilds uncleared.</summary>
+    public bool RiseWithConvergence { get; init; } = true;
+    public double RiseSeconds { get; init; } = 30;
     /// <summary>Packs on a survival map (tests and probes ask for their own number).</summary>
     public int Packs { get; init; } = 160;
     public int MinDistance { get; init; } = 20;
@@ -190,6 +193,8 @@ public sealed record DifficultyDef
     /// <summary>How many sleeping packs there are, and stray handfuls: a harder map is fuller, not only its packs bigger.</summary>
     public double PackCount { get; init; } = 1;
     public double Strays { get; init; } = 1;
+    /// <summary>Whether the wilds rise with the Convergence (WildsRules.RiseWithConvergence): not on Easy, which is for learning the town.</summary>
+    public bool Rise { get; init; } = true;
     /// <summary>Hellgate bands.</summary>
     public double Gates { get; init; } = 1;
     /// <summary>Starting resources.</summary>
@@ -397,6 +402,7 @@ public sealed class Rules
             NearCount = Round(Wilds.NearCount * d.Packs), FarCount = Round(Wilds.FarCount * d.Packs),
             // Counts may be none (a hand-made map that wants only its own packs): a zero stays a zero.
             Packs = (int)Math.Round(Wilds.Packs * d.PackCount), Strays = (int)Math.Round(Wilds.Strays * d.Strays),
+            RiseWithConvergence = Wilds.RiseWithConvergence && d.Rise,
         };
         var gates = Hellgates with { BandSize = Round(Hellgates.BandSize * d.Gates) };
         var start = StartingResources.Scale(d.Start);

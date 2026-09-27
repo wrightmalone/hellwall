@@ -1260,6 +1260,40 @@ last lost by at least one).
 - For screenshots only, a new `--hover=dx,dy` flag pins the cursor tile, so a screenshot
   run never moves your real mouse.
 
+## The wilds rise with the Convergence (your call: an incentive to clear the map)
+
+- **What happens:** when the Convergence lands, every demon still asleep on the map wakes
+  and comes: the wilds' packs, strays, and the ruins' guards.
+  - It's spread over 30 seconds so it arrives as a flood, not all on one tick
+    (`Wilds.RiseSeconds`).
+  - Each pack's moment in that half-minute comes from its id, so nothing new is saved.
+  - Mid-sized maps are covered: the Convergence is held for four minutes, time for
+    packs anywhere on the map to arrive.
+- **How you're told:**
+  - The threat card shows the count all game: "11,075 asleep in the wilds: they rise with
+    the Convergence". It drops as you clear packs.
+  - The Convergence's warning, ten minutes out, adds "When it lands, all N asleep in the
+    wilds rise too: clear what you can".
+  - On landing, one alert: "THE WILDS RISE: N demons wake across the map".
+  - The single "a pack stirs" alerts are muted during the rise, so they don't flood the
+    feed.
+  - Mission briefings' "What's coming" says every demon still asleep rises with the
+    Convergence.
+- **Not on Easy:** the first verify run had the bot lose both Easy openers on every path.
+  The bot never clears packs, and neither would someone learning the game. Easy is for
+  learning the town, so it has no rise (`difficulties.Easy.rise: false`). Normal, Hard
+  and Nightmare have it.
+- **The size of it:** a Normal map starts with about 11,000 asleep, against a Convergence
+  of about 14,500. Uncleared, the final fight nearly doubles. That's the point, but it's
+  big.
+- **Balance, Normal survival sweep:** pyre 7/8 (was 8/8), fortress 5/8 (was 6/8), legion
+  3/8 (was 5/8). That still passes the gate. The bot is the worst case, since it clears
+  nothing on purpose.
+  - If it's too much in play, the knobs are: a share of the sleepers rather than all, only
+    packs within some distance, or a smaller Convergence on Normal.
+- **Campaign:** First Night and Iron in the Hills are Easy, so unchanged. The Hellwall
+  was already lost by the bot.
+
 ## Buildings from KayKit Medieval Hexagon (you downloaded it and the Medieval Village MegaKit)
 
 - **Every building but walls and gates is now a baked KayKit model** (`tools/bake_buildings.gd`,

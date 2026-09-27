@@ -43,6 +43,23 @@ public class SurvivalTests
     }
 
     [Fact]
+    public void EverythingAsleepRisesWhenTheConvergenceLands()
+    {
+        var rules = Quick().WithStartingResources(Plenty).WithHellgates(g => g with { Count = 0 }).WithWilds(w => w with { Packs = 24, Strays = 0 });
+        var world = World.Create(new WorldOptions(7, Balance.DefaultMapSize, 0, rules.Harmless(), true)); // harmless: the town lasts to see it
+        var s = world.Survival!;
+        for (int t = 0; t < 400 * Balance.TickHz && !s.FinalLanded; t++) world.Step();
+        Assert.True(s.FinalLanded, $"the Convergence never landed ({world.Outcome})");
+        int asleep = world.Sleeping;
+        Assert.True(asleep > 0, "some packs should still be asleep when it lands");
+        // Over the next half-minute, not all at once.
+        world.Step();
+        Assert.True(world.Sleeping > 0, "the rise should be spread out, not one tick");
+        RunSeconds(world, rules.Wilds.RiseSeconds + 1);
+        Assert.Equal(0, world.Sleeping);
+    }
+
+    [Fact]
     public void AWonGamePlayedOnHasNoMoreWaves()
     {
         var world = Run(Quick());
@@ -72,7 +89,8 @@ public class SurvivalTests
     public void SurvivingTheConvergenceWinsTheRun()
     {
         // A garrisoned ring of towers against tiny waves: this should be a comfortable win.
-        var world = Run(Quick(convergence: 12, waveSize: 2, growth: 1.0));
+        // Without the ruins' guards rising at the end (they'd swamp this little town): this is about the Convergence alone.
+        var world = Run(Quick(convergence: 12, waveSize: 2, growth: 1.0).WithWilds(w => w with { RiseWithConvergence = false }));
         foreach (var (x, y) in new[] { (58, 58), (69, 58), (58, 69), (69, 69) }) world.Enqueue(new PlaceBuilding(BuildingKind.Watchtower, x, y));
         world.Enqueue(new PlaceBuilding(BuildingKind.House, 59, 63));
         var events = RunSeconds(world, 18 * 10 + 90);

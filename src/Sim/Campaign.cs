@@ -183,7 +183,8 @@ public sealed record ScenarioDef
         if (!Endless)
         {
             int size = (int)Math.Round(r.Survival.ConvergenceSize / 100.0) * 100;
-            yield return $"The Convergence on day {r.Survival.Days}: about {size:N0}, most from one side, told ten minutes ahead";
+            yield return $"The Convergence on day {r.Survival.Days}: about {size:N0}, most from one side, told ten minutes ahead"
+                + (r.Wilds.RiseWithConvergence ? ", and every demon still asleep in the wilds rises with it" : "");
         }
         foreach (var t in Triggers.Where(t => t.SpawnCount > 0))
         {

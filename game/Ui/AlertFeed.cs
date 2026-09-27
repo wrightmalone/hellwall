@@ -30,6 +30,13 @@ public partial class AlertFeed : VBoxContainer
     readonly List<Alert> _alerts = new();
     const int Max = 6;
 
+    /// <summary>The Convergence's warning adds what will rise with it from the wilds, if anything's still asleep.</summary>
+    string Rising()
+    {
+        int sleeping = World.Rules.Wilds.RiseWithConvergence ? World.Sleeping : 0;
+        return sleeping > 0 ? $". When it lands, all {sleeping:N0} asleep in the wilds rise too: clear what you can" : "";
+    }
+
     public override void _Ready()
     {
         AddThemeConstantOverride("separation", 4);
@@ -86,7 +93,7 @@ public partial class AlertFeed : VBoxContainer
         }
     }
 
-    static readonly Color Red = UiKit.ThreatDark;
+    public static readonly Color Red = UiKit.ThreatDark;
     static readonly Color Amber = new(0.45f, 0.29f, 0.07f, 0.95f);
     static readonly Color Grey = new(0.25f, 0.24f, 0.22f, 0.95f);
     static readonly Color Gold = new(0.42f, 0.34f, 0.12f, 0.95f);
@@ -106,11 +113,13 @@ public partial class AlertFeed : VBoxContainer
             case BuildingDestroyed d:
                 Push("lost-" + d.Kind, $"{d.Kind} destroyed", Red, new Vector2(d.X + 1, d.Y + 1));
                 break;
+            case PackWoke when World.Survival is { FinalLanded: true } && World.Rules.Wilds.RiseWithConvergence:
+                break; // the wilds rising with the Convergence: one message for it (Main), not one per pack
             case PackWoke p:
                 Push("pack", $"A pack of {p.Count} stirs", Grey, new Vector2(p.X + 0.5f, p.Y + 0.5f));
                 break;
             case WaveAnnounced w:
-                Push("wave", w.Final ? $"THE CONVERGENCE in {UiKit.Clock((w.LandsAtTick - w.Tick) / (double)Balance.TickHz)}: {w.Size}, most from the {UiKit.SideOnScreen(w.Sides[0])}. Harden that side" : $"Wave {w.Number}: {w.Size} from the {string.Join(" and ", w.Sides.Select(UiKit.SideOnScreen))}", Red, EdgeOf(w.Sides[0]), 12);
+                Push("wave", w.Final ? $"THE CONVERGENCE in {UiKit.Clock((w.LandsAtTick - w.Tick) / (double)Balance.TickHz)}: {w.Size}, most from the {UiKit.SideOnScreen(w.Sides[0])}. Harden that side{Rising()}" : $"Wave {w.Number}: {w.Size} from the {string.Join(" and ", w.Sides.Select(UiKit.SideOnScreen))}", Red, EdgeOf(w.Sides[0]), 12);
                 break;
             case TechResearched t:
                 Push("tech-" + t.TechId, $"Researched {World.Rules.Tech(t.TechId).Name}", Gold);
