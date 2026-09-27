@@ -124,6 +124,7 @@ public partial class PauseMenu : CanvasLayer
         box.AddChild(row);
         box.AddChild(Display.MusicRow());
         box.AddChild(Display.UiScaleRow());
+        box.AddChild(Display.MinimapRow());
         box.AddChild(Toggle("Pause when a building is possessed", "pause_on_possession", false));
         box.AddChild(Toggle("Screen shake", "screen_shake", true));
         box.AddChild(Toggle("Autosave every 5 minutes (the last five kept)", "autosave", true));
@@ -198,11 +199,25 @@ public static class Display
         return row;
     }
 
+    /// <summary>A slider row for the minimap's size, for both menus.</summary>
+    public static HBoxContainer MinimapRow()
+    {
+        var row = new HBoxContainer();
+        row.AddChild(UiKit.Label("Minimap size", 13));
+        var slider = new HSlider { MinValue = Minimap.MinScale, MaxValue = Minimap.MaxScale, Step = 0.05, Value = Minimap.SizeScale, SizeFlagsHorizontal = Control.SizeFlags.ExpandFill, FocusMode = Control.FocusModeEnum.None };
+        var label = UiKit.Label($"{Minimap.SizeScale * 100:0}%", 12, UiKit.Muted);
+        label.CustomMinimumSize = new Vector2(40, 0);
+        slider.ValueChanged += v => { Minimap.SetScale((float)v); label.Text = $"{v * 100:0}%"; };
+        row.AddChild(slider);
+        row.AddChild(label);
+        return row;
+    }
+
     /// <summary>A slider row for the interface size, for both menus.</summary>
     public static HBoxContainer UiScaleRow()
     {
         var row = new HBoxContainer();
-        row.AddChild(UiKit.Label("Interface size", 13));
+        row.AddChild(UiKit.Label("UI scale", 13));
         var slider = new HSlider { MinValue = 0.75, MaxValue = 1.75, Step = 0.05, Value = UiScale, SizeFlagsHorizontal = Control.SizeFlags.ExpandFill, FocusMode = Control.FocusModeEnum.None };
         var label = UiKit.Label($"{UiScale * 100:0}%", 12, UiKit.Muted);
         label.CustomMinimumSize = new Vector2(40, 0);

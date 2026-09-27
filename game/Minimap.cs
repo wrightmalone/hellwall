@@ -14,8 +14,19 @@ namespace Hellwall.Game;
 /// </summary>
 public partial class Minimap : Control
 {
-    /// <summary>The diamond is W wide and W/2 tall, like a tile.</summary>
-    const float W = 640, H = W / 2;
+    /// <summary>The diamond is W wide and W/2 tall, like a tile: 320 at 100%, sized in Settings (SizeScale).</summary>
+    static float W => 320 * SizeScale;
+    static float H => W / 2;
+
+    /// <summary>The minimap's size, from the settings: 100% is 320 px across (before the UI scale).</summary>
+    public static float SizeScale { get; private set; } = Settings.Get("minimap_scale", 1.5f);
+    public const float MinScale = 0.75f, MaxScale = 2.5f;
+
+    public static void SetScale(float scale)
+    {
+        SizeScale = Mathf.Clamp(scale, MinScale, MaxScale);
+        Settings.Set("minimap_scale", SizeScale);
+    }
 
     public World World = null!;
     public Camera2D Camera = null!;
@@ -74,6 +85,7 @@ public partial class Minimap : Control
 
     public override void _Process(double delta)
     {
+        if (CustomMinimumSize.X != W) { CustomMinimumSize = new Vector2(W, H + 16); Size = CustomMinimumSize; } // resized in the settings
         // New ground explored: repaint (the terrain layer is cheap at this size, but not every frame).
         if (World.Vision.Revision != _revision && (_revision == 0 || Engine.GetProcessFrames() % 15 == 0))
         {

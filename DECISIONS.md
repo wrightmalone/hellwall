@@ -1232,6 +1232,20 @@ last lost by at least one).
   buttons it explains. Hover tooltips are unchanged.
 - **Edge warnings:** a south-side warning keeps clear of the bigger minimap.
 
+## Size settings, and a steady campaign column (after the 1080p look)
+
+- **Minimap size:** a new slider in Settings and the pause menu, from 75% to 250%.
+  100% is the old 320 px; the default is 150% (480 px), down from the doubled 640,
+  which was too big. It resizes live.
+- **UI scale:** the slider was already there, labelled "Interface size". It's now "UI
+  scale", so it's easier to find.
+- **Campaign column:** the description column on the right is a fixed 420 px.
+  - Its title, facts and goals didn't wrap before, so a long line widened the
+    column.
+  - The map beside it then repainted at the new size, which was the re-render you saw.
+  - Every line in the column wraps now.
+- **Screenshots:** from now on I take them at 1920x1080.
+
 ## Buildings from KayKit Medieval Hexagon (you downloaded it and the Medieval Village MegaKit)
 
 - **Every building but walls and gates is now a baked KayKit model** (`tools/bake_buildings.gd`,

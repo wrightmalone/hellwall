@@ -264,6 +264,7 @@ public partial class NewGameMenu : CanvasLayer
         side.AddChild(volume);
         side.AddChild(Display.MusicRow());
         side.AddChild(Display.UiScaleRow());
+        side.AddChild(Display.MinimapRow());
         var fullscreen = new CheckButton { Text = "Fullscreen", ButtonPressed = Display.Fullscreen };
         fullscreen.Toggled += on => Display.SetFullscreen(on);
         side.AddChild(fullscreen);

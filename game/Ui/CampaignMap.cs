@@ -45,6 +45,7 @@ public partial class CampaignMap : CanvasLayer
     HashSet<string> _won = new();
     ScenarioDef? _picked;
     Board _board = null!;
+    const float SideWidth = 420;
     Label _name = null!, _facts = null!, _brief = null!, _goals = null!;
     Button _begin = null!;
 
@@ -79,7 +80,8 @@ public partial class CampaignMap : CanvasLayer
         body.AddChild(_board);
 
         var side = UiKit.PanelBox();
-        side.CustomMinimumSize = new Vector2(380, 0);
+        // One width whatever the mission says: every line wraps, so the text never widens it (and the map beside it never repaints).
+        side.CustomMinimumSize = new Vector2(SideWidth, 0);
         var box = new VBoxContainer();
         box.AddThemeConstantOverride("separation", 10);
         side.AddChild(box);
@@ -87,8 +89,8 @@ public partial class CampaignMap : CanvasLayer
         _facts = UiKit.Label("", 13, UiKit.Muted);
         _brief = UiKit.Label("", 14);
         _brief.AutowrapMode = TextServer.AutowrapMode.WordSmart;
-        _brief.CustomMinimumSize = new Vector2(350, 0);
         _goals = UiKit.Label("", 14);
+        foreach (var label in new[] { _name, _facts, _brief, _goals }) label.AutowrapMode = TextServer.AutowrapMode.WordSmart;
         _begin = UiKit.TextButton("Begin", 18);
         _begin.Pressed += () => { if (_picked != null) Begin(_picked); };
         box.AddChild(_name);
