@@ -1208,6 +1208,18 @@ last lost by at least one).
   - A group upgrade also gets a coloured cost line; it had none.
   - If you still see an uncoloured cost, tell me which button.
 
+## The Convergence warning as a reminder (your note: it stayed on screen too long)
+
+- The edge warnings (count, side, countdown) used to stay up from the moment a wave was
+  told until it landed. The Convergence is told ten minutes ahead, so its warning sat on
+  screen for ten minutes.
+- A warning more than a minute off now shows as a reminder. It comes up for 8 seconds
+  when told and at each whole minute of the countdown (9:00, 8:00 and so on), fading in
+  and out.
+- In its last minute a warning stays up. Ordinary waves are told 60 seconds out, so they
+  look as before.
+- The threat card in the corner still shows the Convergence throughout.
+
 ## Buildings from KayKit Medieval Hexagon (you downloaded it and the Medieval Village MegaKit)
 
 - **Every building but walls and gates is now a baked KayKit model** (`tools/bake_buildings.gd`,

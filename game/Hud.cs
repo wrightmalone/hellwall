@@ -315,6 +315,9 @@ public partial class Hud : CanvasLayer
         }
     }
 
+    /// <summary>A warning this near (seconds) stays up; one further off shows as a reminder this long, each minute.</summary>
+    const double SteadyWarning = 60, ReminderSeconds = 8;
+
     /// <summary>Each announced wave pinned to the corner of the screen its map side lies toward, with its countdown.</summary>
     void UpdateEdgeWarnings(Vector2 screen)
     {
@@ -337,8 +340,19 @@ public partial class Hud : CanvasLayer
         foreach (var (side, (share, ticks, what)) in soonest)
         {
             var label = _edgeWarnings[side];
-            label.Visible = true;
-            string eta = UiKit.Clock(ticks / (double)Balance.TickHz);
+            double left = ticks / (double)Balance.TickHz;
+            // Far off (the Convergence is told ten minutes ahead), a reminder, not a fixture: shown for a few
+            // seconds when told and at each whole minute of the countdown, fading in and out. Steady in the last minute.
+            float alpha = 1;
+            if (left > SteadyWarning)
+            {
+                double since = (60 - left % 60) % 60; // seconds since the countdown passed a whole minute
+                alpha = since >= ReminderSeconds ? 0 : (float)Math.Min(1, Math.Min(since / 0.5, (ReminderSeconds - since) / 1.5));
+            }
+            label.Visible = alpha > 0;
+            label.Modulate = new Color(1, 1, 1, alpha);
+            if (!label.Visible) continue;
+            string eta = UiKit.Clock(left);
             // In the isometric view each map side lies along a screen diagonal.
             label.Text = side switch
             {
