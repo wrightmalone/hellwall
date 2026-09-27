@@ -1,0 +1,345 @@
+<title>Hellwall Asset Brief</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Spectral+SC:wght@500;600&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+:root {
+  --ground: #eef0ee;
+  --surface: #ffffff;
+  --ink: #1e2327;
+  --muted: #5d676e;
+  --rule: #d3d8da;
+  --accent: #8f701d;
+  --accent-soft: #f3ecd8;
+  --must: #a23b2c;
+  --must-soft: #f6e3df;
+  --should: #6b5a1c;
+  --should-soft: #efe9d6;
+  --later: #56626a;
+  --later-soft: #e3e8ea;
+  --display: "Spectral SC", "Iowan Old Style", Georgia, serif;
+  --body: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --ground: #15181b; --surface: #1c2024; --ink: #e3e6e8; --muted: #98a2a9; --rule: #30363b;
+    --accent: #d8b24e; --accent-soft: #2c2716;
+    --must: #e37c68; --must-soft: #3a211d; --should: #d6c07a; --should-soft: #2e2a1b; --later: #a7b1b8; --later-soft: #262b2f;
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --ground: #15181b; --surface: #1c2024; --ink: #e3e6e8; --muted: #98a2a9; --rule: #30363b;
+  --accent: #d8b24e; --accent-soft: #2c2716;
+  --must: #e37c68; --must-soft: #3a211d; --should: #d6c07a; --should-soft: #2e2a1b; --later: #a7b1b8; --later-soft: #262b2f;
+}
+* { box-sizing: border-box; }
+body {
+  background: var(--ground); color: var(--ink); font-family: var(--body); font-size: 15.5px; line-height: 1.6;
+  padding-inline: 20px; padding-block: 40px 80px;
+}
+.wrap { max-width: 1120px; margin: 0 auto; display: grid; grid-template-columns: 220px minmax(0, 1fr); gap: 48px; }
+nav { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 24px); align-self: start; font-size: 13.5px; }
+nav p { font-family: var(--mono); font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); margin: 0 0 10px; }
+nav ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+nav a { color: var(--muted); text-decoration: none; }
+nav a:hover, nav a:focus-visible { color: var(--ink); }
+nav ol ol { padding-left: 12px; margin-top: 6px; gap: 4px; font-size: 12.5px; }
+main { max-width: 760px; }
+header { border-bottom: 1px solid var(--rule); padding-bottom: 24px; margin-bottom: 8px; }
+.kicker { font-family: var(--mono); font-size: 11.5px; letter-spacing: .1em; text-transform: uppercase; color: var(--accent); margin: 0 0 8px; }
+h1 { font-family: var(--display); font-weight: 600; font-size: clamp(34px, 5vw, 46px); line-height: 1.05; margin: 0 0 14px; text-wrap: balance; letter-spacing: .01em; }
+h2 { font-family: var(--display); font-weight: 600; font-size: 28px; line-height: 1.15; margin: 56px 0 10px; text-wrap: balance; scroll-margin-top: 20px; }
+h3 { font-family: var(--display); font-weight: 500; font-size: 20px; margin: 34px 0 8px; scroll-margin-top: 20px; }
+p, li { max-width: 68ch; }
+.lede { font-size: 17px; color: var(--ink); margin: 0; }
+.muted { color: var(--muted); }
+a { color: var(--accent); }
+code, .spec { font-family: var(--mono); font-size: .88em; }
+.facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin: 22px 0 0; }
+.fact { background: var(--surface); border: 1px solid var(--rule); border-radius: 6px; padding: 12px 14px; }
+.fact b { display: block; font-family: var(--mono); font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); font-weight: 500; margin-bottom: 4px; }
+.fact span { font-size: 14px; }
+.table { overflow-x: auto; margin: 12px 0 8px; border: 1px solid var(--rule); border-radius: 6px; background: var(--surface); }
+table { border-collapse: collapse; width: 100%; font-size: 14px; min-width: 560px; }
+th { text-align: left; font-family: var(--mono); font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); font-weight: 500; padding: 10px 12px; border-bottom: 1px solid var(--rule); }
+td { padding: 9px 12px; border-bottom: 1px solid var(--rule); vertical-align: top; }
+tr:last-child td { border-bottom: 0; }
+td:first-child { font-weight: 500; }
+td.now { color: var(--muted); }
+.tag { display: inline-block; font-family: var(--mono); font-size: 11px; font-weight: 500; padding: 1px 7px; border-radius: 99px; white-space: nowrap; }
+.must { color: var(--must); background: var(--must-soft); }
+.should { color: var(--should); background: var(--should-soft); }
+.later { color: var(--later); background: var(--later-soft); }
+.legend { display: flex; flex-wrap: wrap; gap: 14px; font-size: 13.5px; color: var(--muted); margin: 14px 0 0; }
+.note { border-left: 3px solid var(--accent); background: var(--accent-soft); padding: 12px 16px; border-radius: 0 6px 6px 0; margin: 18px 0; }
+.note p { margin: 0; }
+ul.spec-list { padding-left: 20px; }
+ul.spec-list li { margin-bottom: 4px; }
+.cues { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 12px; margin: 14px 0; }
+.cue { background: var(--surface); border: 1px solid var(--rule); border-radius: 6px; padding: 14px 16px; }
+.cue h4 { font-family: var(--display); font-weight: 500; font-size: 17px; margin: 0 0 4px; }
+.cue p { margin: 6px 0 0; font-size: 13.5px; color: var(--muted); }
+.cue .spec { color: var(--ink); font-size: 12px; }
+footer { margin-top: 64px; padding-top: 18px; border-top: 1px solid var(--rule); color: var(--muted); font-size: 13px; }
+@media (max-width: 860px) {
+  .wrap { grid-template-columns: minmax(0, 1fr); gap: 20px; }
+  nav { position: static; border-bottom: 1px solid var(--rule); padding-bottom: 14px; }
+  nav ol ol { display: none; }
+}
+@media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto !important; } }
+</style>
+
+<div class="wrap">
+<nav aria-label="Contents">
+  <p>Contents</p>
+  <ol>
+    <li><a href="#about">The game, and what stands in now</a></li>
+    <li><a href="#pipeline">How art gets into the game</a></li>
+    <li><a href="#visuals">Visuals</a>
+      <ol>
+        <li><a href="#projectiles">Projectiles and combat effects</a></li>
+        <li><a href="#figures">Soldiers, workers, demons</a></li>
+        <li><a href="#buildings">Buildings</a></li>
+        <li><a href="#world">Terrain and the world</a></li>
+        <li><a href="#interface">Interface</a></li>
+      </ol>
+    </li>
+    <li><a href="#sound">Sound effects</a>
+      <ol>
+        <li><a href="#sfx-combat">Combat</a></li>
+        <li><a href="#sfx-demons">Demons</a></li>
+        <li><a href="#sfx-colony">The colony</a></li>
+        <li><a href="#sfx-events">Events and interface</a></li>
+      </ol>
+    </li>
+    <li><a href="#music">Music</a></li>
+    <li><a href="#order">What to do first</a></li>
+  </ol>
+</nav>
+
+<main>
+<header>
+  <p class="kicker">Production brief · art, sound, music</p>
+  <h1>Hellwall: what it needs to look and sound like a finished game</h1>
+  <p class="lede">A list of every visual and sound the game uses or will use, what stands in for it today, and how much it matters. It's for artists, a sound designer, and a composer, so the rest can be put off until they've read it.</p>
+  <div class="facts">
+    <div class="fact"><b>Genre</b><span>Colony-building survival against a horde (They Are Billions, in a dark medieval world)</span></div>
+    <div class="fact"><b>View</b><span>Isometric, 2:1, camera 30° down and 45° round</span></div>
+    <div class="fact"><b>Scale</b><span>Up to 20,000 demons on the map; a town of a few hundred buildings</span></div>
+    <div class="fact"><b>Engine</b><span>Godot 4, 2D sprites baked from 3D models</span></div>
+  </div>
+</header>
+
+<h2 id="about">The game, and what stands in now</h2>
+<p>You found a colony on holy ground, build it up through sixty days, wall it, and hold it against waves of demons that grow until the last night, the Convergence, when everything comes at once. A breach cascades: one possessed house turns the next. The tone is grim and weighty, not heroic; the demons are many and small, the town is fragile and warm.</p>
+<p>What's in the game now is placeholder, all free to use:</p>
+<ul>
+  <li><b>Buildings</b>: KayKit's Medieval Hexagon pack, rendered from our camera. Walls are KayKit's castle wall and a timber palisade made from simple shapes.</li>
+  <li><b>Soldiers and workers</b>: Quaternius's RPG Characters, tinted per role.</li>
+  <li><b>Demons</b>: Quaternius's Ultimate Monsters.</li>
+  <li><b>Trees, rocks, grass</b>: Quaternius's Stylized Nature pack.</li>
+  <li><b>Projectiles and effects</b>: lines and circles drawn in code.</li>
+  <li><b>Every sound and the music</b>: synthesized in code at start-up. None of it is recorded.</li>
+</ul>
+<div class="legend" aria-label="Priority">
+  <span><span class="tag must">Must</span> seen or heard in every game; placeholder now</span>
+  <span><span class="tag should">Should</span> clearly better with it</span>
+  <span><span class="tag later">Later</span> polish, or for features still to come</span>
+</div>
+
+<h2 id="pipeline">How art gets into the game</h2>
+<p>Everything on the map is a 2D sprite rendered from a 3D model by our own baking tools, so it all shares one camera and light. <b>The easiest thing to deliver is a 3D model</b> (glTF or FBX), which we bake; hand-drawn 2D sprites work too, to these specs.</p>
+<ul class="spec-list">
+  <li><b>Figures</b> (soldiers, workers, demons): 8 facings, 6 frames per animation, 72 px square cells, feet at a fixed point. Animations we use: walk, attack, and for some a work loop (chop, dig, sow, reap). Death animations are welcome.</li>
+  <li><b>Buildings</b>: drawn at 132 px across one tile's diamond, shown at half size; footprints of 1×1, 2×2 or 3×3 tiles. Each needs a construction state and ideally a damaged one.</li>
+  <li><b>Walls</b>: joining pieces, a post plus an arm toward each neighbour, so a line of them reads as one wall with corners.</li>
+  <li><b>Readability first</b>: at normal zoom a soldier is about 30 px tall and a demon smaller. Silhouettes and colour must tell kinds apart at that size, among hundreds.</li>
+</ul>
+
+<h2 id="visuals">Visuals</h2>
+
+<h3 id="projectiles">Projectiles and combat effects</h3>
+<p class="muted">Today every shot is a pale line, every splash a circle. This is where the game most looks unfinished.</p>
+<div class="table"><table>
+<thead><tr><th>Effect</th><th>Used by</th><th>Now</th><th>Priority</th></tr></thead>
+<tbody>
+<tr><td>Arrow</td><td>Marksman, Militia, Watchtower</td><td class="now">tracer line</td><td><span class="tag must">Must</span></td></tr>
+<tr><td>Crossbow bolt, heavy ballista bolt</td><td>Crossbowman; Lance Tower (long range, big hits)</td><td class="now">tracer line</td><td><span class="tag must">Must</span></td></tr>
+<tr><td>Bombard shot: arc, impact, blast</td><td>Bombard (splash damage)</td><td class="now">line and a circle</td><td><span class="tag must">Must</span></td></tr>
+<tr><td>Holy fire bolt and burst</td><td>Exorcist (the late-game soldier)</td><td class="now">line and a circle</td><td><span class="tag must">Must</span></td></tr>
+<tr><td>Anti-air bolt</td><td>Skyspire (shoots only fliers)</td><td class="now">tracer line</td><td><span class="tag should">Should</span></td></tr>
+<tr><td>Incense smoke that burns demons</td><td>Censer (short-range aura)</td><td class="now">circle</td><td><span class="tag should">Should</span></td></tr>
+<tr><td>Bell's slowing ring</td><td>Belfry (slows demons nearby)</td><td class="now">faint ring</td><td><span class="tag should">Should</span></td></tr>
+<tr><td>Melee swing and hit</td><td>Templar, Outrider</td><td class="now">none</td><td><span class="tag should">Should</span></td></tr>
+<tr><td>Healing glow</td><td>Chaplain</td><td class="now">none</td><td><span class="tag later">Later</span></td></tr>
+<tr><td>Bile spit: arc and splash</td><td>Spitter (shoots over walls)</td><td class="now">green dot, circle</td><td><span class="tag must">Must</span></td></tr>
+<tr><td>Bloater burst</td><td>Bloater (explodes against buildings)</td><td class="now">green circle</td><td><span class="tag must">Must</span></td></tr>
+<tr><td>Brood burst</td><td>Broodmother (bursts into imps)</td><td class="now">none</td><td><span class="tag should">Should</span></td></tr>
+<tr><td>Howl ring</td><td>Howler (wakes sleeping demons as it passes)</td><td class="now">violet ring</td><td><span class="tag should">Should</span></td></tr>
+<tr><td>Demon deaths and ichor marks</td><td>every demon; hundreds a minute</td><td class="now">dark splashes</td><td><span class="tag must">Must</span></td></tr>
+<tr><td>Burning on holy ground</td><td>demons crossing consecrated ground</td><td class="now">none</td><td><span class="tag should">Should</span></td></tr>
+<tr><td>Hit sparks on buildings; wood and stone debris</td><td>buildings under attack</td><td class="now">health bar only</td><td><span class="tag must">Must</span></td></tr>
+<tr><td>Fire and smoke on badly damaged buildings</td><td>any building below half health</td><td class="now">none</td><td><span class="tag should">Should</span></td></tr>
+<tr><td>Collapse into a ruin</td><td>destroyed buildings</td><td class="now">instant ruin sprite</td><td><span class="tag should">Should</span></td></tr>
+<tr><td>Possession: corruption spreading over a building, Thralls bursting out</td><td>the cascade that ends most runs</td><td class="now">a violet tag and a screen pulse</td><td><span class="tag must">Must</span></td></tr>
+</tbody></table></div>
+
+<h3 id="figures">Soldiers, workers, demons</h3>
+<div class="table"><table>
+<thead><tr><th>Who</th><th>What they are</th><th>Now</th><th>Priority</th></tr></thead>
+<tbody>
+<tr><td>Militia</td><td>cheap levy with bows; the first army</td><td class="now">tinted RPG Rogue</td><td><span class="tag must">Must</span></td></tr>
+<tr><td>Marksman, Crossbowman</td><td>ranged soldiers, long range and heavy bolts</td><td class="now">RPG Ranger, tinted</td><td><span class="tag must">Must</span></td></tr>
+<tr><td>Templar</td><td>armoured melee, wide swings</td><td class="now">RPG Warrior</td><td><span class="tag must">Must</span></td></tr>
+<tr><td>Chaplain</td><td>heals soldiers near him</td><td class="now">RPG Cleric</td><td><span class="tag should">Should</span></td></tr>
+<tr><td>Outrider</td><td>mounted, fast, for clearing the wilds</td><td class="now">RPG Monk (no horse)</td><td><span class="tag should">Should</span></td></tr>
+<tr><td>Exorcist</td><td>the late-game soldier; holy fire, paid for in silver</td><td class="now">RPG Wizard, silvered</td><td><span class="tag should">Should</span></td></tr>
+<tr><td>Veteran ranks</td><td>soldiers earn up to three ranks</td><td class="now">gold chevrons</td><td><span class="tag later">Later</span></td></tr>
+<tr><td>Woodsman, miner, farmer, hunter</td><td>workers with a work loop each: chop, dig, sow and water and reap, draw a bow</td><td class="now">tinted RPG figures</td><td><span class="tag should">Should</span></td></tr>
+<tr><td>Fishing boat</td><td>sails out, nets, hauls in</td><td class="now">built from boxes</td><td><span class="tag should">Should</span></td></tr>
+<tr><td>Imp</td><td>the mass of every horde; thousands at once</td><td class="now">Quaternius demon</td><td><span class="tag must">Must</span></td></tr>
+<tr><td>Hound</td><td>fast runner</td><td class="now">Quaternius fish-beast</td><td><span class="tag must">Must</span></td></tr>
+<tr><td>Thrall</td><td>a colonist the horde has taken: what a possessed house releases</td><td class="now">Kenney zombie</td><td><span class="tag must">Must</span></td></tr>
+<tr><td>Gargoyle</td><td>flier, over walls</td><td class="now">Quaternius flying demon</td><td><span class="tag must">Must</span></td></tr>
+<tr><td>Bloater, Brute, Spitter</td><td>explodes on walls; siege tank; spits over walls</td><td class="now">Quaternius monsters</td><td><span class="tag should">Should</span></td></tr>
+<tr><td>Howler, Broodmother</td><td>wakes packs as it passes; bursts into imps</td><td class="now">Quaternius monsters</td><td><span class="tag should">Should</span></td></tr>
+</tbody></table></div>
+
+<h3 id="buildings">Buildings</h3>
+<p class="muted">Each needs a finished state and a construction state; damaged, possessed and ruined states come after. Buildings off holy ground are shown darkened, so they must still read in shadow.</p>
+<div class="table"><table>
+<thead><tr><th>Group</th><th>Buildings</th><th>Priority</th></tr></thead>
+<tbody>
+<tr><td>The Keep</td><td>the heart of the town, 3×3, raised through three levels by research</td><td><span class="tag must">Must</span></td></tr>
+<tr><td>Homes</td><td>House, upgraded to Cottage, then Manor (2×2)</td><td><span class="tag must">Must</span></td></tr>
+<tr><td>Gathering</td><td>Woodcutter, Quarry, Mine, Silver Mine, Hunter, Fishery, Farm (3×3, with its fields)</td><td><span class="tag must">Must</span></td></tr>
+<tr><td>Holy ground</td><td>Shrine (makes holy ground), Wardstone (a small marker that spreads it)</td><td><span class="tag must">Must</span></td></tr>
+<tr><td>Walls and gates</td><td>timber palisade and gate; stone wall and gate. Joining pieces.</td><td><span class="tag should">Should</span> <span class="muted">(fair stand-ins now)</span></td></tr>
+<tr><td>Towers</td><td>Watchtower, Lance Tower, Bombard, Skyspire (anti-air), Censer (incense), Belfry (bell)</td><td><span class="tag must">Must</span></td></tr>
+<tr><td>Other</td><td>Barracks, Scriptorium (research)</td><td><span class="tag should">Should</span></td></tr>
+<tr><td>States</td><td>scaffolding, damaged, possessed (corruption over it), ruin</td><td><span class="tag should">Should</span></td></tr>
+</tbody></table></div>
+
+<h3 id="world">Terrain and the world</h3>
+<div class="table"><table>
+<thead><tr><th>Element</th><th>Notes</th><th>Priority</th></tr></thead>
+<tbody>
+<tr><td>Ground tiles</td><td>grass, water and shore, rock outcrops, iron ore, silver veins (only near the map's edge)</td><td><span class="tag should">Should</span></td></tr>
+<tr><td>Trees and stumps</td><td>forest is a wall; woodsmen fell it tree by tree, so a felled tree needs a stump or cleared look</td><td><span class="tag should">Should</span></td></tr>
+<tr><td>Worn-away rock</td><td>miners wear rock and ore down over a game: two or three stages from full to gone would show it</td><td><span class="tag later">Later</span></td></tr>
+<tr><td>Holy ground</td><td>the golden ground round Shrines, where everything must be built</td><td><span class="tag must">Must</span></td></tr>
+<tr><td>Hellgate</td><td>a rift in the earth, 3×3, that feeds the waves; needs to look alive, and closed</td><td><span class="tag must">Must</span></td></tr>
+<tr><td>Ruins</td><td>fallen reliquary towns, guarded by Thralls, looted for supplies</td><td><span class="tag should">Should</span></td></tr>
+<tr><td>Crops</td><td>four stages on a field: sown, watered, growing, ripe</td><td><span class="tag later">Later</span></td></tr>
+<tr><td>Fog of war edge</td><td>soft darkness over ground not yet seen</td><td><span class="tag later">Later</span></td></tr>
+<tr><td>The Convergence</td><td>the last night: the sky, the light, the ground under the mass of the horde</td><td><span class="tag should">Should</span></td></tr>
+</tbody></table></div>
+
+<h3 id="interface">Interface</h3>
+<div class="table"><table>
+<thead><tr><th>Element</th><th>Notes</th><th>Priority</th></tr></thead>
+<tbody>
+<tr><td>Resource icons</td><td>gold, wood, stone, food, iron, silver, and sanctity (holy power)</td><td><span class="tag must">Must</span></td></tr>
+<tr><td>Command card icons</td><td>every building and soldier; build categories (Town, Works, Holy, Walls, Towers); orders (attack, stop, hold, patrol, upgrade, hold work, demolish)</td><td><span class="tag must">Must</span></td></tr>
+<tr><td>Talking-head portraits</td><td>four speakers so far: Steward Maren, Scout Ilse, Abbess Oda, Captain Brand, plus a narrator; each with an idle and a speaking frame or two</td><td><span class="tag must">Must</span></td></tr>
+<tr><td>Title and logo</td><td>main menu and the Steam page</td><td><span class="tag must">Must</span></td></tr>
+<tr><td>Campaign map</td><td>a painted map of the march with twelve mission markers</td><td><span class="tag should">Should</span></td></tr>
+<tr><td>Wave marker</td><td>the horned head that follows each horde in, with its count</td><td><span class="tag should">Should</span></td></tr>
+<tr><td>Patron saints</td><td>a card or medallion each for eight saints, offered as the town grows</td><td><span class="tag should">Should</span></td></tr>
+<tr><td>Research icons</td><td>around twenty techs, plus the Keep's levels</td><td><span class="tag later">Later</span></td></tr>
+<tr><td>Cursors</td><td>default, attack-move, patrol, build, blocked</td><td><span class="tag later">Later</span></td></tr>
+<tr><td>Panels and frames</td><td>the card, alerts, tooltips, end screen: a frame and texture to replace flat panels</td><td><span class="tag later">Later</span></td></tr>
+</tbody></table></div>
+
+<h2 id="sound">Sound effects</h2>
+<p>Thirteen sounds are synthesized now: a shot, a boom, a horn, a howl, a burst, built, possessed, fallen, promoted, felled, a voice blip, victory and the Convergence roar. All of it wants replacing. Three things matter more than usual here:</p>
+<div class="note"><p><b>Scale.</b> With thousands of demons on screen, sounds can't be one per demon. Each wants 3 to 5 variations, and the horde itself wants <b>ambient beds</b> at three sizes (a handful, a pack, the Convergence) that the game fades between by how many are in view.</p></div>
+<ul class="spec-list">
+  <li><b>Format</b>: WAV (48 kHz, 24-bit) masters; the game uses OGG. Short effects mono, as they're placed in the world; ambience and stingers stereo.</li>
+  <li><b>Length</b>: combat sounds short (under a second); events up to five seconds.</li>
+  <li><b>Loudness</b>: a consistent level across the set, with the alarm and the Convergence the loudest things in the game.</li>
+</ul>
+
+<h3 id="sfx-combat">Combat</h3>
+<div class="table"><table>
+<thead><tr><th>Sound</th><th>When</th><th>Priority</th></tr></thead>
+<tbody>
+<tr><td>Bow, crossbow, ballista</td><td>every shot, towers and soldiers; very frequent</td><td><span class="tag must">Must</span></td></tr>
+<tr><td>Bombard: fire and impact</td><td>the big gun; splash</td><td><span class="tag must">Must</span></td></tr>
+<tr><td>Holy fire; anti-air shot; incense burn; bell toll</td><td>Exorcist, Skyspire, Censer, Belfry</td><td><span class="tag should">Should</span></td></tr>
+<tr><td>Blows on timber and on stone</td><td>demons hitting walls and buildings</td><td><span class="tag must">Must</span></td></tr>
+<tr><td>A wall or building going down</td><td>destroyed, and the breach it makes</td><td><span class="tag must">Must</span></td></tr>
+<tr><td>Melee: sword on flesh</td><td>Templars and Outriders</td><td><span class="tag should">Should</span></td></tr>
+<tr><td>Soldier falls</td><td>a soldier dies</td><td><span class="tag should">Should</span></td></tr>
+</tbody></table></div>
+
+<h3 id="sfx-demons">Demons</h3>
+<div class="table"><table>
+<thead><tr><th>Sound</th><th>When</th><th>Priority</th></tr></thead>
+<tbody>
+<tr><td>Horde beds: a few, a pack, the Convergence</td><td>always, faded by how many are in view</td><td><span class="tag must">Must</span></td></tr>
+<tr><td>Demon deaths</td><td>hundreds a minute; small and satisfying</td><td><span class="tag must">Must</span></td></tr>
+<tr><td>Hound snarl; Gargoyle wings; Brute footfalls</td><td>their arrival, so you know what's coming</td><td><span class="tag should">Should</span></td></tr>
+<tr><td>Howler's shriek</td><td>it wakes sleeping packs: it should sound like it</td><td><span class="tag should">Should</span></td></tr>
+<tr><td>Bloater and brood bursts; bile spit</td><td>their attacks</td><td><span class="tag should">Should</span></td></tr>
+<tr><td>A pack waking</td><td>the colony's noise has woken demons nearby</td><td><span class="tag must">Must</span></td></tr>
+</tbody></table></div>
+
+<h3 id="sfx-colony">The colony</h3>
+<div class="table"><table>
+<thead><tr><th>Sound</th><th>When</th><th>Priority</th></tr></thead>
+<tbody>
+<tr><td>Building placed, built, upgraded</td><td>constantly, in the building phase</td><td><span class="tag must">Must</span></td></tr>
+<tr><td>Possession alarm</td><td>a building is taken; the one sound nobody should miss (a bell, now)</td><td><span class="tag must">Must</span></td></tr>
+<tr><td>Work: axe, falling tree, pick on stone, sowing, a net in water, a bow in the woods</td><td>the workers at their loops; quiet, placed in the world</td><td><span class="tag should">Should</span></td></tr>
+<tr><td>Crew fleeing</td><td>workers run from demons</td><td><span class="tag later">Later</span></td></tr>
+<tr><td>Gate opening and closing</td><td>soldiers passing</td><td><span class="tag later">Later</span></td></tr>
+<tr><td>Town ambience</td><td>a living town under the music: voices, animals, hammering</td><td><span class="tag should">Should</span></td></tr>
+<tr><td>Soldier acknowledgements</td><td>a short spoken line when ordered (optional)</td><td><span class="tag later">Later</span></td></tr>
+</tbody></table></div>
+
+<h3 id="sfx-events">Events and interface</h3>
+<div class="table"><table>
+<thead><tr><th>Sound</th><th>When</th><th>Priority</th></tr></thead>
+<tbody>
+<tr><td>Wave horn</td><td>a wave is sighted, a minute out</td><td><span class="tag must">Must</span></td></tr>
+<tr><td>The Convergence</td><td>the last night lands: a roar from everywhere</td><td><span class="tag must">Must</span></td></tr>
+<tr><td>Victory; the Keep falls</td><td>the end of a run</td><td><span class="tag must">Must</span></td></tr>
+<tr><td>Research done; a patron saint's blessing; a rank earned</td><td>milestones</td><td><span class="tag should">Should</span></td></tr>
+<tr><td>Alert chimes, by weight</td><td>notices, warnings, danger</td><td><span class="tag should">Should</span></td></tr>
+<tr><td>Clicks, hovers, "can't do that"</td><td>the interface</td><td><span class="tag should">Should</span></td></tr>
+<tr><td>Talking-head voice</td><td>the campaign's speakers (a blip now; voice acting later?)</td><td><span class="tag later">Later</span></td></tr>
+</tbody></table></div>
+
+<h2 id="music">Music</h2>
+<p>The direction: <b>moodier and slower than Red Alert 2 or Tiberian Sun</b>, less driving. Nearer the weight of <i>Frostpunk</i> or <i>They Are Billions</i>: a town holding out in the cold and dark, sorrow as much as threat, the horde as weather more than enemy.</p>
+<p>The game already plays music in layers. A calm bed plays under everything, and a battle layer on the same chords fades in with how many demons are in sight. The placeholder does this with a pad and a drum. The real score should keep the idea, so the music rises with the fight instead of switching tracks.</p>
+<div class="note"><p><b>Stems matter most.</b> For the in-game music, the ideal delivery is each track as stems (a bed, a tension layer, a battle layer) at one tempo and key, cut to loop, so the game can mix them live. Finished stereo tracks work too, as a fallback.</p></div>
+
+<div class="cues">
+  <div class="cue"><h4>Main menu</h4><span class="spec">1 track · 2 to 4 min · loops</span><p>Plays over a live town at war behind the menu. The game's theme.</p></div>
+  <div class="cue"><h4>Campaign map</h4><span class="spec">1 track · loops</span><p>Choosing the next mission: quieter, a map on a table.</p></div>
+  <div class="cue"><h4>Building the town</h4><span class="spec">3 to 4 tracks · 3 to 5 min · loops · with stems</span><p>Most of play: the colony growing. Hope, tiredness, the dark at the edge.</p></div>
+  <div class="cue"><h4>Tension and battle layers</h4><span class="spec">stems over the town tracks</span><p>A wave sighted, then landing. Rises and falls with the horde on screen.</p></div>
+  <div class="cue"><h4>The Convergence</h4><span class="spec">1 track · 3 to 5 min</span><p>The last night. The one place for everything at once.</p></div>
+  <div class="cue"><h4>Victory and defeat</h4><span class="spec">2 stingers · 10 to 30 s</span><p>The colony endures; the Keep falls.</p></div>
+  <div class="cue"><h4>Endless mode</h4><span class="spec">optional · a darker variant</span><p>No end, the horde corrupting as it goes.</p></div>
+  <div class="cue"><h4>Trailer</h4><span class="spec">optional · 1 to 2 min</span><p>For the Steam page, if it can be cut from the above.</p></div>
+</div>
+<p><b>Licensing</b>: we'd need rights to use the music in a commercial game on Steam and other stores, in trailers and store videos, for the life of the game. A non-exclusive licence is fine. A soundtrack release (Steam's soundtrack DLC) would be a separate, welcome arrangement. The stems are needed for the game itself, not for publication.</p>
+
+<h2 id="order">What to do first</h2>
+<ol>
+  <li><b>Projectiles and impacts</b>: arrows, bolts, the Bombard, bile, bursts, hits on walls. These are the most visible placeholder, and every fight is made of them.</li>
+  <li><b>Sound for combat and the horde</b>: bows, impacts, demon deaths, the horde beds, and the alarm and horn. A silent or synthetic fight undersells everything else.</li>
+  <li><b>Music</b>: the town tracks with their battle stems, then the menu theme and the Convergence.</li>
+  <li><b>The demons</b>, the Imp first (it's most of what's on screen), then Hound, Thrall and Gargoyle.</li>
+  <li><b>The talking heads and the title</b>, which the campaign and the Steam page need.</li>
+  <li><b>The town</b>: the Keep, homes, gatherers, towers. The stand-ins are passable here, so this can come after the fight looks and sounds right.</li>
+</ol>
+<footer>Hellwall · asset brief · reflects build 0.23.0. The game's systems will keep changing; the lists here are what exists and what's planned.</footer>
+</main>
+</div>
