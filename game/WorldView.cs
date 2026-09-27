@@ -654,6 +654,7 @@ public partial class WorldView : Node2D
             var inset = new Vector2(46, 46);
             var lo = toWorld * (screen.Position + inset + new Vector2(0, 30)); // clear of the top bar
             var hi = toWorld * (screen.End - inset - new Vector2(0, 150)); // and of the build card
+            hi = new Vector2(Mathf.Max(hi.X, lo.X), Mathf.Max(hi.Y, lo.Y)); // a window smaller than the margins (headless)
             float pulse = 0.8f + 0.2f * Mathf.Sin((float)Time.GetTicksMsec() / 220f);
             foreach (var (_, centre, count) in state.Columns)
             {

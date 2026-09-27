@@ -10,18 +10,25 @@ cd "$(dirname "$0")/.."
 
 GODOT="${GODOT:-/Applications/Godot_mono.app/Contents/MacOS/Godot}"
 VERSION=$(sed -n 's/^application\/short_version="\(.*\)"/\1/p' game/export_presets.cfg | head -1)
+# The menu shows the project's own version: keep it the same as the export's.
+sed -i '' "s/^config\/version=.*/config\/version=\"$VERSION\"/" game/project.godot
 TARGETS=("${@:-macos windows}")
 [[ $# -eq 0 ]] && TARGETS=(macos windows)
 mkdir -p out/build
+
+# The scenes behind the main menu are saves, and a save loads only under the rules it was made
+# with: make them afresh for this build's rules.
+dotnet build src/Sim.Headless -c Release --nologo -v q >/dev/null
+dotnet src/Sim.Headless/bin/Release/net10.0/hellwall-sim.dll menuscenes --out=game/menu | tail -1
 
 note() {
   cat <<NOTE
 Hellwall $VERSION - playtest build
 
-A colony-survival RTS: hold a walled town against demon hordes. The first
-screen offers the campaign, a skirmish (survival or endless, with settings on
-the right) and a map editor. F1 shows the controls; Esc (with nothing
-selected) is the pause menu, with save, load, fullscreen and volume.
+A colony-survival RTS: hold a walled town against demon hordes. The main
+menu has the campaign, a skirmish (survival or endless, with its settings),
+load game and settings; the map editor is under Extras. F1 shows the
+controls; Esc (with nothing selected) is the pause menu.
 
 $1
 

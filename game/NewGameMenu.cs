@@ -66,63 +66,118 @@ public partial class NewGameMenu : CanvasLayer
     VBoxContainer _more = null!;
     readonly List<ScenarioDef> _handMade = new();
 
+    /// <summary>Load a save slot (the menu's Load game page).</summary>
+    public Action<int>? LoadSlot;
+
+    Control _panel = null!;
+    readonly Dictionary<string, Control> _pages = new();
+
     public override void _Ready()
     {
-        // Thin enough to see the town playing behind the menu (Main's backdrop game), dark enough to read over.
-        var backdrop = new ColorRect { Color = new Color(0.06f, 0.04f, 0.05f, 0.55f) };
+        // A light wash over the town playing behind the menu (Main's backdrop game), darker down the left where the menu sits.
+        var backdrop = new ColorRect { Color = new Color(0.06f, 0.04f, 0.05f, 0.25f), MouseFilter = Control.MouseFilterEnum.Ignore };
         backdrop.SetAnchorsPreset(Control.LayoutPreset.FullRect);
         AddChild(backdrop);
+        var shade = new ColorRect { Color = new Color(0.05f, 0.035f, 0.04f, 0.78f) };
+        shade.SetAnchorsPreset(Control.LayoutPreset.LeftWide);
+        shade.CustomMinimumSize = new Vector2(620, 0);
+        AddChild(shade);
 
         // Scrolls when the page is taller than the window (a large interface size on a small screen).
         var scroll = new ScrollContainer { HorizontalScrollMode = ScrollContainer.ScrollMode.Disabled };
-        scroll.SetAnchorsPreset(Control.LayoutPreset.FullRect);
+        scroll.SetAnchorsPreset(Control.LayoutPreset.LeftWide);
+        scroll.CustomMinimumSize = new Vector2(620, 0);
         AddChild(scroll);
-        var centre = new CenterContainer { SizeFlagsHorizontal = Control.SizeFlags.ExpandFill, SizeFlagsVertical = Control.SizeFlags.ExpandFill };
-        scroll.AddChild(centre);
-        var page = new VBoxContainer();
-        page.AddThemeConstantOverride("separation", 10);
-        centre.AddChild(page);
+        var margin = new MarginContainer { SizeFlagsHorizontal = Control.SizeFlags.ExpandFill };
+        foreach (var side in new[] { "left", "right" }) margin.AddThemeConstantOverride($"margin_{side}", 48);
+        margin.AddThemeConstantOverride("margin_top", 56);
+        margin.AddThemeConstantOverride("margin_bottom", 32);
+        scroll.AddChild(margin);
+        var column = new VBoxContainer();
+        column.AddThemeConstantOverride("separation", 14);
+        margin.AddChild(column);
 
-        var title = new Label { Text = "HELLWALL", HorizontalAlignment = HorizontalAlignment.Center };
-        title.AddThemeFontSizeOverride("font_size", 48);
+        var title = new Label { Text = "HELLWALL" };
+        title.AddThemeFontSizeOverride("font_size", 56);
         title.AddThemeColorOverride("font_color", new Color(0.95f, 0.55f, 0.25f));
-        page.AddChild(title);
-        var version = new Label { Text = $"playtest build {ProjectSettings.GetSetting("application/config/version", "dev")}", HorizontalAlignment = HorizontalAlignment.Center };
+        column.AddChild(title);
+        var version = new Label { Text = $"playtest build {ProjectSettings.GetSetting("application/config/version", "dev")}" };
         version.AddThemeColorOverride("font_color", new Color(0.6f, 0.55f, 0.5f));
-        page.AddChild(version);
+        column.AddChild(version);
+        _panel = new VBoxContainer();
+        column.AddChild(_panel);
 
-        var columns = new HBoxContainer();
-        columns.AddThemeConstantOverride("separation", 28);
-        page.AddChild(columns);
-        var box = new VBoxContainer { CustomMinimumSize = new Vector2(480, 0) };
-        box.AddThemeConstantOverride("separation", 8);
-        columns.AddChild(box);
-        var side = new VBoxContainer { CustomMinimumSize = new Vector2(360, 0) };
-        side.AddThemeConstantOverride("separation", 8);
-        columns.AddChild(side);
+        _pages["home"] = HomePage();
+        _pages["skirmish"] = SkirmishPage();
+        _pages["load"] = LoadPage();
+        _pages["settings"] = SettingsPage();
+        _pages["extras"] = ExtrasPage();
+        foreach (var page in _pages.Values) { page.Visible = false; _panel.AddChild(page); }
+        Show("home");
+        if (ShowNews) CallDeferred(nameof(OpenNews));
+    }
 
-        // --- play ---
+    void Show(string page)
+    {
+        foreach (var (name, control) in _pages) control.Visible = name == page;
+    }
+
+    static VBoxContainer Page(int separation = 8)
+    {
+        var page = new VBoxContainer();
+        page.AddThemeConstantOverride("separation", separation);
+        return page;
+    }
+
+    Button MenuButton(VBoxContainer page, string text, Action act, int size = 22)
+    {
+        var b = UiKit.TextButton(text, size);
+        b.Alignment = HorizontalAlignment.Left;
+        b.CustomMinimumSize = new Vector2(320, 0);
+        b.Pressed += act;
+        page.AddChild(b);
+        return b;
+    }
+
+    void Back(VBoxContainer page)
+    {
+        page.AddChild(new Control { CustomMinimumSize = new Vector2(0, 6) });
+        MenuButton(page, "Back", () => Show("home"), 16);
+    }
+
+    // --- the front page: a short list ---
+
+    Control HomePage()
+    {
+        var page = Page(10);
+        page.AddChild(new Control { CustomMinimumSize = new Vector2(0, 18) });
         if (Continue != null && Saved is { } saved)
         {
-            var resume = UiKit.TextButton($"Continue: {saved}", 16);
-            resume.Pressed += () => { Continue(); QueueFree(); };
-            box.AddChild(resume);
+            var resume = MenuButton(page, "Continue", () => { Continue(); QueueFree(); });
+            resume.TooltipText = saved;
+            var what = UiKit.Label(saved, 13, UiKit.Muted);
+            page.AddChild(what);
         }
+        MenuButton(page, "Campaign", () => { OpenCampaign(); QueueFree(); });
+        MenuButton(page, "Skirmish", () => Show("skirmish"));
+        MenuButton(page, "Load game", () => Show("load"));
+        MenuButton(page, "Settings", () => Show("settings"));
+        MenuButton(page, "Extras", () => Show("extras"));
+        MenuButton(page, "Quit", () => GetTree().Quit());
+        return page;
+    }
+
+    // --- skirmish: the weekly challenge, then a run of your own ---
+
+    Control SkirmishPage()
+    {
+        var box = Page();
+        box.AddChild(UiKit.Label("Skirmish", 22, UiKit.Gold));
         var weekly = Weekly();
-        var campaign = UiKit.TextButton($"Campaign: {Campaign.Default.Name}", 18);
-        campaign.Pressed += () => { OpenCampaign(); QueueFree(); };
-        box.AddChild(campaign);
         var weeklyButton = UiKit.TextButton($"{weekly.Name}: {weekly.Map}, seed {weekly.Seed}", 15);
         weeklyButton.TooltipText = "The same map and seed for everyone this week, at Normal. Your best score for it is kept.";
         weeklyButton.Pressed += () => { Start(new GameSetup(weekly.Seed, weekly.Map, weekly.Difficulty, false, weekly)); QueueFree(); };
         box.AddChild(weeklyButton);
-        if (OpenEditor != null)
-        {
-            var editor = UiKit.TextButton("Map editor", 15);
-            editor.Pressed += () => { OpenEditor(); QueueFree(); };
-            box.AddChild(editor);
-        }
-        box.AddChild(UiKit.Label("Skirmish", 16, UiKit.Gold));
 
         _mode = Options(box, "Mode", ["Survival: the Convergence at the end", "Endless: until the Keep falls"], Initial.Endless ? 1 : 0);
         _difficulty = Options(box, "Difficulty", Enum.GetNames<Difficulty>(), (int)Initial.Difficulty);
@@ -136,15 +191,15 @@ public partial class NewGameMenu : CanvasLayer
         random.Pressed += () => _seed.Text = ((uint)GD.Randi() % 100000).ToString();
         seedRow.AddChild(random);
 
-        _about = new Label { AutowrapMode = TextServer.AutowrapMode.WordSmart, CustomMinimumSize = new Vector2(480, 60) };
+        _about = new Label { AutowrapMode = TextServer.AutowrapMode.WordSmart, CustomMinimumSize = new Vector2(500, 60) };
         _about.AddThemeColorOverride("font_color", new Color(0.8f, 0.78f, 0.72f));
         box.AddChild(_about);
 
-        // The rest of a skirmish's settings, in the right-hand column: left at their defaults, it's the game as designed.
-        side.AddChild(UiKit.Label("Skirmish settings", 16, UiKit.Gold));
+        // The rest of a skirmish's settings: left at their defaults, it's the game as designed.
+        box.AddChild(UiKit.Label("More settings", 15, UiKit.Gold));
         _more = new VBoxContainer();
         _more.AddThemeConstantOverride("separation", 4);
-        side.AddChild(_more);
+        box.AddChild(_more);
         _size = Options(_more, "Map size", Sizes.Select(s => s.Label).ToArray(), 1);
         _days = Options(_more, "Days", DayChoices.Select(d => $"{d} days").ToArray(), 2);
         _waves = Options(_more, "Waves", WaveChoices.Select(w => w.Label).ToArray(), 1);
@@ -163,13 +218,48 @@ public partial class NewGameMenu : CanvasLayer
         begin.AddThemeFontSizeOverride("font_size", 22);
         begin.Pressed += Begin;
         box.AddChild(begin);
-        begin.GrabFocus();
+        Back(box);
+        return box;
+    }
 
-        // --- options ---
-        side.AddChild(new HSeparator());
-        side.AddChild(UiKit.Label("Options", 16, UiKit.Gold));
+    // --- load game: every slot, the autosaves too ---
+
+    Control LoadPage()
+    {
+        var page = Page();
+        page.AddChild(UiKit.Label("Load game", 22, UiKit.Gold));
+        bool any = false;
+        foreach (int slot in new[] { 0, 1, 2, 3 }.Concat(Main.AutosaveSlots))
+        {
+            if (Main.SlotSummary(slot) is not { } what) continue;
+            any = true;
+            string name = slot == 0 ? "Quicksave" : slot <= 3 ? $"Slot {slot}" : "Autosave";
+            string when = System.IO.File.GetLastWriteTime(Main.SlotPath(slot)).ToString("ddd d MMM, HH:mm");
+            var row = new HBoxContainer();
+            row.AddThemeConstantOverride("separation", 10);
+            var label = UiKit.Label($"{name}: {what}\n{when}", 13);
+            label.CustomMinimumSize = new Vector2(380, 0);
+            label.AutowrapMode = TextServer.AutowrapMode.WordSmart;
+            row.AddChild(label);
+            int n = slot;
+            var load = UiKit.TextButton("Load", 14);
+            load.Pressed += () => { LoadSlot?.Invoke(n); QueueFree(); };
+            row.AddChild(load);
+            page.AddChild(row);
+        }
+        if (!any) page.AddChild(UiKit.Label("No saves yet. F5 saves in a game, and it autosaves every five minutes.", 14, UiKit.Muted));
+        Back(page);
+        return page;
+    }
+
+    // --- settings: everything the pause menu has, and the rest ---
+
+    Control SettingsPage()
+    {
+        var side = Page(6);
+        side.AddChild(UiKit.Label("Settings", 22, UiKit.Gold));
         side.AddChild(UiKit.Label("Master volume", 13));
-        var volume = new HSlider { MinValue = 0, MaxValue = 1, Step = 0.05, Value = Sound.Volume, SizeFlagsHorizontal = Control.SizeFlags.ExpandFill };
+        var volume = new HSlider { MinValue = 0, MaxValue = 1, Step = 0.05, Value = Sound.Volume, SizeFlagsHorizontal = Control.SizeFlags.ExpandFill, CustomMinimumSize = new Vector2(360, 0) };
         volume.ValueChanged += v => Settings.Set("volume", (float)v);
         side.AddChild(volume);
         side.AddChild(Display.MusicRow());
@@ -177,25 +267,27 @@ public partial class NewGameMenu : CanvasLayer
         var fullscreen = new CheckButton { Text = "Fullscreen", ButtonPressed = Display.Fullscreen };
         fullscreen.Toggled += on => Display.SetFullscreen(on);
         side.AddChild(fullscreen);
-        var edge = new CheckButton { Text = "Scroll at the screen edges", ButtonPressed = Main.EdgeScroll };
-        edge.Toggled += on => Settings.Set("edge_scroll", on);
-        side.AddChild(edge);
-        var confine = new CheckButton { Text = "Keep the mouse inside the window", ButtonPressed = Main.ConfineMouse };
-        confine.Toggled += on => Settings.Set("confine_mouse", on);
-        side.AddChild(confine);
-        var hints = new CheckButton { Text = "Hints for a first run", ButtonPressed = Coach.Enabled };
-        hints.Toggled += on => Settings.Set("hints", on);
-        side.AddChild(hints);
-        var news = UiKit.TextButton("What's new in this build", 13);
-        news.Pressed += () => Dialog("What's new", WhatsNew);
-        side.AddChild(news);
-        var credits = UiKit.TextButton("Credits", 13);
-        credits.Pressed += ShowCredits;
-        side.AddChild(credits);
-        if (ShowNews) CallDeferred(nameof(OpenNews));
-        var quit = UiKit.TextButton("Exit game", 13);
-        quit.Pressed += () => GetTree().Quit();
-        side.AddChild(quit);
+        side.AddChild(PauseMenu.Toggle("Scroll at the screen edges", "edge_scroll", true));
+        side.AddChild(PauseMenu.Toggle("Keep the mouse inside the window", "confine_mouse", true));
+        side.AddChild(PauseMenu.Toggle("Screen shake", "screen_shake", true));
+        side.AddChild(PauseMenu.Toggle("Pause when a building is possessed", "pause_on_possession", false));
+        side.AddChild(PauseMenu.Toggle("Autosave every 5 minutes (the last five kept)", "autosave", true));
+        side.AddChild(PauseMenu.Toggle("Hints for a first run", "hints", true));
+        Back(side);
+        return side;
+    }
+
+    // --- extras ---
+
+    Control ExtrasPage()
+    {
+        var page = Page(10);
+        page.AddChild(UiKit.Label("Extras", 22, UiKit.Gold));
+        if (OpenEditor != null) MenuButton(page, "Map editor", () => { OpenEditor(); QueueFree(); }, 18);
+        MenuButton(page, "What's new in this build", () => Dialog("What's new", WhatsNew), 18);
+        MenuButton(page, "Credits", ShowCredits, 18);
+        Back(page);
+        return page;
     }
 
     void Describe()

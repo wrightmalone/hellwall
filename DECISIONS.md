@@ -921,6 +921,21 @@ last lost by at least one).
   `scripts/ab.sh '<flags>' plains lakes` runs a quick sweep with and without some flags per map
   and prints them side by side. `scripts/verify.sh --fast` (about a minute) skips the full-run
   gates. Iterate with those; a full sweep and verify before a commit or build.
+- **The main menu, a pass** (your list): a short column on the left, the game playing on the
+  right. Continue (when there's a save, with what it is), Campaign, Skirmish, Load game,
+  Settings, Extras, Quit. Skirmish holds the weekly challenge and every skirmish setting; Load
+  game lists every save, with the autosaves and when each was made; Settings has everything
+  (sound, display, edge scroll, the mouse, screen shake, pausing on possession, autosave,
+  hints); Extras has the map editor, what's new and the credits. **Decide:** whether the
+  weekly challenge deserves the front page.
+- **The scenes behind it change every 15 to 20 seconds**, fading between: eight made for each
+  build by `hellwall-sim menuscenes` (export.sh runs it), the bot playing a run to a moment
+  and saving it with where to look. Three are towns going up (Plains, Lakes, Wildwood), four
+  are a big wave breaking on the walls (Plains, the Causeway, Two Fronts, the Gorge), one is
+  the Convergence (14,000 demons). The bot plays each on from there. A save only loads under
+  its own rules, so they're made afresh each build and kept out of git; if one ever won't
+  load, it's dropped, and with none the backdrop plays a live run as before. The menu's
+  version line now matches the build (export.sh keeps project.godot in step).
 - **Living woods and miners are the game now** (you: commit to resources running out and
   opening ways in): the new-game switches and their saved settings are gone; forest is always a
   wall that woodsmen fell, and rock and iron always wear away. `--no-woods` and `--no-mining`

@@ -5,3 +5,7 @@ out/
 *.user
 .DS_Store
 game/export/
+
+# Made by scripts/export.sh for each build (hellwall-sim menuscenes)
+game/menu/*.hwsave
+game/menu/scenes.json

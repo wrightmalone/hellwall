@@ -160,6 +160,11 @@ public partial class Main : Node2D
                 _pendingContinue = NewestSlot() ?? 0;
                 Play(new GameSetup(11, MapKind.Plains, Difficulty.Normal, false));
             },
+            LoadSlot = slot =>
+            {
+                _pendingContinue = slot;
+                Play(new GameSetup(11, MapKind.Plains, Difficulty.Normal, false));
+            },
         });
     }
 
@@ -190,7 +195,10 @@ public partial class Main : Node2D
         var day = DateTime.Now;
         uint seed = (uint)(day.DayOfYear * 7919 + day.Hour * 131);
         var maps = new[] { MapKind.Plains, MapKind.Lakes, MapKind.Wildwood, MapKind.Causeway, MapKind.Highlands };
+        _scenes ??= LoadSceneList();
         Begin(new GameSetup(seed, maps[seed % maps.Length], Difficulty.Normal, false));
+        // The made scenes if there are any (they need no fast-forward); the live run Begin made if not.
+        if (_scenes.Count > 0) NextScene();
     }
 
     void OpenEditor() => AddChild(new MapEditor
@@ -266,7 +274,7 @@ public partial class Main : Node2D
         if (_backdrop)
         {
             // Into the thick of it: a town already up, a few waves in.
-            for (int t = 0; t < 520 * Balance.TickHz && _world.Outcome == Outcome.Running; t++)
+            for (int t = 0; t < (_scenes is { Count: > 0 } ? 0 : 520 * Balance.TickHz) && _world.Outcome == Outcome.Running; t++)
             {
                 if (_world.Tick % Balance.TickHz == 0) _bot!.Act();
                 _world.Step();
@@ -618,6 +626,7 @@ public partial class Main : Node2D
         PanCamera(delta);
         StepShake(delta);
         StepAutosave();
+        if (_backdrop) StepBackdrop(delta);
         var coming = _world.Survival?.Next;
         var light = coming is { Announced: true } ? (coming.Final ? new Color(1, 0.78f, 0.74f) : new Color(1, 0.9f, 0.87f)) : Colors.White;
         _tint.Color = _tint.Color.Lerp(light, (float)Math.Min(1, delta * 0.8));
@@ -1082,27 +1091,107 @@ public partial class Main : Node2D
         try
         {
             var loaded = World.Load(System.IO.File.ReadAllBytes(path), _baseRules);
-            _world = loaded;
-            _lastAutosaveTick = loaded.Tick; // five minutes on from here
-            TheMusic.World = _world;
-            BuildViews();
-            // The horde layer is sized to the map, which a save may change.
-            _horde.QueueFree();
-            _horde = new HordeRenderer(_world.Terrain.Width) { ZIndex = 1 };
-            AddChild(_horde);
-            MoveChild(_horde, -1);
-            BuildHud();
-            _state.SelectedUnits.Clear();
-            _state.SelectedBuilding = null;
-            _state.Armed = null;
-            _state.Shots.Clear();
-            _accumulator = 0;
+            ReplaceWorld(loaded);
             _state.Say($"Loaded (day {loaded.Day})");
         }
         catch (FormatException e)
         {
             _state.Say($"Can't load: {e.Message}");
         }
+    }
+
+    /// <summary>Carry on with another world (a load, the next backdrop scene): every view rebuilt round it.</summary>
+    void ReplaceWorld(World loaded)
+    {
+        _world = loaded;
+        _lastAutosaveTick = loaded.Tick; // five minutes on from here
+        TheMusic.World = _world;
+        BuildViews();
+        // The horde layer is sized to the map, which a save may change.
+        _horde.QueueFree();
+        _horde = new HordeRenderer(_world.Terrain.Width) { ZIndex = 1 };
+        AddChild(_horde);
+        MoveChild(_horde, -1);
+        BuildHud();
+        _state.SelectedUnits.Clear();
+        _state.SelectedBuilding = null;
+        _state.Armed = null;
+        _state.Shots.Clear();
+        _accumulator = 0;
+    }
+
+    // --- the scenes behind the main menu ---
+
+    /// <summary>The backdrop's scenes (hellwall-sim menuscenes, made for each build): a save each, where to look, and how close.</summary>
+    static List<(string File, Vector2 At, float Zoom)>? _scenes;
+    int _scene = -1;
+    double _sceneLeft, _fadeIn = 1;
+    Vector2 _sceneAt;
+    static readonly Random _sceneRandom = new();
+
+    /// <summary>The rules the scenes were made under: the defaults with fog off (as MenuScenes.BackdropRules).</summary>
+    static Rules BackdropRules => Rules.Default.WithFog(f => f with { Enabled = false });
+
+    static List<(string File, Vector2 At, float Zoom)> LoadSceneList()
+    {
+        var list = new List<(string File, Vector2 At, float Zoom)>();
+        if (!Godot.FileAccess.FileExists("res://menu/scenes.json")) return list;
+        var json = Json.ParseString(Godot.FileAccess.GetFileAsString("res://menu/scenes.json")).AsGodotDictionary();
+        foreach (var entry in json["scenes"].AsGodotArray())
+        {
+            var e = entry.AsGodotDictionary();
+            list.Add((e["file"].AsString(), new Vector2((float)e["x"].AsDouble(), (float)e["y"].AsDouble()), (float)e["zoom"].AsDouble()));
+        }
+        return list;
+    }
+
+    /// <summary>Cut to another scene (never the same one twice running); one that no longer loads is dropped.</summary>
+    bool NextScene()
+    {
+        while (_scenes is { Count: > 0 })
+        {
+            int pick = _scenes.Count == 1 ? 0 : (_scene + 1 + _sceneRandom.Next(_scenes.Count - 1)) % _scenes.Count;
+            var (file, at, zoom) = _scenes[pick];
+            try
+            {
+                var loaded = World.Load(Godot.FileAccess.GetFileAsBytes("res://menu/" + file), BackdropRules);
+                ReplaceWorld(loaded);
+                _hud.Visible = false;
+                _bot = new Hellwall.Headless.Bot(_world, Hellwall.Headless.Bot.Style.Full);
+                _scene = pick;
+                _sceneAt = at;
+                _camera.Zoom = Vector2.One * zoom / Display.UiScale;
+                _camera.Position = Iso.P(at);
+                _sceneLeft = 15 + _sceneRandom.NextDouble() * 5;
+                _fadeIn = 0;
+                if (DisplayServer.GetName() == "headless") GD.Print($"hellwall: backdrop scene {file} (day {loaded.Day})");
+                return true;
+            }
+            catch (FormatException e)
+            {
+                GD.PushWarning($"menu scene {file} doesn't load ({e.Message}): run hellwall-sim menuscenes");
+                _scenes.RemoveAt(pick);
+            }
+        }
+        return false;
+    }
+
+    /// <summary>Behind the menu: the scene plays on; near its end it fades, and the next one fades in.</summary>
+    void StepBackdrop(double delta)
+    {
+        float real = (float)(delta / Math.Max(0.01, Engine.TimeScale));
+        _fadeIn = Math.Min(1, _fadeIn + real * 2);
+        if (_scenes is { Count: > 0 })
+        {
+            _sceneLeft -= real;
+            if ((_sceneLeft <= 0 || _world.Outcome != Outcome.Running) && !NextScene()) _scenes = null;
+            // A slow drift round what the scene is about.
+            float angle = (float)(Time.GetTicksMsec() / 1000.0 * Mathf.Tau / 60);
+            _camera.Position = Iso.P(_sceneAt + new Vector2(Mathf.Cos(angle), Mathf.Sin(angle)) * 3);
+        }
+        float fadeOut = _scenes is { Count: > 0 } ? (float)Math.Clamp(_sceneLeft / 0.5, 0, 1) : 1;
+        float light = (float)Math.Min(_fadeIn, fadeOut);
+        _tint.Color = new Color(light, light, light);
     }
 
     void PlaceLine(BuildingKind kind)
@@ -1278,6 +1367,7 @@ public partial class Main : Node2D
 
     void PanCamera(double delta)
     {
+        if (_backdrop && _scenes is { Count: > 0 }) return; // StepBackdrop moves the camera
         if (_backdrop)
         {
             // A slow turn round the town, like a banner-bearer walking the walls.
