@@ -255,9 +255,9 @@
       "requires": [
         "gatekeepers"
       ],
-      "briefing": "A narrow way through the ridges, and everything the mountains hold coming down it. Forty days, and four thousand of them to put down.",
+      "briefing": "A town at the mouth of a gorge, and everything the mountains hold coming down it, strung out along the canyon. Nothing else can reach you: the rock is your wall. Forty days, and four thousand of them to put down. Every stone you quarry at the mouth widens it.",
       "seed": 505,
-      "map": "Highlands",
+      "map": "Gorge",
       "difficulty": "Normal",
       "days": 40,
       "waves": 0.77,
@@ -273,6 +273,11 @@
       ],
       "triggers": [
         {
+          "day": 8,
+          "say": "The rock is the only wall we need, so long as we leave it standing. Quarry the far side of the basin, not the mouth.",
+          "speaker": "steward"
+        },
+        {
           "day": 20,
           "say": "Miners from the next valley join you, with what they could carry.",
           "give": {
@@ -286,6 +291,13 @@
           "say": "Scouts report green things among the horde that spit bile over the walls. Keep the towers back from the parapet.",
           "speaker": "scout"
         }
+      ],
+      "packs": 120,
+      "lockedBuildings": [
+        "SilverMine"
+      ],
+      "lockedUnits": [
+        "Exorcist"
       ]
     },
     {
@@ -502,9 +514,9 @@
       "requires": [
         "the-bridge"
       ],
-      "briefing": "The last line. Four Hellgates, a harder horde, sixty days. Close every gate, and survive what comes through before you do.",
+      "briefing": "The wall at the end of the world. Beyond it, the four Hellgates, and everything they have ever sent. Close every gate, through the three breaches in the old rampart, and survive what comes through before you do.",
       "seed": 808,
-      "map": "Plains",
+      "map": "Hellwall",
       "difficulty": "Hard",
       "days": 60,
       "objectives": [

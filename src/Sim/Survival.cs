@@ -241,7 +241,7 @@ internal static class SurvivalSystem
         {
             int sideShare = wave.ShareOf(i, world.Survival!.Rules);
             // A side may have more than one way onto the map (Causeway's two banks): the share splits between them, a column each.
-            var entries = MapGen.Entries(world.Map, wave.Sides[i], world.Terrain.Width);
+            var entries = MapGen.Entries(world.Map, wave.Sides[i], world.Terrain.Width, seed: world.Seed);
             for (int e = 0; e < entries.Length; e++)
             {
                 int share = sideShare / entries.Length + (e < sideShare % entries.Length ? 1 : 0);

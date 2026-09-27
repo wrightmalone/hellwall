@@ -32,6 +32,8 @@ public partial class NewGameMenu : CanvasLayer
         [MapKind.Causeway] = "A river down the middle, your town on the causeway. Waves from north and south, down both banks: four gaps to hold.",
         [MapKind.TwoFronts] = "Waves from east and west only. The rich north is thick with sleeping demons: clear it if you dare.",
         [MapKind.Crossing] = "A river to the east with one bridge. Everything comes over it.",
+        [MapKind.Gorge] = "Rock all round but one winding canyon from the north: the horde comes down it strung out.",
+        [MapKind.Hellwall] = "An old rampart across the north with three breaches, and the Hellgates beyond it.",
     };
 
     static readonly Dictionary<Difficulty, string> DifficultyAbout = new()

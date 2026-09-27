@@ -921,6 +921,19 @@ last lost by at least one).
   `scripts/ab.sh '<flags>' plains lakes` runs a quick sweep with and without some flags per map
   and prints them side by side. `scripts/verify.sh --fast` (about a minute) skips the full-run
   gates. Iterate with those; a full sweep and verify before a commit or build.
+- **Two more map kinds, and the missions on them**:
+  - **Gorge**: solid rock but for a basin round the Keep and one winding canyon down from the
+    north, its width breathing between a throat and hollows. Every wave comes down it, strung
+    out; its Hellgates stand far up it. **The Pass** now runs here (120 packs, since the whole
+    map's count would crowd the basin; Silver Mines and Exorcists locked, as its silver lies in
+    solid rock): "every stone you quarry at the mouth widens it". Bot: fortress and pyre win.
+  - **Hellwall**: an old rampart of rock across the north with three breaches, the hellscape
+    beyond it (more packs, the far wilds' elites) and all four Hellgates out there. Waves come
+    only from the north, through the breaches. **The Hellwall** mission now stands on it. Bot:
+    lost by all three (two survive but can't close the gates beyond the wall). **Decide:** its
+    difficulty after you've played it; it's the finale, on Hard.
+  Both are in the skirmish menu too. Gate placement takes many more tries on maps with one way in
+  (a canyon is a small target).
 - **The campaign's missing beats** (docs/plans/campaign.md, with what each mission's hook,
   complication and catharsis are):
   - **The First Night**: waves only from the west (a new mission setting, `waveSides`), and the

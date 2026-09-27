@@ -43,7 +43,7 @@ public static class MapImage
         foreach (var r in world.Ruins) Dot(r.X, r.Y, 2, ((byte)230, (byte)190, (byte)40));
         Dot(n / 2, n / 2, 4, ((byte)255, (byte)255, (byte)255));
         foreach (var side in MapGen.WaveSides(kind))
-            foreach (var (x, y) in MapGen.Entries(kind, side, n)) Dot(x, y, 4, ((byte)255, (byte)230, (byte)0));
+            foreach (var (x, y) in MapGen.Entries(kind, side, n, seed: seed)) Dot(x, y, 4, ((byte)255, (byte)230, (byte)0));
         Write(output, px, n, scale);
         var budget = MapGen.Measure(t);
         Console.WriteLine($"{kind} seed {seed}: {world.Packs.Count} packs ({world.Packs.Sum(p => p.Count)} demons), {world.Gates.Count} gates, {world.Ruins.Count} ruins; start {budget}; wrote {output}");

@@ -32,6 +32,16 @@ public enum MapKind : byte
     TwoFronts,
     /// <summary>A river to the east with one bridge over it. Every wave comes from the east, over the bridge, and so does the Convergence.</summary>
     Crossing,
+    /// <summary>
+    /// Solid rock but for a basin round the Keep and one winding canyon down from the north: the
+    /// horde comes the whole length of it, strung out. Every quarry at its mouth widens it.
+    /// </summary>
+    Gorge,
+    /// <summary>
+    /// The wall at the end of the world: an ancient rampart of rock across the north with three
+    /// breaches in it, and beyond it the hellscape, the Hellgates, and everything that comes.
+    /// </summary>
+    Hellwall,
 }
 
 public static class MapGen
@@ -133,6 +143,35 @@ public static class MapGen
                     }
                 break;
             }
+            case MapKind.Gorge:
+            {
+                int basin = s * 52 / 256;
+                for (int y = 0; y < s; y++)
+                    for (int x = 0; x < s; x++)
+                    {
+                        int dx = x - c, dy = y - c;
+                        int rb = basin + Wobble(seed, x, y, 4);
+                        bool inBasin = dx * dx + dy * dy <= rb * rb;
+                        // The canyon's width breathes: narrows to a throat, opens into hollows where things sleep.
+                        int half = s * 7 / 256 + (int)((Math.Sin(y * 0.11 + 1.3) * 0.5 + 0.5) * s * 5 / 256) + Wobble(seed, x, y, 2);
+                        bool inCanyon = y <= c && Math.Abs(x - GorgeX(seed, y, s)) <= half;
+                        if (!inBasin && !inCanyon) Put(x, y, Tile.Rock);
+                    }
+                break;
+            }
+            case MapKind.Hellwall:
+            {
+                int wallY = HellwallY(s), breach = 3;
+                for (int y = 0; y < s; y++)
+                    for (int x = 0; x < s; x++)
+                    {
+                        if (Math.Abs(y - wallY) > 3 + Wobble(seed, x, 11, 1)) continue;
+                        bool atBreach = false;
+                        foreach (int bx in HellwallBreaches(s)) if (Math.Abs(x - bx) <= breach) atBreach = true;
+                        Put(x, y, atBreach ? Tile.Grass : Tile.Rock);
+                    }
+                break;
+            }
             case MapKind.Crossing:
             {
                 int river = c + s * 38 / 256, width = s * 6 / 256, bridge = 3;
@@ -146,6 +185,19 @@ public static class MapGen
             }
         }
     }
+
+    /// <summary>Where the Gorge's canyon runs at row y: a slow seeded wind down from the north edge to the basin.</summary>
+    static int GorgeX(uint seed, int y, int size)
+    {
+        double phase = Lattice(seed ^ 0x6072u, 1, 1) * Math.PI * 2;
+        int c = size / 2;
+        // Straight into the basin at its end, winding further out.
+        double reach = Math.Clamp((c - y) / (double)(size * 40 / 256), 0, 1);
+        return c + (int)(Math.Sin(y * 0.045 + phase) * size * 20 / 256 * reach);
+    }
+
+    static int HellwallY(int size) => size / 2 - size * 40 / 256;
+    static int[] HellwallBreaches(int size) => [size / 2 - size * 62 / 256, size / 2, size / 2 + size * 62 / 256];
 
     /// <summary>Two Fronts' north country: more iron and stone than anywhere, for whoever clears it.</summary>
     static void EnrichNorth(Terrain t, uint seed)
@@ -165,13 +217,15 @@ public static class MapGen
         MapKind.Causeway => [Side.North, Side.South],
         MapKind.TwoFronts => [Side.East, Side.West],
         MapKind.Crossing => [Side.East],
+        MapKind.Gorge or MapKind.Hellwall => [Side.North],
         _ => [Side.North, Side.East, Side.South, Side.West],
     };
 
     /// <summary>Where a side's share of a wave comes onto the map: the middle of the edge, or (Causeway) down each bank.</summary>
-    public static (int X, int Y)[] Entries(MapKind kind, Side side, int size, int inset = 6)
+    public static (int X, int Y)[] Entries(MapKind kind, Side side, int size, int inset = 6, uint seed = 0)
     {
         int c = size / 2;
+        if (kind == MapKind.Gorge && side == Side.North) return [(GorgeX(seed, inset, size), inset)];
         if (kind == MapKind.Causeway && side is Side.North or Side.South)
         {
             int westMid = (size * 7 / 256 + c - size * 13 / 256) / 2, eastMid = size - 1 - westMid;
@@ -199,6 +253,8 @@ public static class MapGen
             MapKind.Causeway => Math.Abs(y - c) > size * 50 / 256,
             MapKind.TwoFronts => Math.Abs(x - c) > size * 70 / 256 && y > c - size * 30 / 256,
             MapKind.Crossing => x > c + size * 46 / 256,
+            MapKind.Gorge => y < c - size * 60 / 256, // far up the canyon
+            MapKind.Hellwall => y < HellwallY(size) - 10, // beyond the wall
             _ => true,
         };
     }
@@ -209,7 +265,7 @@ public static class MapGen
 
     /// <summary>Ground far thicker with sleeping demons than the rest (Two Fronts' north country).</summary>
     public static bool Infested(MapKind kind, int x, int y, int size) =>
-        kind == MapKind.TwoFronts && y < size / 2 - size * 36 / 256;
+        (kind == MapKind.TwoFronts && y < size / 2 - size * 36 / 256) || (kind == MapKind.Hellwall && y < HellwallY(size) - 6);
 
     /// <summary>
     /// Silver lies only in the outer band of the map, past 80% of the way from

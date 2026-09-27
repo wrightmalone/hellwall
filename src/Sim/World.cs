@@ -390,7 +390,7 @@ public sealed partial class World
 
     internal int SpawnAtEdge(Side side, DemonKind kind, int count, int inset = 6)
     {
-        var (x, y) = MapGen.Entries(Map, side, Terrain.Width, inset)[0];
+        var (x, y) = MapGen.Entries(Map, side, Terrain.Width, inset, Seed)[0];
         return SpawnAt(x, y, kind, count);
     }
 
@@ -1435,7 +1435,9 @@ public sealed partial class World
         }
         int centre = Terrain.Width / 2;
         int min2 = rules.MinDistance * rules.MinDistance;
-        for (int n = _gates.Count, attempts = 0; n < rules.Count && attempts < rules.Count * 400; attempts++)
+        // A narrow place for gates (the Gorge's canyon) takes many more random looks to hit.
+        int tries = rules.Count * (MapGen.WaveSides(Map).Length == 1 ? 3000 : 400);
+        for (int n = _gates.Count, attempts = 0; n < rules.Count && attempts < tries; attempts++)
         {
             int x = Rng.NextInt(Terrain.Width - Hellgate.Size), y = Rng.NextInt(Terrain.Height - Hellgate.Size);
             int dx = x - centre, dy = y - centre;
