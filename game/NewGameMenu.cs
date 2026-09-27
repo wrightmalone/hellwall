@@ -4,7 +4,7 @@ using Hellwall.Sim;
 namespace Hellwall.Game;
 
 /// <summary>What a new run is: every choice the menu offers, and what the command line can set instead.</summary>
-public sealed record GameSetup(uint Seed, MapKind Map, Difficulty Difficulty, bool Endless, ScenarioDef? Mission = null, bool Woods = false);
+public sealed record GameSetup(uint Seed, MapKind Map, Difficulty Difficulty, bool Endless, ScenarioDef? Mission = null);
 
 /// <summary>
 /// The screen before a run: survival or endless, difficulty, kind of map and
@@ -18,8 +18,6 @@ public partial class NewGameMenu : CanvasLayer
     public GameSetup Initial = new(11, MapKind.Plains, Difficulty.Normal, false);
 
     OptionButton _mode = null!, _difficulty = null!, _map = null!;
-    CheckButton _woods = null!;
-    CheckButton _mining = null!;
     LineEdit _seed = null!;
     Label _about = null!;
 
@@ -157,14 +155,6 @@ public partial class NewGameMenu : CanvasLayer
         _start = Options(_more, "Start with", StartChoices.Select(w => w.Label).ToArray(), 1);
         _fog = new CheckButton { Text = "Fog of war", ButtonPressed = true };
         _more.AddChild(_fog);
-        _woods = new CheckButton { Text = "Living woods (campaign too): forest is a wall", ButtonPressed = Settings.Get("sk_living_woods", true) };
-        _woods.TooltipText = "No one walks through the trees. Woodcutters send out woodsmen who fell them one by one, so the forest\nshrinks and opens new ways into your town. The horde can hack through trees, slowly.";
-        _woods.Toggled += on => Settings.Set("sk_living_woods", on); // saved now: the campaign reads it too
-        _more.AddChild(_woods);
-        _mining = new CheckButton { Text = "Miners (campaign too): rock and iron run out", ButtonPressed = Settings.Get("sk_mining", true) };
-        _mining.TooltipText = "Quarries and Mines send out miners who wear the rock and ore away, slowly (iron slowest).\nA worked-out one has to be replaced further out, and worn-away rock is a new way in.\nOff: they gather from the ground around them forever.";
-        _mining.Toggled += on => Settings.Set("sk_mining", on);
-        _more.AddChild(_mining);
         foreach (var o in new[] { _difficulty, _map, _mode, _days }) o.ItemSelected += _ => Describe();
         Remembered(true);
         Describe();
@@ -234,12 +224,10 @@ public partial class NewGameMenu : CanvasLayer
         if (restore)
         {
             _fog.ButtonPressed = Settings.Get("sk_fog", true);
-            _woods.ButtonPressed = Settings.Get("sk_living_woods", true);
         }
         else
         {
             Settings.Set("sk_fog", _fog.ButtonPressed);
-            Settings.Set("sk_living_woods", _woods.ButtonPressed);
         }
     }
 
@@ -255,7 +243,7 @@ public partial class NewGameMenu : CanvasLayer
             && _wilds.Selected == 1 && _strays.Selected == 0 && _ruinsOption.Selected == 1 && _start.Selected == 1 && _fog.ButtonPressed;
         if (plain)
         {
-            Start(new GameSetup(seed, kind, difficulty, endless, Woods: _woods.ButtonPressed));
+            Start(new GameSetup(seed, kind, difficulty, endless));
             QueueFree();
             return;
         }
@@ -279,9 +267,8 @@ public partial class NewGameMenu : CanvasLayer
             Ruins = RuinChoices[_ruinsOption.Selected].Count,
             Start = rules.StartingResources.Scale(StartChoices[_start.Selected].Scale),
             Fog = _fog.ButtonPressed,
-            LivingWoods = _woods.ButtonPressed,
         };
-        Start(new GameSetup(seed, kind, difficulty, endless, skirmish, _woods.ButtonPressed));
+        Start(new GameSetup(seed, kind, difficulty, endless, skirmish));
         QueueFree();
     }
 

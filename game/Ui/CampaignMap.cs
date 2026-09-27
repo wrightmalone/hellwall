@@ -112,9 +112,7 @@ public partial class CampaignMap : CanvasLayer
         bool open = IsOpen(s);
         _name.Text = s.Name;
         int best = CampaignProgress.BestDay(_campaign.Id, s.Id);
-        _facts.Text = $"{s.Map} · {s.Difficulty} · {(s.Days > 0 ? s.Days : 60)} days" + (_won.Contains(s.Id) ? " · won" : best > 0 ? $" · best: day {best}" : "")
-            + (Settings.Get("sk_living_woods", true) ? "" : " · living woods off")
-            + (Settings.Get("sk_mining", true) ? "" : " · miners off");
+        _facts.Text = $"{s.Map} · {s.Difficulty} · {(s.Days > 0 ? s.Days : 60)} days" + (_won.Contains(s.Id) ? " · won" : best > 0 ? $" · best: day {best}" : "");
         _brief.Text = open ? s.Briefing : $"Win {string.Join(" and ", s.Requires.Select(r => _campaign.Find(r)!.Name))} to open this mission.";
         _goals.Text = string.Join("\n", s.Goals.Select(g => "·  " + g.Describe()))
             + (open ? "\n\nWhat's coming:\n" + string.Join("\n", s.Threats(Rules.Default).Select(t => "·  " + t)) : "");

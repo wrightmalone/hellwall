@@ -224,11 +224,10 @@ public partial class Main : Node2D
         if (_demoSeconds > 0) rules = rules.WithStartingResources(new Cost { Gold = 5000, Wood = 3000, Stone = 2000, Food = 1000, Iron = 1000 });
         bool scripted = _benchSeconds > 0 || _demoSeconds > 0;
         _baseRules = rules; // saves record whether the woods were living, and Load puts that back
-        // Living woods is a setting every kind of run reads (on unless turned off), --woods / --no-woods over it.
-        bool woods = options.ContainsKey("woods") || (!options.ContainsKey("no-woods") && Settings.Get("sk_living_woods", true));
+        // Living woods and miners are how the game is: forest is a wall and rock runs out. --no-woods and --no-mining are for A/B tests only.
+        bool woods = !options.ContainsKey("no-woods");
         if (woods != rules.Woods.Blocks) rules = rules.WithWoods(w => w with { Blocks = woods });
-        // Miners likewise, but on unless turned off: every kind of run reads the setting.
-        if (options.ContainsKey("no-mining") || (!options.ContainsKey("mining") && !Settings.Get("sk_mining", true))) rules = rules.WithMining(m => m with { Enabled = false });
+        if (options.ContainsKey("no-mining")) rules = rules.WithMining(m => m with { Enabled = false });
         if (options.ContainsKey("reveal") || _backdrop) rules = rules.WithFog(f => f with { Enabled = false });
         if (options.ContainsKey("patrons-now")) rules = rules.WithSurvival(s => s with { PatronMilestones = [1, .. s.PatronMilestones] }); // screenshots of the picker
         // A survival run takes its packs from rules.json (wilds).

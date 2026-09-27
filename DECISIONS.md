@@ -921,6 +921,10 @@ last lost by at least one).
   `scripts/ab.sh '<flags>' plains lakes` runs a quick sweep with and without some flags per map
   and prints them side by side. `scripts/verify.sh --fast` (about a minute) skips the full-run
   gates. Iterate with those; a full sweep and verify before a commit or build.
+- **Living woods and miners are the game now** (you: commit to resources running out and
+  opening ways in): the new-game switches and their saved settings are gone; forest is always a
+  wall that woodsmen fell, and rock and iron always wear away. `--no-woods` and `--no-mining`
+  stay as flags for A/B sweeps.
 - **Two more map kinds, and the missions on them**:
   - **Gorge**: solid rock but for a basin round the Keep and one winding canyon down from the
     north, its width breathing between a throat and hollows. Every wave comes down it, strung
