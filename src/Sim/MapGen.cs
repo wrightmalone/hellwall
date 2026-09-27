@@ -113,6 +113,8 @@ public static class MapGen
                         // A ridge across each bank, north and south of the bridge, with one gap in each: the four chokepoints.
                         else if (Math.Abs(Math.Abs(y - c) - ridge) <= 2 + Wobble(seed, x, 7, 1)
                                  && Math.Abs(x - (x < c ? westMid : eastMid)) > gap) Put(x, y, Tile.Rock);
+                        // The gaps are open ground, so the way through is a way through.
+                        else if (Math.Abs(Math.Abs(y - c) - ridge) <= 5 && Math.Abs(x - (x < c ? westMid : eastMid)) <= gap) Put(x, y, Tile.Grass);
                     }
                 break;
             }
@@ -126,6 +128,8 @@ public static class MapGen
                         if (y > shore + w) Put(x, y, Tile.Water);
                         // The wall to the north country, two passes through it.
                         else if (Math.Abs(y - wallAt) <= 2 + Wobble(seed, x, 3, 1) && Math.Abs(Math.Abs(x - c) - pass) > 3) Put(x, y, Tile.Rock);
+                        // The passes themselves, and a little either side, are open ground: a way in, not a thicket.
+                        else if (Math.Abs(y - wallAt) <= 6 && Math.Abs(Math.Abs(x - c) - pass) <= 3) Put(x, y, Tile.Grass);
                     }
                 break;
             }
@@ -198,6 +202,10 @@ public static class MapGen
             _ => true,
         };
     }
+
+    /// <summary>Where ruins may stand: Two Fronts keeps its ruins in the near part of the infested north, the reason to go in (not to march to its far edge).</summary>
+    public static bool RuinAllowed(MapKind kind, int x, int y, int size) =>
+        kind != MapKind.TwoFronts || (Infested(kind, x, y, size) && y > size / 2 - size * 72 / 256);
 
     /// <summary>Ground far thicker with sleeping demons than the rest (Two Fronts' north country).</summary>
     public static bool Infested(MapKind kind, int x, int y, int size) =>

@@ -106,6 +106,9 @@ public sealed record ScenarioDef
     public bool Endless { get; init; }
     /// <summary>Hand-placed sleeping packs (a map editor's), besides any scattered at random (Packs).</summary>
     public PlacedPack[] PlacedPacks { get; init; } = [];
+    /// <summary>The sides waves may come from in this mission (empty: whatever its kind of map allows).</summary>
+    public Side[] WaveSides { get; init; } = [];
+
     /// <summary>Hand-placed Hellgates: when there are any, they're the map's gates and none are placed at random.</summary>
     public PlacedGate[] PlacedGates { get; init; } = [];
 
@@ -173,7 +176,7 @@ public sealed record ScenarioDef
     public IEnumerable<string> Threats(Rules rules)
     {
         var r = RulesFrom(rules).ForDifficulty(Difficulty);
-        var sides = MapGen.WaveSides(Map);
+        var sides = WaveSides.Length > 0 ? WaveSides : MapGen.WaveSides(Map);
         string Names(IEnumerable<Side> s) => string.Join(" and ", s.Select(x => x.ToString().ToLowerInvariant()));
         yield return sides.Length == 4 ? "Waves from any side, one or two at a time, each told a minute ahead" : $"Waves only from the {Names(sides)}, each told a minute ahead";
         if (r.Hellgates.Count > 0) yield return $"{r.Hellgates.Count} Hellgate{(r.Hellgates.Count == 1 ? "" : "s")} feeding the waves (close them and the waves shrink)";
@@ -201,7 +204,7 @@ public sealed record ScenarioDef
     {
         if (Name.Length > 60 || Briefing.Length > 4000) return "its name or briefing is too long";
         if (Array.IndexOf(MapSizes, MapSize) < 0) return $"it's {MapSize} tiles across, which isn't a size the game makes";
-        if (!Enum.IsDefined(Map) || !Enum.IsDefined(Difficulty)) return "it names a kind of map or difficulty this build doesn't have";
+        if (!Enum.IsDefined(Map) || !Enum.IsDefined(Difficulty) || WaveSides.Any(s => !Enum.IsDefined(s))) return "it names a kind of map, difficulty or side this build doesn't have";
         if (Days is < 0 or > 400 || Waves is < 0 or > 20 || Convergence is < 0 or > 20) return "its days or wave sizes are out of range";
         if (Hellgates is < -1 or > 16 || Packs is < -1 or > 5000 || Strays is < -1 or > 5000 || Ruins is < -1 or > 64) return "it asks for too many gates, packs, strays or ruins";
         if (Start != null && Enum.GetValues<Resource>().Any(r => Start[r] is < 0 or > 1_000_000 || double.IsNaN(Start[r]))) return "its starting stock is out of range";

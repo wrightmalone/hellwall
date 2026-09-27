@@ -132,7 +132,7 @@ public sealed record MiningRules
     /// <summary>Hit points a miner takes off a second, and what each point yields.</summary>
     public float MineDps { get; init; } = 1;
     public float StonePerHp { get; init; } = 0.16f;
-    public float IronPerHp { get; init; } = 0.13f;
+    public float IronPerHp { get; init; } = 0.16f;
 }
 
 public sealed record WildsRules

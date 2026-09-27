@@ -921,6 +921,24 @@ last lost by at least one).
   `scripts/ab.sh '<flags>' plains lakes` runs a quick sweep with and without some flags per map
   and prints them side by side. `scripts/verify.sh --fast` (about a minute) skips the full-run
   gates. Iterate with those; a full sweep and verify before a commit or build.
+- **The campaign's missing beats** (docs/plans/campaign.md, with what each mission's hook,
+  complication and catharsis are):
+  - **The First Night**: waves only from the west (a new mission setting, `waveSides`), and the
+    briefing says so: the beat is getting the west wall up before the first of them. Its
+    Convergence is gentler again (a wave from one side only is all on that side).
+  - **The Causeway**: sixty people as well as surviving. They don't fit behind the near gaps,
+    so you have to push out to the far ones; on day 14 masons from downriver bring the stone
+    to wall them. The ridge gaps are always open ground now (the noise could fill one with trees).
+  - **Two Fronts**: bring home one relic from a reliquary in the north. On this map ruins only
+    stand in the near part of the infested north, the reason to go in. Its passes are always open
+    ground, and the extra infestation is a third of the base packs (was half: with the fuller
+    map it was 865 packs, and no raid got through). Bot: fortress wins, the others don't.
+  - **Wildwood Watch**: the briefing and a day-8 line make it about choosing which trees to fell.
+  - **The Long Siege**: on day 30 refugees from the fallen south arrive with food, gold and
+    timber; a day later 160 Hounds that hunted them reach the south edge (told 45 seconds ahead).
+- **Iron yields a little more** (0.16 per hit point, was 0.13): Mines now stop when demons come
+  near, and the army path, which lives on iron, fell to 2/8 with soldiers steadying crews in.
+  Back to fortress 5/8, pyre 7/8, legion 6/8.
 - **Civilians run from demons** (you asked): once a second, every gathering building looks round
   its working ground (its gather radius and three tiles more) for a demon with an open line to
   it, nothing of the colony's walls or gates in between. If there is one, its crew flee home for

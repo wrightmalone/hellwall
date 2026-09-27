@@ -51,7 +51,7 @@
   },
 
   "mining": {
-    "enabled": true, "rockHp": 360, "oreHp": 720, "mineDps": 1, "stonePerHp": 0.16, "ironPerHp": 0.13
+    "enabled": true, "rockHp": 360, "oreHp": 720, "mineDps": 1, "stonePerHp": 0.16, "ironPerHp": 0.16
   },
   "woods": {
     "blocks": true, "treeHp": 120, "treeCost": 30, "chopDps": 2.2, "woodPerHp": 0.25, "carry": 10, "speed": 2.2, "reach": 14

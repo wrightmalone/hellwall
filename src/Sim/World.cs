@@ -291,7 +291,7 @@ public sealed partial class World
                 for (int i = 0; i < start.Count; i++) world.TrySpawnUnit(start.Kind, keep);
         }
         world.ScatterPacks(options.DormantPacks > 0 ? options.DormantPacks : options.Survival ? world.Rules.Wilds.Packs : 0);
-        if (options.Survival && options.DormantPacks == 0) world.Infest(world.Rules.Wilds.Packs / 2);
+        if (options.Survival && options.DormantPacks == 0) world.Infest(world.Rules.Wilds.Packs / 3);
         if (options.Survival && options.DormantPacks == 0) world.ScatterStrays(world.Rules.Wilds.Strays);
         if (options.Survival && options.DormantPacks == 0) RuinSystem.Place(world);
         if (options.Scenario is { } s)

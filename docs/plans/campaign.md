@@ -161,7 +161,7 @@ Tags:
 - **What it asks:** everything at once, from the direction you know it's coming.
 
 ## Suggested order to build
-1. Give the missions that lack one a complication or a catharsis beat, using what exists: the Causeway's gift, the Long Siege's twist, Two Fronts' reason to go north, and Wildwood's briefing.
+1. ~~Give the missions that lack one a complication or a catharsis beat~~ Done (see DECISIONS.md, "The campaign's missing beats"). The First Night's west wall, the Causeway's sixty people and masons, Two Fronts' relic in the north, Wildwood's "fell the right trees", and the Long Siege's refugees and the horde behind them.
 2. The Gorge and the Hellwall's own map. Both are map shapes, like the three we just made.
 3. A trigger that changes tiles, for The Frozen River (and later the Island's tides).
 4. Buildings placed by a mission, for The Ruined City.

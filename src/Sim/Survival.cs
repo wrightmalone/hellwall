@@ -182,7 +182,7 @@ internal static class SurvivalSystem
             if (wave.Landed) continue;
             if (!wave.Announced && world.Tick >= wave.AnnounceTick(s.Rules))
             {
-                var allowed = MapGen.WaveSides(world.Map);
+                var allowed = world.Scenario is { WaveSides.Length: > 0 } m ? m.WaveSides : MapGen.WaveSides(world.Map);
                 wave.Sides = wave.Final ? MainSideFirst(world, allowed) : wave.Surge ? allowed : DrawSides(world, allowed, SidesFor(s.Rules, wave.Number));
                 // Corruptions that swell the tide apply from the announcement, so the size shown is the size that comes.
                 wave.Size = (int)Math.Round(wave.Size * CorruptionSystem.WaveMultiplier(world));

@@ -38,7 +38,7 @@ internal static class RuinSystem
         {
             int x = world.Rng.NextInt(t.Width), y = world.Rng.NextInt(t.Height);
             int dx = x - c, dy = y - c, d2 = dx * dx + dy * dy;
-            if (d2 < min * min || d2 > max * max) continue;
+            if (d2 < min * min || d2 > max * max || !MapGen.RuinAllowed(world.Map, x, y, t.Width)) continue;
             if (!world.IsWalkable(x, y) || world.Flow.DistAt(x, y) == FlowField.Unreachable || !World.FairWalk(walk, t.Index(x, y), MathF.Sqrt(d2))) continue;
             if (world.RuinList.Any(r => (r.X - x) * (r.X - x) + (r.Y - y) * (r.Y - y) < 30 * 30)) continue;
             float far = (MathF.Sqrt(d2) - min) / Math.Max(1, max - min);

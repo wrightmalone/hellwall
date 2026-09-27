@@ -29,13 +29,13 @@
       "name": "The First Night",
       "mapX": 0.08,
       "mapY": 0.62,
-      "briefing": "A handful of families and four militia, a Keep, and fifteen days before the dark closes in. Build homes, gather wood and stone, and raise a wall. Nothing from the Scriptorium yet, and only the simplest towers.",
+      "briefing": "A handful of families and four militia, a Keep, and fifteen days before the dark closes in. They will come from the west, where the plain is open: build homes, gather wood and stone, and have a wall across the west before the first of them. Nothing from the Scriptorium yet, and only the simplest towers.",
       "seed": 101,
       "map": "Plains",
       "difficulty": "Easy",
       "days": 15,
       "waves": 0.46,
-      "convergence": 0.035,
+      "convergence": 0.025,
       "hellgates": 0,
       "packs": 60,
       "lockedBuildings": [
@@ -60,7 +60,7 @@
         },
         {
           "day": 5,
-          "say": "Scouts report movement at the edge of the plain. The first wave lands at the end of tomorrow.",
+          "say": "Scouts report movement on the western plain. The first wave lands at the end of tomorrow: is the west wall finished?",
           "speaker": "scout"
         },
         {
@@ -75,6 +75,9 @@
       ],
       "lockedUnits": [
         "Exorcist"
+      ],
+      "waveSides": [
+        "West"
       ]
     },
     {
@@ -211,7 +214,7 @@
       "requires": [
         "drowned"
       ],
-      "briefing": "A town on a causeway across a river, cliffs east and west. They will come down both banks from the north and the south, through the gaps in the ridges: four gaps to hold, and the further out you hold them, the more room you have behind.",
+      "briefing": "A town on a causeway across a river, cliffs east and west. They will come down both banks from the north and the south, through gaps in the ridges. Wall the near gaps and you're safe, and cramped: sixty people won't fit. The good ground lies out between the near gaps and the far ones.",
       "seed": 911,
       "map": "Causeway",
       "difficulty": "Normal",
@@ -220,14 +223,27 @@
       "convergence": 0.42,
       "objectives": [
         {
+          "kind": "Population",
+          "count": 60
+        },
+        {
           "kind": "Survive"
         }
       ],
       "triggers": [
         {
           "day": 6,
-          "say": "Four gaps in the ridges, two on each bank. Wall them, and the banks between are ours.",
+          "say": "Four gaps in the ridges near us, two on each bank, and four more further out. Wall the near ones first.",
           "speaker": "captain"
+        },
+        {
+          "day": 14,
+          "say": "Masons from downriver, with stone enough to wall the far gaps. Everything between is ours if we take it.",
+          "give": {
+            "stone": 300,
+            "wood": 150
+          },
+          "speaker": "steward"
         }
       ]
     },
@@ -280,7 +296,7 @@
       "requires": [
         "the-pass"
       ],
-      "briefing": "The waves will come from the east and the west, and only there. North, behind the old wall, is the richest country in the march: iron, stone, silver. It is also thick with them, asleep. Clear it a piece at a time if you can spare the soldiers.",
+      "briefing": "The waves will come from the east and the west, and only there. North, behind the old wall, is the richest country in the march: iron, stone, silver, and an old reliquary whose relic we need. It is also thick with demons, asleep. Clear a way in, a piece at a time, when you can spare the soldiers.",
       "seed": 912,
       "map": "TwoFronts",
       "difficulty": "Normal",
@@ -288,6 +304,10 @@
       "waves": 0.8,
       "convergence": 0.45,
       "objectives": [
+        {
+          "kind": "LootRuins",
+          "count": 1
+        },
         {
           "kind": "Survive"
         }
@@ -297,6 +317,15 @@
           "day": 10,
           "say": "The north is waking to the noise of the town. Go in when you choose, not when they do.",
           "speaker": "scout"
+        },
+        {
+          "afterGoal": 0,
+          "say": "The relic is home. Now hold both fronts to the end.",
+          "give": {
+            "gold": 300,
+            "iron": 150
+          },
+          "speaker": "abbess"
         }
       ]
     },
@@ -308,7 +337,7 @@
       "requires": [
         "drowned"
       ],
-      "briefing": "Deep forest: wood for a hundred walls, and no clear ground to see them coming. Forty-five days.",
+      "briefing": "Deep forest: wood for a hundred walls, and no clear ground to see them coming. The trees are your wall, until your own woodsmen cut them down: every tree they fell is a way in. Fell the ones you want the horde to use, and build your killing ground there. Forty-five days.",
       "seed": 606,
       "map": "Wildwood",
       "difficulty": "Normal",
@@ -321,6 +350,11 @@
         }
       ],
       "triggers": [
+        {
+          "day": 8,
+          "say": "Every tree the woodsmen fell is a new way in. Choose where the woods open, before the horde chooses for you.",
+          "speaker": "scout"
+        },
         {
           "day": 25,
           "say": "Howling in the trees to the west.",
@@ -409,13 +443,26 @@
       "triggers": [
         {
           "day": 30,
-          "say": "Halfway. The waves only grow from here.",
+          "say": "Refugees from the fallen towns to the south, with what they could carry. Something followed them.",
+          "give": {
+            "food": 400,
+            "gold": 400,
+            "wood": 200
+          },
           "speaker": "steward"
+        },
+        {
+          "day": 31,
+          "say": "The horde that hunted the refugees is at the southern edge.",
+          "spawnKind": "Hound",
+          "spawnCount": 160,
+          "spawnSide": "South",
+          "speaker": "scout"
         },
         {
           "day": 55,
           "say": "Five days to the Convergence. Everything you have.",
-          "speaker": "steward"
+          "speaker": "captain"
         }
       ]
     },
