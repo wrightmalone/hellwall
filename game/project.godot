@@ -12,6 +12,7 @@ config_version=5
 
 config/name="Hellwall"
 config/version="0.26.0"
+run/flush_stdout_on_print=true
 run/main_scene="res://Main.tscn"
 config/features=PackedStringArray("4.7", "C#", "Forward Plus")
 
@@ -30,3 +31,7 @@ project/solution_directory="../"
 textures/vram_compression/import_etc2_astc=true
 
 textures/canvas_textures/default_texture_filter=0
+
+[debug]
+
+file_logging/max_log_files=20

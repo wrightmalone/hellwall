@@ -104,6 +104,20 @@ public partial class NewGameMenu : CanvasLayer
         var version = new Label { Text = $"playtest build {ProjectSettings.GetSetting("application/config/version", "dev")}" };
         version.AddThemeColorOverride("font_color", new Color(0.6f, 0.55f, 0.5f));
         column.AddChild(version);
+        // The last session died without closing: say so once, and where the report is, so it can be sent.
+        if (Diagnostics.LastCrashReport is { } report)
+        {
+            var crashed = new VBoxContainer();
+            crashed.AddThemeConstantOverride("separation", 4);
+            var note = UiKit.Label($"Hellwall closed unexpectedly last time. A report was saved, crashes/{System.IO.Path.GetFileName(report)}: send it along with what you were doing.", 13, new Color(1, 0.6f, 0.5f));
+            note.AutowrapMode = TextServer.AutowrapMode.WordSmart; // wraps to the column, never widens it
+            crashed.AddChild(note);
+            var open = UiKit.TextButton("Open the folder", 13);
+            open.SizeFlagsHorizontal = Control.SizeFlags.ShrinkBegin;
+            open.Pressed += Diagnostics.OpenFolder;
+            crashed.AddChild(open);
+            column.AddChild(crashed);
+        }
         _panel = new VBoxContainer();
         column.AddChild(_panel);
 
@@ -273,6 +287,9 @@ public partial class NewGameMenu : CanvasLayer
         side.AddChild(PauseMenu.Toggle("Screen shake", "screen_shake", true));
         side.AddChild(PauseMenu.Toggle("Pause when a building is possessed", "pause_on_possession", false));
         side.AddChild(PauseMenu.Toggle("Autosave every 5 minutes (the last five kept)", "autosave", true));
+        var folder = UiKit.TextButton("Open the game's folder (saves, logs, crash reports)", 13);
+        folder.Pressed += Diagnostics.OpenFolder;
+        side.AddChild(folder);
         side.AddChild(PauseMenu.Toggle("Hints for a first run", "hints", true));
         Back(side);
         return side;

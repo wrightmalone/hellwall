@@ -1294,6 +1294,34 @@ last lost by at least one).
 - **Campaign:** First Night and Iron in the Hills are Easy, so unchanged. The Hellwall
   was already lost by the bot.
 
+## Ready for the next crash (your playtest crashed once, with no log to send)
+
+- **The logs already existed.** Godot writes one per session, in `logs/` under the game's
+  folder. On Windows that's `%APPDATA%\Godot\app_userdata\Hellwall`.
+  - They kept only the last 5, so a crash's log was gone after five more launches. Now
+    they keep 20.
+  - They're written line by line now (`flush_stdout_on_print`). Before, a hard crash lost
+    whatever was still waiting to be written out. That was all of it in my test.
+- **A trail** (`diagnostics.log`), written as you play:
+  - which screen you're on;
+  - when the window loses or regains focus (you were on another screen);
+  - saves and loads;
+  - every engine error and C# exception, with its source;
+  - every 10 seconds, a breadcrumb: map, day, tick, demons, soldiers, buildings, speed,
+    frame rate, memory and video memory.
+- **Crash reports:** `session.txt` says "running" while the game is up and "closed" after
+  a clean quit.
+  - If the next launch finds "running", the last session died. It saves
+    `crashes/crash-<time>.txt`, with the trail and the end of that session's Godot log.
+  - The main menu then says so, with "Open the folder".
+  - Settings has "Open the game's folder (saves, logs, crash reports)".
+- **Tested** by killing a game hard partway through. The next launch filed the report,
+  with its breadcrumbs and log, and showed the notice.
+- **Not affected:** headless runs (tests, verify, bakes) don't write any of it, so they
+  never touch a player's trail.
+- **Next time it crashes:** send the newest file in `crashes/`, and say what you were
+  doing.
+
 ## Buildings from KayKit Medieval Hexagon (you downloaded it and the Medieval Village MegaKit)
 
 - **Every building but walls and gates is now a baked KayKit model** (`tools/bake_buildings.gd`,

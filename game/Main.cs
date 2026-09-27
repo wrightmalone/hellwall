@@ -88,6 +88,7 @@ public partial class Main : Node2D
 
     public override void _Ready()
     {
+        Diagnostics.Start(GetTree());
         _options = ParseUserArgs();
         if (_options.TryGetValue("dump-music", out var dump)) Music.DumpTo = dump;
         if (_music == null || !IsInstanceValid(_music))
@@ -149,6 +150,8 @@ public partial class Main : Node2D
 
     void ShowMenu(GameSetup setup)
     {
+        Diagnostics.Screen = "main menu";
+        Diagnostics.Describe = null;
         // A town at war behind the menu (as in Factorio): the bot playing, quietly, the camera drifting round it.
         if (!_started && (DisplayServer.GetName() != "headless" || _options.ContainsKey("backdrop")) && !_options.ContainsKey("no-backdrop")) StartBackdrop();
         AddChild(new NewGameMenu
@@ -202,14 +205,19 @@ public partial class Main : Node2D
         if (_scenes.Count > 0) NextScene();
     }
 
-    void OpenEditor() => AddChild(new MapEditor
+    void OpenEditor()
     {
-        Back = () => ShowMenu(new GameSetup(11, MapKind.Plains, Difficulty.Normal, false)),
-        Play = map => Play(new GameSetup(map.Seed, map.Map, Difficulty.Normal, false, map with { Id = "map-" + map.Id })),
-    });
+        Diagnostics.Screen = "map editor";
+        AddChild(new MapEditor
+        {
+            Back = () => ShowMenu(new GameSetup(11, MapKind.Plains, Difficulty.Normal, false)),
+            Play = map => Play(new GameSetup(map.Seed, map.Map, Difficulty.Normal, false, map with { Id = "map-" + map.Id })),
+        });
+    }
 
     void OpenCampaign()
     {
+        Diagnostics.Screen = "campaign map";
         CampaignMap? map = null;
         map = new CampaignMap
         {
@@ -222,6 +230,8 @@ public partial class Main : Node2D
     void Begin(GameSetup setup)
     {
         _setup = setup;
+        Diagnostics.Screen = $"game: {setup.Mission?.Name ?? "skirmish"} on {setup.Map}, {setup.Difficulty}, seed {setup.Seed}";
+        Diagnostics.Describe = () => _world == null ? "" : $"day {_world.Day}, tick {_world.Tick}, {_world.Outcome}{(_paused ? " paused" : "")}, demons {_world.Horde.Count}, soldiers {_world.Units.Count}, buildings {_world.Buildings.Count}, speed {Speeds[_speed]}x";
         var options = _options;
         uint seed = setup.Seed;
         _screenshotPath = options.GetValueOrDefault("screenshot");
@@ -1094,11 +1104,13 @@ public partial class Main : Node2D
         string mode = _world.Scenario?.Name ?? (_world.Survival is { Endless: true } ? "Endless" : "Survival");
         System.IO.File.WriteAllText(SlotPath(slot) + ".txt", $"{mode} · {_world.Map} · {_world.Rules.Difficulty} · day {_world.Day}");
         if (!quiet) _state.Say($"Saved (day {_world.Day})");
+        Diagnostics.Note($"saved to slot {slot}, day {_world.Day}");
     }
 
     void LoadFrom(int slot)
     {
         string path = SlotPath(slot);
+        Diagnostics.Note($"loading slot {slot}");
         if (!System.IO.File.Exists(path))
         {
             _state.Say(slot == 0 ? "No quicksave yet: F5 to save" : "That slot is empty");

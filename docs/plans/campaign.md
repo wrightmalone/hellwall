@@ -160,9 +160,63 @@ Tags:
 - **Missions:** The Bridge; The Hellwall on its own ground.
 - **What it asks:** everything at once, from the direction you know it's coming.
 
+## Relics: what the campaign gives (draft)
+
+Winning a mission gives a relic: a named holy object with one clear effect. Before each mission you take a few into it. Relics are the campaign's reward. Nothing else carries over, and there's no currency: no points to grind, no shop.
+
+**Why relics:**
+- **Dead ends become optional missions** with a reason to play them: Causeway, Two Fronts and Reliquary each give a relic you can't get elsewhere.
+- **Balance stays fixed.** Every mission is tuned to be won with none (the bot plays without), and relics are the edge. A currency would make each mission's difficulty a range.
+- **They fit the in-run game without repeating it.** Research (the Scriptorium) and Patrons stay what they are. A relic is never a tech you could research anyway. It bends a rule, or starts you ahead.
+- **They're story objects** for the writing pass: each has an owner, a place, and a reason it matters. They're easy to draw as icons.
+
+**How it works (proposed; the open questions are at the end):**
+- **Slots:** two to start. The Reliquary's relic adds a third, and winning The Long Siege a fourth.
+- **The main path still grows your kit, visibly.** Today's hidden per-mission locks become announcements on the win screen: "Bombards are yours from now on".
+- **Every mission has one bonus goal.** Meeting it hallows that mission's relic: the same object, a stronger effect. It's optional, it's hard, and it's a reason to replay a mission you've already won. The campaign map marks which are still to earn.
+
+Tags: [mod] is a modifier the game already has (as techs use); [start] is a change to what you start with; [rule] is one number in the rules for that mission; [new] needs new code, named.
+
+| # | Mission | Relic | Effect | Hallowed (bonus goal → stronger effect) |
+|---|---|---|---|---|
+| 1 | The First Night | **The First Hearthstone** | The Keep's holy ground reaches 2 tiles further [mod: consecrateRadius] | *Lose no building* → 4 tiles |
+| 2 | Iron in the Hills | **The Smith's Tongs** | Soldiers train 30% faster [mod: trainSeconds] | *Forty souls by day 10* → 50% faster |
+| 3 | The Gatekeepers | **The Warden's Key** | Hellgate bands are 25% smaller [rule: bandSize] | *Both gates closed by day 20* → 40% smaller |
+| 4 | Drowned Country | **The Ferryman's Coin** | Fisheries gather 50% more [mod: rate, Fishery] | *Lose no Fishery* → and Skyspires +20% range [mod] |
+| 5 | The Causeway *(dead end)* | **The Mason's Plumb Line** | Walls and gates: +30% hp, built 30% faster [mod: walls] | *Wall all four far gaps* → +50% hp |
+| 6 | The Pass | **The Bombardier's Fuse** | Bombards: +25% splash [mod: splash] | *Six thousand slain* → and +15% damage |
+| 7 | Two Fronts *(dead end)* | **The Saint's Vial** | Start with 60 silver: Exorcists from the first days [start] | *Both ruins looted by day 25* → 120 silver |
+| 8 | Wildwood Watch | **The Woodward's Axe** | Woodsmen fell trees 40% faster [rule: chopDps] | *Keep three quarters of the forest standing* → and lodges +2 woodsmen [new: crew size] |
+| 9 | The Reliquary *(dead end)* | **The Reliquary Casket** | One more relic slot | *All three ruins looted without losing a soldier* → and a relic's hallowed effect for free [new] |
+| 10 | The Long Siege | **The Refugee's Bell** | The Keep houses 8 more [mod: housing, Keep]; a fourth slot opens | *Every refugee housed* → 16 more |
+| 11 | The Bridge | **The Watchman's Horn** | The Convergence is told 15 minutes ahead, not 10 [rule: convergenceWarnSeconds] | *Clear the wilds before the Convergence* → 20 minutes, and the first wave comes a day later [rule] |
+| 12 | The Hellwall | **The Last Candle** *(the finale)* | Nothing in the campaign: it's the end. It unlocks relics in Skirmish (below) | *All four gates closed by day 45* → the hallowed relics in Skirmish too |
+
+**Notes on the list:**
+- **Each relic teaches back its mission's lesson.** The Hearthstone is about holy ground, the Plumb Line about walls, the Horn about being ready for the Convergence. Taking a relic is a small reminder of what that mission was about.
+- **The Watchman's Horn's bonus is "clear the wilds before the Convergence".** It ties straight into the rising wilds, on the map where the Convergence matters most.
+- **Two to watch in balance:**
+  - The Saint's Vial, since Exorcists early may be strong.
+  - The Warden's Key stacked with Hellgate-heavy missions.
+- **Replacements:** if a relic turns out dull, the easiest swaps are start bonuses ([start]), which are always safe.
+- **After the campaign:** winning The Hellwall could let Skirmish and Endless take relics too. Every relic taken would lower the score, so scores stay comparable.
+
+**Open questions (these change the design):**
+1. **Loadout or always on?** Choosing relics before each mission is a real choice, but it adds a screen. The alternative, every relic always on, is simpler, but difficulty creeps up as the campaign goes and there's no choice.
+2. **What does the finale ask?** For example, "every relic you've won is yours" as a gift for the last fight. Or "choose three; the rest are spent to seal the wall", as a sacrifice that matches the story.
+3. **Where do bonus goals show?** On the campaign map, as marks on each mission, and in the briefing, or only after the first win, so a new player isn't overloaded.
+
+**To build it:**
+- **Rules:** a relic is a set of tech-style modifiers, a start change, or a rules value, applied to the mission's rules when it starts.
+- **Saves:** they check the rules hash, so the relics taken must be saved with the game.
+- **Win screen:** gains "Relic won: ..." and the "yours from now on" line.
+- **Campaign map:** a small picker before Begin, and a mark for each hallowed relic.
+- **Testing:** the bot's campaign check plays with no relics, as the missions are tuned. A second probe with the strongest loadout checks that relics help without making a mission trivial.
+
 ## Suggested order to build
 1. ~~Give the missions that lack one a complication or a catharsis beat~~ Done (see DECISIONS.md, "The campaign's missing beats"). The First Night's west wall, the Causeway's sixty people and masons, Two Fronts' relic in the north, Wildwood's "fell the right trees", and the Long Siege's refugees and the horde behind them.
 2. ~~The Gorge and the Hellwall's own map~~ Done: The Pass now runs down the Gorge, and The Hellwall is on its own map.
 3. A trigger that changes tiles, for The Frozen River (and later the Island's tides).
 4. Buildings placed by a mission, for The Ruined City.
 5. The Sealed Valley and The Refuge, after you've played the rest.
+6. Relics (above): the rewards, the picker and bonus goals, once the open questions are answered.
