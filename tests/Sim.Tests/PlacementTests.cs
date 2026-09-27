@@ -198,3 +198,20 @@ public class CutOffTests
         Assert.Equal(1, world.CutOff(BuildingKind.Wall, TestWorlds.C + 5, TestWorlds.C).Buildings);
     }
 }
+
+public class HolyGroundPreviewTests
+{
+    [Fact]
+    public void TheGroundAWardstoneWouldSanctifyIsTheGroundItDoes()
+    {
+        var world = TestWorlds.Rich();
+        var (x, y) = TestWorlds.GrassAtDistance(world, 10, 11); // on the Keep's holy ground, near its edge
+        var preview = world.WouldConsecrate(BuildingKind.Wardstone, x, y);
+        Assert.NotEmpty(preview);
+        Assert.All(preview, i => Assert.False(world.Colony.Consecrated[i]));
+        TestWorlds.Built(world, BuildingKind.Wardstone, x, y);
+        Assert.All(preview, i => Assert.True(world.Colony.Consecrated[i]));
+        // Nothing that doesn't consecrate shows any.
+        Assert.Empty(world.WouldConsecrate(BuildingKind.House, x + 2, y));
+    }
+}

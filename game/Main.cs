@@ -28,6 +28,7 @@ namespace Hellwall.Game;
 ///   --reveal             no fog of war
 ///   --editor             open the map editor
 ///   --look=x,y[,zoom]    start the camera over tile (x, y)
+///   --arm=Kind --hover=dx,dy  arm a building with the cursor pinned to a tile (from the centre), for placement screenshots
 ///   --selftest=controls  select the soldiers, press A, click: check they got an attack-move there, print, quit
 /// </summary>
 public partial class Main : Node2D
@@ -337,6 +338,9 @@ public partial class Main : Node2D
         ForestWatch.Log = DisplayServer.GetName() == "headless";
         if (options.TryGetValue("select-group", out var groupKind) && Enum.TryParse<BuildingKind>(groupKind, true, out var gk)) _pendingGroup = gk;
         if (options.TryGetValue("arm", out var armKind) && Enum.TryParse<BuildingKind>(armKind, true, out var toArm)) _state.Armed = toArm; // screenshots of the build grid
+        // --hover=dx,dy: the cursor's tile, from the map's centre, for screenshots of a placement (the real mouse is left alone).
+        if (options.TryGetValue("hover", out var hover) && hover.Split(',') is [var hx, var hy])
+            _hoverOverride = (_world.Terrain.Width / 2 + int.Parse(hx), _world.Terrain.Height / 2 + int.Parse(hy));
         if (options.ContainsKey("select-keep")) _state.SelectedBuilding = _world.Buildings.First(b => b.Kind == BuildingKind.Keep).Id; // screenshots of the inspector
         GD.Print($"hellwall: world ready seed={_world.Seed} map={_world.Map} difficulty={_world.Rules.Difficulty} endless={_world.Survival?.Endless ?? false} hash={StateHash.Hex(_world)}");
         _started = true;
@@ -345,6 +349,7 @@ public partial class Main : Node2D
     void Send(Command command) => _world.Enqueue(command);
 
     bool _withCoach;
+    (int X, int Y)? _hoverOverride;
 
     /// <summary>The screen-space UI for the current world: at the start, and after a quickload.</summary>
     void BuildHud()
@@ -617,7 +622,7 @@ public partial class Main : Node2D
 
         _state.Alpha = _paused ? 1f : (float)Math.Clamp(_accumulator / TickSeconds, 0, 1);
         _state.MouseWorld = GetGlobalMousePosition();
-        _state.HoveredTile = Iso.TileAt(_state.MouseWorld);
+        _state.HoveredTile = _hoverOverride ?? Iso.TileAt(_state.MouseWorld);
 
         _horde.Sync(_world, _state.Alpha, delta);
         if (!_paused) { _state.Farmers.Step(_world, (float)delta); _state.Fishers.Step(_world, (float)delta); _state.Hunters.Step(_world, (float)delta); }

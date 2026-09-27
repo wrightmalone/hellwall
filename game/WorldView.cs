@@ -402,6 +402,8 @@ public partial class WorldView : Node2D
     {
         public WorldView View = null!;
         (BuildingKind, int, int, int) _cutKey;
+        (BuildingKind, int, int, int) _holyKey;
+        List<int> _holy = new();
         (int, int) _cut;
 
         public override void _Draw()
@@ -604,6 +606,15 @@ public partial class WorldView : Node2D
                 RefreshBuildGrid(world, state.HoveredTile);
                 foreach (var (gx, gy, ok) in _buildGrid)
                     DrawColoredPolygon(Iso.Diamond(gx, gy, 1, 1), ok ? new Color(0.3f, 1, 0.35f, 0.16f) : new Color(1, 0.25f, 0.2f, 0.16f));
+                // The ground it would make holy, in blue over the grid: for anything that consecrates (Shrine, Wardstone).
+                if (def.ConsecrateRadius > 0)
+                {
+                    var at = state.HoveredTile;
+                    var key = (kind, at.X, at.Y, world.Tick / 20);
+                    if (_holyKey != key) { _holyKey = key; _holy = world.WouldConsecrate(kind, at.X, at.Y); }
+                    int width = world.Terrain.Width;
+                    foreach (int i in _holy) DrawColoredPolygon(Iso.Diamond(i % width, i / width, 1, 1), new Color(0.25f, 0.55f, 1f, 0.42f));
+                }
                 var ghosts = state.Ghosts(world).ToList();
                 foreach (var (tx, ty, turned) in ghosts)
                 {
@@ -618,6 +629,8 @@ public partial class WorldView : Node2D
                 double free = 1;
                 string note = reason ?? (def.Produces is { } res ? $"+{world.EstimateGathering(kind, hx, hy, out free):0.00} {res.ToString().ToLowerInvariant()}/s" : "");
                 // Gatherers split their ground: say so when most of it is already worked, before a crew is wasted on it.
+                if (reason == null && def.ConsecrateRadius > 0)
+                    note += (note.Length > 0 ? "  " : "") + (_holy.Count > 0 ? $"(+{_holy.Count} tiles of holy ground)" : "(links to no holy ground: it would sanctify nothing new)");
                 if (reason == null && free < 0.6) note += free <= 0.05 ? "  (all its ground is already worked)" : $"  (only {free:P0} of its ground is free)";
                 // Lanes: warn before a building shuts soldiers out of part of the town (a building, or a patch of holy ground).
                 if (reason == null)

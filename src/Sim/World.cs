@@ -475,6 +475,9 @@ public sealed partial class World
         return true;
     }
 
+    /// <summary>The tiles (indices) a building of this kind placed here would make holy that aren't yet: for the placement preview.</summary>
+    public List<int> WouldConsecrate(BuildingKind kind, int x, int y) => ColonySystem.WouldConsecrate(this, kind, x, y);
+
     /// <summary>Why a building can't go here, or null if it can. Lets the client preview placement.</summary>
     /// <summary>
     /// Could a building stand on this one tile, as far as the ground goes: explored, buildable,

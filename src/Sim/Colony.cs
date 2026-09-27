@@ -156,6 +156,71 @@ internal static class ColonySystem
     }
 
     /// <summary>
+    /// The holy grid: every node linked to the Keep (a node within a linked one's radius is
+    /// linked), and the ground within each linked node's radius, into `holy`.
+    /// </summary>
+    static void Flood(World world, List<(float X, float Y, float R, bool Keep)> nodes, bool[] holy)
+    {
+        var terrain = world.Terrain;
+        var connected = new bool[nodes.Count];
+        var frontier = new Queue<int>();
+        for (int i = 0; i < nodes.Count; i++)
+        {
+            if (!nodes[i].Keep) continue;
+            connected[i] = true;
+            frontier.Enqueue(i);
+        }
+        while (frontier.Count > 0)
+        {
+            var from = nodes[frontier.Dequeue()];
+            float r2 = from.R * from.R;
+            for (int j = 0; j < nodes.Count; j++)
+            {
+                if (connected[j]) continue;
+                float dx = nodes[j].X - from.X, dy = nodes[j].Y - from.Y;
+                if (dx * dx + dy * dy > r2) continue;
+                connected[j] = true;
+                frontier.Enqueue(j);
+            }
+        }
+
+        Array.Clear(holy);
+        for (int i = 0; i < nodes.Count; i++)
+        {
+            if (!connected[i]) continue;
+            var (cx, cy, r, _) = nodes[i];
+            int x0 = Math.Max(0, (int)(cx - r)), x1 = Math.Min(terrain.Width - 1, (int)(cx + r));
+            int y0 = Math.Max(0, (int)(cy - r)), y1 = Math.Min(terrain.Height - 1, (int)(cy + r));
+            for (int y = y0; y <= y1; y++)
+                for (int x = x0; x <= x1; x++)
+                {
+                    float dx = x + 0.5f - cx, dy = y + 0.5f - cy;
+                    if (dx * dx + dy * dy <= r * r) holy[terrain.Index(x, y)] = true;
+                }
+        }
+    }
+
+    /// <summary>
+    /// The ground a building of this kind placed here would make holy that isn't already: for the
+    /// placement preview. Empty if it doesn't consecrate, or wouldn't be linked to the Keep's grid.
+    /// </summary>
+    public static List<int> WouldConsecrate(World world, BuildingKind kind, int x, int y)
+    {
+        var def = world.Def(kind);
+        var added = new List<int>();
+        if (def.ConsecrateRadius <= 0) return added;
+        var nodes = new List<(float X, float Y, float R, bool Keep)>();
+        foreach (var b in world.BuildingList)
+            if (b.Complete && !b.Possessed && b.Def.ConsecrateRadius > 0) nodes.Add((b.CentreX, b.CentreY, b.Def.ConsecrateRadius, b.Kind == BuildingKind.Keep));
+        nodes.Add((x + def.W / 2f, y + def.H / 2f, def.ConsecrateRadius, false));
+        var holy = new bool[world.Colony.Consecrated.Length];
+        Flood(world, nodes, holy);
+        for (int i = 0; i < holy.Length; i++)
+            if (holy[i] && !world.Colony.Consecrated[i]) added.Add(i);
+        return added;
+    }
+
+    /// <summary>
     /// Flood the holy grid out from the Keep, repaint consecrated ground, mark
     /// which buildings stand on it, and re-divide gathering tiles.
     /// </summary>
@@ -163,49 +228,11 @@ internal static class ColonySystem
     {
         world.ClearNetworkDirty();
         var colony = world.Colony;
-        var terrain = world.Terrain;
 
-        var nodes = new List<Building>();
+        var nodes = new List<(float X, float Y, float R, bool Keep)>();
         foreach (var b in world.BuildingList)
-            if (b.Complete && !b.Possessed && b.Def.ConsecrateRadius > 0) nodes.Add(b);
-
-        var connected = new bool[nodes.Count];
-        var frontier = new Queue<int>();
-        for (int i = 0; i < nodes.Count; i++)
-        {
-            if (nodes[i].Kind != BuildingKind.Keep) continue;
-            connected[i] = true;
-            frontier.Enqueue(i);
-        }
-        while (frontier.Count > 0)
-        {
-            var from = nodes[frontier.Dequeue()];
-            float r2 = from.Def.ConsecrateRadius * from.Def.ConsecrateRadius;
-            for (int j = 0; j < nodes.Count; j++)
-            {
-                if (connected[j]) continue;
-                float dx = nodes[j].CentreX - from.CentreX, dy = nodes[j].CentreY - from.CentreY;
-                if (dx * dx + dy * dy > r2) continue;
-                connected[j] = true;
-                frontier.Enqueue(j);
-            }
-        }
-
-        Array.Clear(colony.Consecrated);
-        for (int i = 0; i < nodes.Count; i++)
-        {
-            if (!connected[i]) continue;
-            var n = nodes[i];
-            float r = n.Def.ConsecrateRadius;
-            int x0 = Math.Max(0, (int)(n.CentreX - r)), x1 = Math.Min(terrain.Width - 1, (int)(n.CentreX + r));
-            int y0 = Math.Max(0, (int)(n.CentreY - r)), y1 = Math.Min(terrain.Height - 1, (int)(n.CentreY + r));
-            for (int y = y0; y <= y1; y++)
-                for (int x = x0; x <= x1; x++)
-                {
-                    float dx = x + 0.5f - n.CentreX, dy = y + 0.5f - n.CentreY;
-                    if (dx * dx + dy * dy <= r * r) colony.Consecrated[terrain.Index(x, y)] = true;
-                }
-        }
+            if (b.Complete && !b.Possessed && b.Def.ConsecrateRadius > 0) nodes.Add((b.CentreX, b.CentreY, b.Def.ConsecrateRadius, b.Kind == BuildingKind.Keep));
+        Flood(world, nodes, colony.Consecrated);
 
         foreach (var b in world.BuildingList) b.OnGround = world.FootprintConsecrated(b.X, b.Y, b.W, b.H);
 

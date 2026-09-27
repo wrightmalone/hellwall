@@ -1246,6 +1246,20 @@ last lost by at least one).
   - Every line in the column wraps now.
 - **Screenshots:** from now on I take them at 1920x1080.
 
+## Where new holy ground would go (your ask: show it while placing)
+
+- While you place anything that consecrates (a Shrine or Wardstone), the ground it would
+  newly make holy is tinted blue, over the green and red grid. Blue because red and green
+  already mean "can't build" and "can build".
+- The note beside the cursor says how much it adds, for example "+30 tiles of holy
+  ground". If it wouldn't link to the Keep's grid, the note says it would sanctify
+  nothing new.
+- The blue comes from the sim's own flood of the holy grid with the new stone added
+  (`World.WouldConsecrate`), so it's exactly what happens once it's built. That includes
+  linking up other stones along a chain. A test checks it.
+- For screenshots only, a new `--hover=dx,dy` flag pins the cursor tile, so a screenshot
+  run never moves your real mouse.
+
 ## Buildings from KayKit Medieval Hexagon (you downloaded it and the Medieval Village MegaKit)
 
 - **Every building but walls and gates is now a baked KayKit model** (`tools/bake_buildings.gd`,
