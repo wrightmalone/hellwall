@@ -9,6 +9,26 @@
     <RootNamespace>Hellwall.Game</RootNamespace>
   </PropertyGroup>
 
+  <!--
+    Steamworks.NET (MIT; game/lib/steamworks, from its standalone release): the C# side comes built
+    twice, as Windows and Mac/Linux pack Steam's structs differently, so each build takes its own.
+    Valve's native library (steam_api64.dll, libsteam_api.dylib/.so) is found at run time (Steam.cs);
+    scripts/export.sh puts it beside the game.
+  -->
+  <PropertyGroup>
+    <SteamworksDir Condition="$(RuntimeIdentifier.StartsWith('win')) Or ('$(RuntimeIdentifier)' == '' And '$(OS)' == 'Windows_NT')">lib/steamworks/windows-x64</SteamworksDir>
+    <SteamworksDir Condition="'$(SteamworksDir)' == ''">lib/steamworks/osx-linux-x64</SteamworksDir>
+    <!-- Steamworks.NET is built for x64 only: an ARM build (an Apple-silicon Mac's half of the app, Windows on ARM) goes without it. -->
+    <NoSteamworks Condition="$(RuntimeIdentifier.EndsWith('arm64'))">true</NoSteamworks>
+    <DefineConstants Condition="'$(NoSteamworks)' == 'true'">$(DefineConstants);NO_STEAMWORKS</DefineConstants>
+  </PropertyGroup>
+
+  <ItemGroup Condition="'$(NoSteamworks)' != 'true'">
+    <Reference Include="Steamworks.NET">
+      <HintPath>$(SteamworksDir)/Steamworks.NET.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+
   <ItemGroup>
     <ProjectReference Include="../src/Sim/Sim.csproj" />
     <!-- The headless harness scripted player, so the autoplay option can show it playing. -->

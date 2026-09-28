@@ -93,6 +93,10 @@ public partial class Main : Node2D
         if (SaveFolder.Migrated is { } moved) Diagnostics.Note(moved);
         _options = ParseUserArgs();
         if (_options.GetValueOrDefault("selftest") == "migrate") { SaveFolder.SelfTest(); GetTree().Quit(); return; }
+        if (_options.GetValueOrDefault("selftest") == "steam") { Steam.SelfTest(); GetTree().Quit(); return; }
+        // Steam, if the game was launched through it (or --steam-test, as Valve's test app): nothing happens otherwise.
+        Steam.Start(GetTree(), _options.ContainsKey("steam-test"));
+        Diagnostics.Note($"steam: {Steam.Status}");
         if (_options.TryGetValue("dump-music", out var dump)) Music.DumpTo = dump;
         if (_music == null || !IsInstanceValid(_music))
         {

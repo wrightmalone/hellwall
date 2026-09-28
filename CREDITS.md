@@ -19,3 +19,8 @@ Demons are baked from [Ultimate Monsters](https://quaternius.com/packs/ultimatem
 Each pack's License.txt is in `game/art/kenney/` or `game/art/kenney3d/`. Sound and music are synthesized in code (`game/Sound.cs`, `game/Music.cs`).
 
 The in-game Credits screen (main menu) carries the same list: keep the two in step.
+
+## Code and libraries
+
+- [Steamworks.NET](https://github.com/rlabrecque/Steamworks.NET) 2025.164.1 by Riley Labrecque, MIT licence (`game/lib/steamworks/LICENSE-Steamworks.NET.txt`): the game's link to Steam.
+- Valve's Steamworks API libraries (`steam_api64.dll`, `libsteam_api.dylib`, `libsteam_api.so`), shipped with the game under the Steamworks SDK's terms for redistribution.

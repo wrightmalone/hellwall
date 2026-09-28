@@ -49,6 +49,8 @@ for target in "${TARGETS[@]}"; do
         || { cat out/export-macos.log; echo "FAIL: macOS export"; exit 1; }
       if grep -q ERROR out/export-macos.log; then grep -A1 ERROR out/export-macos.log; echo "FAIL: macOS export had errors"; exit 1; fi
       (cd out/build/macos && unzip -q Hellwall.zip && rm Hellwall.zip)
+      # Valve's Steam library, inside the app beside the executable (Steam.cs looks there); signed with it below.
+      cp game/lib/steamworks/osx-linux-x64/libsteam_api.dylib out/build/macos/Hellwall.app/Contents/MacOS/
       # Signed here, ad hoc, rather than by Godot: the app Godot 4.7.2 signs is
       # killed at launch (exit 137) on this machine, while the same app signed
       # with codesign runs.
@@ -68,6 +70,11 @@ and choose Open (or run: xattr -dr com.apple.quarantine Hellwall.app)." > out/bu
         || { cat out/export-windows.log; echo "FAIL: Windows export"; exit 1; }
       if grep -q ERROR out/export-windows.log; then grep -A1 ERROR out/export-windows.log; echo "FAIL: Windows export had errors"; exit 1; fi
       [[ -f out/build/windows/Hellwall.exe ]] || { echo "FAIL: no Hellwall.exe"; exit 1; }
+      # Valve's Steam library beside the exe (Steam.cs looks there), and the Windows build of Steamworks.NET in the data folder.
+      cp game/lib/steamworks/windows-x64/steam_api64.dll out/build/windows/
+      shipped=$(find out/build/windows -name Steamworks.NET.dll | head -1)
+      [[ -n "$shipped" ]] && cmp -s "$shipped" game/lib/steamworks/windows-x64/Steamworks.NET.dll \
+        || { echo "FAIL: the Windows build doesn't carry the Windows Steamworks.NET.dll (${shipped:-none})"; exit 1; }
       note "Windows: the exe isn't signed, so SmartScreen may warn: More info, then Run anyway.
 Keep Hellwall.exe next to its data_Hellwall folder." > out/build/windows/READ-ME.txt
       rm -f "out/build/Hellwall-$VERSION-windows.zip"

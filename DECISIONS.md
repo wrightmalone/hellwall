@@ -1452,6 +1452,44 @@ last lost by at least one).
 - **Where to find things:** the playtester note in each build now points at the new
   `crashes/` folder.
 
+## Steam in the build (step 2 of the Steam plan)
+
+- **Steamworks.NET 2025.164.1** (its standalone release, MIT), and Valve's Steam libraries,
+  are in the repo under `game/lib/steamworks/`, as you chose. So a build never needs the
+  internet.
+  - Its C# side comes built twice, since Windows and Mac/Linux pack Steam's structs
+    differently. The project picks the right one for each build.
+- **One module, `game/Steam.cs`, is the only place that talks to Steam.**
+  - Steam starts when the game was launched through it. With `--steam-test`, it starts as
+    Valve's test app, Spacewar (480), until there's a real App ID.
+  - Otherwise nothing happens: a playtest zip, a dev run, the tests and the bot all go on
+    exactly as before.
+  - While Steam is up, its callbacks are pumped every frame, and it shuts down cleanly on
+    quit.
+  - The diagnostics trail notes which it was ("the Steam client isn't running", "up, as
+    <name>").
+- **Nothing Steam-shaped can stop the game starting.**
+  - The first try did exactly that on this Mac: the x64-only Steamworks.NET wouldn't load
+    on Apple silicon, and the failure escaped (.NET loads a library when a method using it
+    is first compiled, before that method's own catch can act). Startup hung.
+  - Now every call into Steamworks.NET is a small method of its own, and the callers catch
+    whatever loading throws.
+  - ARM builds leave it out entirely: the Apple-silicon half of the Mac app, and Windows
+    on ARM.
+- **Valve's library is found by the game** (a .NET import resolver), not by .NET's own
+  search, which doesn't look where Godot puts things. It looks beside the exe on Windows,
+  inside the Mac app, and in `game/lib/steamworks` when run from the project.
+  - export.sh puts `steam_api64.dll` beside `Hellwall.exe` and the dylib inside the app,
+    signed with it.
+  - It checks that the Windows build carries the Windows Steamworks.NET, byte for byte.
+- **Tested** by `--selftest=steam`, now part of verify. It passes if Valve's library loads
+  and answers, or if this machine can't have Steam and the game carries on.
+  - On this Mac it's the second: Apple silicon.
+  - The Windows path loading Steam can't be tested here. It'll first be tried when Steam
+    runs the game.
+- **Still to do for Macs:** Apple-silicon Macs get Steam once Steamworks.NET is built from
+  its source as any-CPU. That needs its source downloaded.
+
 ## Buildings from KayKit Medieval Hexagon (you downloaded it and the Medieval Village MegaKit)
 
 - **Every building but walls and gates is now a baked KayKit model** (`tools/bake_buildings.gd`,

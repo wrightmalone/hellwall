@@ -405,6 +405,7 @@ public partial class NewGameMenu : CanvasLayer
         "  Kay Lousberg (kaylousberg.itch.io): KayKit Medieval Hexagon Pack (the buildings),\n" +
         "    KayKit Dungeon Pack (the gold, food and sanctity icons)\n\n" +
         "Sound and music: synthesized in code, placeholders.\n\n" +
+        "Code: Steamworks.NET by Riley Labrecque (MIT), and Valve's Steamworks libraries.\n\n" +
         "Built with Godot (godotengine.org) and .NET.";
 
     /// <summary>For playtesters: what changed since the last build they had. Kept short; DECISIONS.md has the why.</summary>
