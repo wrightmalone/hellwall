@@ -403,6 +403,7 @@ public partial class Main : Node2D
             Speed = () => (_paused ? "PAUSED  ·  " : "") + $"{Speeds[_speed]}x  ·  F1 help",
             Order = OrderSelected,
         };
+        _hud.CountsForBoards = () => AchievementRun.Eligible;
         AddChild(_hud);
         // An achievement earned shows for a moment in the alerts; a hand-made map played earns the map-maker's.
         GameAchievements.Unlocked = a => { if (IsInstanceValid(_hud)) _hud.Alerts.Push("ach-" + a.Id, $"Achievement: {a.Name}. {a.Description}", UiKit.Gold, null, 10); };

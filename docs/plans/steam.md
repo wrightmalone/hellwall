@@ -191,6 +191,16 @@ The design notes follow.
   - "Play" subscribes and downloads, and the map appears at once. There's no trip to the Steam overlay.
   - Maps you've played or won are marked, as in CW3.
   - Rating uses Steam's votes, open to anyone who has played it. Steam can't restrict votes to people who've won; we could show a "won by N players" count beside it.
+**Leaderboards are built (0.36.0):** `game/Leaderboards.cs`.
+- **The board:** each Workshop map's is named for its item id and a fingerprint of the file as published, e.g. `map_123456789_9f3c...`. It's created the first time anyone finishes it.
+- **Versions:** a map changed by its maker has a new fingerprint, and so a new board. A save of the map carries its fingerprint, so a loaded game still counts on the right board.
+- **What goes up:** at the end of a fair run (the same rule as achievements), the game's score, keeping your best, with the days held and demons slain beside it.
+- **The end screen** shows your rank and best, the two players above and below you, and your friends.
+- **[you] Nothing to do in Steamworks:** the game makes the boards. If you ever want only the game's own uploads trusted, Steamworks can set a board to "trusted writes", but that needs a server, so leave it off.
+- **Not yet tested against Steam** (it needs a client and the App ID). Board names and the end-screen line are tested in `--selftest=workshop`.
+
+The design notes follow.
+
 - **Scores:** each shared map gets a Steam leaderboard, created the first time anyone finishes it.
   - It's ranked by the run's score, which the game already computes, with days survived as the tie-break.
   - The end screen shows your place and the friends above you.
@@ -206,12 +216,12 @@ The design notes follow.
 4. **Achievements:** the code done in 0.33.0 (tested with scripted runs in the unit tests, not bot runs). **[you]** Add the stat, the list and icons in Steamworks, as above.
 5. **Workshop publishing** from the editor, with previews and tags: done in 0.34.0; **[you]** turn the Workshop on in Steamworks.
 6. **The in-game browser:** done in 0.35.0.
-7. **Leaderboards per map.**
+7. **Leaderboards per map:** done in 0.36.0.
 
 Steps 1 to 4 are small and independent of each other. Steps 5 to 7 are the bulk, and step 6 is the part players will judge.
 
 ## Still open
 
-- **Leaderboards:** score (assumed) or days, and whether to have them at all.
+- **Leaderboards:** built on score (days as detail). Say if you'd rather rank by days, or drop them.
 - **Ratings:** anyone can vote (assumed; it's how the Workshop works), with a "won by N" count shown beside it.
 - **The achievement list:** cut it down, and name them in the writing pass.

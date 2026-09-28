@@ -137,6 +137,8 @@ public sealed record ScenarioDef
 
     /// <summary>Its Steam Workshop item, once published (0: never): publishing again updates that item.</summary>
     public ulong WorkshopId { get; init; }
+    /// <summary>A Workshop map as downloaded: a fingerprint of the file as published (its leaderboard is this version's). Empty otherwise.</summary>
+    public string Version { get; init; } = "";
 
     /// <summary>A hand-made map made a mission: it plays by its own settings, goals and events, not Skirmish's.</summary>
     public bool IsMission { get; init; }

@@ -33,6 +33,9 @@ public partial class Hud : CanvasLayer
     public Action NewRun = null!;
     /// <summary>A mission ended: back to the campaign map, or play it again.</summary>
     public Action BackToCampaign = null!;
+    /// <summary>This run is fair for a leaderboard (no bot, no cheats, no dev options): Main's word.</summary>
+    public Func<bool> CountsForBoards = () => false;
+    Label _board = null!;
     public Action Retry = null!;
     /// <summary>The same run again from the start (survival, skirmish, a hand-made map).</summary>
     public Action Again = null!;
@@ -160,6 +163,10 @@ public partial class Hud : CanvasLayer
         endBox.AddThemeConstantOverride("separation", 8);
         _endText = UiKit.Label("", 16);
         endBox.AddChild(_endText);
+        _board = UiKit.Label("", 13, UiKit.Gold);
+        _board.AutowrapMode = TextServer.AutowrapMode.WordSmart;
+        _board.Visible = false;
+        endBox.AddChild(_board);
         _chart = new RunChart { World = World };
         endBox.AddChild(_chart);
         var endRow = new HBoxContainer { Alignment = BoxContainer.AlignmentMode.Center };
@@ -320,6 +327,17 @@ public partial class Hud : CanvasLayer
                             + (!World.BonusDone && relic.Bonus is { } b ? $"\nBonus goal not met ({b.Describe().ToLowerInvariant()}): play it again to hallow it" : "");
                 }
                 var (score, best) = Score.Record(World, mode);
+                // A Workshop map's leaderboard: the score sent (Steam keeps your best), then where it stands.
+                if (Leaderboards.BoardName(World.Scenario) is { } board && Steam.Running && CountsForBoards() && !World.Aftermath)
+                {
+                    _board.Visible = true;
+                    _board.Text = "Leaderboard: sending your score...";
+                    Leaderboards.Submit(board, score, World.Day, st.DemonsKilled, (standing, why) =>
+                    {
+                        if (!IsInstanceValid(_board)) return;
+                        _board.Text = standing != null ? Leaderboards.Describe(standing) : $"Leaderboard: {why}";
+                    });
+                }
                 string scoreLine = $"Score {score:N0}" + (best > score ? $"   (best {best:N0})" : best == score ? "   (a new best)" : "") + "\n";
                 _endText.Text = $"{mode} · {World.Map} · {World.Rules.Difficulty} · seed {World.Seed}\n{goals}{scoreLine}" +
                     $"Days survived: {World.Day}\nDemons slain: {st.DemonsKilled}\nBuildings lost: {st.BuildingsLost}\nSoldiers lost: {st.UnitsLost}" +

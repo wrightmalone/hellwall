@@ -169,14 +169,20 @@ public partial class WorkshopBrowser : VBoxContainer
         WorkshopRecord.SelfTesting = true;
         row?.GetChildren().OfType<Button>().Last().EmitSignal(BaseButton.SignalName.Pressed);
         bool fetched = played is { } m && m.Id == "ws-1000" && m.WorkshopId == 1000 && m.Problem() == null && World.Create(m.Options(Rules.Default)).Terrain.Width == 128;
+        // Its leaderboard: named for the item and this version of it (the same map, the same board; a changed one, another).
+        string? board = Leaderboards.BoardName(played);
+        bool boards = board is { Length: <= 128 } && board == Leaderboards.BoardName(played! with { Name = "a copy" })
+            && board != Leaderboards.BoardName(played! with { Version = Leaderboards.VersionOf(played!.ToJson() + " ") })
+            && Leaderboards.BoardName(demo[0]) == null
+            && Leaderboards.Describe(new Leaderboards.Standing(3, 5200, 40, true, [new(2, "Ada", 6000, 30, false), new(3, "me", 5200, 28, true)], [])).Contains("#3 you 5,200");
         WorkshopRecord.Mark(1000, won: true);
         bool marked = WorkshopRecord.Played(1000) && WorkshopRecord.Won(1000);
         WorkshopRecord.Forget(1000);
         marked &= !WorkshopRecord.Played(1000);
         WorkshopRecord.SelfTesting = false;
         bool unavailable = new SteamWorkshopSource().Unavailable != null; // no Steam here: it says so
-        bool pass = listed && searched && fetched && marked && unavailable;
-        GD.Print(pass ? "hellwall-selftest: PASS workshop" : $"hellwall-selftest: FAIL workshop (listed {listed} ({browser.Rows}), searched {searched}, fetched {fetched}, marks {marked}, says Steam's needed {unavailable})");
+        bool pass = listed && searched && fetched && marked && unavailable && boards;
+        GD.Print(pass ? "hellwall-selftest: PASS workshop" : $"hellwall-selftest: FAIL workshop (listed {listed} ({browser.Rows}), searched {searched}, fetched {fetched}, marks {marked}, says Steam's needed {unavailable}, leaderboard names {boards})");
         host.GetTree().Quit();
     }
 
@@ -294,7 +300,7 @@ public sealed class FakeWorkshopSource : IWorkshopSource
     public void Fetch(WorkshopItem item, Action<ScenarioDef?, string?> done)
     {
         var map = _maps.First(p => p.Item.Id == item.Id).Map;
-        done(map with { Id = $"ws-{item.Id}", WorkshopId = item.Id }, null);
+        done(map with { Id = $"ws-{item.Id}", WorkshopId = item.Id, Version = Leaderboards.VersionOf(map.ToJson()) }, null);
     }
 
     public void Preview(WorkshopItem item, Node host, Action<Image?> done) => done(Workshop.Preview(_maps.First(p => p.Item.Id == item.Id).Map));
@@ -350,10 +356,11 @@ public sealed class SteamWorkshopSource : IWorkshopSource
         string file = System.IO.Path.Combine(folder, "map.json");
         if (!System.IO.File.Exists(file)) { done(null, "That Workshop item has no map in it"); return; }
         ScenarioDef map;
-        try { map = ScenarioDef.FromJson(System.IO.File.ReadAllText(file)); }
+        string text = System.IO.File.ReadAllText(file);
+        try { map = ScenarioDef.FromJson(text); }
         catch (Exception) { done(null, "That map's file is damaged"); return; }
         if (map.Problem() is { } problem) { done(null, $"The game can't play it: {problem}"); return; }
-        done(map with { Id = $"ws-{id}", WorkshopId = id }, null);
+        done(map with { Id = $"ws-{id}", WorkshopId = id, Version = Leaderboards.VersionOf(text) }, null);
     }
 
     public void Preview(WorkshopItem item, Node host, Action<Image?> done)

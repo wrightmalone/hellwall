@@ -1617,6 +1617,34 @@ last lost by at least one).
   Workshop turned on.
 - **Menu flags:** `--workshop` opens the page, and `--achievements` the achievements.
 
+## Leaderboards for Workshop maps (step 7 of the Steam plan): the Steam plan's code is done
+
+- **One board per version of a map:** each Workshop map gets a Steam leaderboard, made by
+  the game the first time someone finishes it. Its name is the item id plus a fingerprint
+  of the map file as published (FNV-1a).
+  - A map its maker updates gets a new board, so old scores made on a different map don't
+    stand against new ones. Nothing is keyed to timestamps.
+  - Saves carry the fingerprint (`ScenarioDef.Version`), so a loaded game counts on the
+    right board.
+- **What's uploaded:** when a fair run ends (the achievements' rule: no bot, cheats or dev
+  options), the game's score goes up.
+  - Steam keeps your best, and stores the days held and demons slain with it.
+  - Not after playing on past a win, since the win's score was already sent.
+- **The end screen** says "Leaderboard: #12 of 340 (a new best)", with the players just
+  above and below you and your friends' scores. It fills in as Steam answers, and says why
+  if it couldn't.
+- **Ranked by score,** with days as detail, as assumed in the plan. Say if you want days
+  instead.
+- **Tested:** `--selftest=workshop` checks the board names are fine: the same map gives the
+  same board, a changed one another, the name fits Steam's 128 characters, and a non-Workshop
+  map has none. It also checks the end-screen line's layout.
+  - The Steam calls themselves wait for a Steam client and the App ID, like steps 2 and 4
+    to 6.
+- **That's the plan's seven steps built.** Everything left is yours in Steamworks: the App
+  ID, Auto-Cloud's seven paths, the stat and 38 achievements with icons, and turning the
+  Workshop on with its tags. Then a first test through Steam: `--steam-test` on a Windows PC
+  with Steam running is the quickest way to see it all start.
+
 ## Buildings from KayKit Medieval Hexagon (you downloaded it and the Medieval Village MegaKit)
 
 - **Every building but walls and gates is now a baked KayKit model** (`tools/bake_buildings.gd`,
