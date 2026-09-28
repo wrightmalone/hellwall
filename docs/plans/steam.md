@@ -107,6 +107,7 @@ The code side is done in 0.32.0. What's left is **[you]**: Steamworks settings, 
 | `display.cfg` | UI scale and fullscreen: this machine's screen | no |
 | `maps/*.json` | hand-made maps and missions | yes |
 | `achievements.cfg` | achievements earned, and demons slain (so a build without Steam shows them too) | yes |
+| `workshop.cfg` | Workshop maps played and won (the browser's marks) | yes |
 | `logs/`, `crashes/`, `diagnostics.log`, `session.txt`, caches | for debugging | no |
 
 - **Existing saves:** saves loose in the folder, from 0.31 and earlier, are moved into `saves/` and `autosaves/` on first launch.
@@ -116,7 +117,7 @@ The code side is done in 0.32.0. What's left is **[you]**: Steamworks settings, 
 **[you] In Steamworks: App Admin, then Steam Cloud:**
 
 1. **Byte quota per user:** 50 MB. **Number of files allowed per user:** 500. A save is about 220 KB, so this is generous.
-2. **Enable Auto-Cloud**, and add these **Root paths** (six), all with **OS: Windows**:
+2. **Enable Auto-Cloud**, and add these **Root paths** (seven), all with **OS: Windows**:
 
 | Root | Subdirectory | Pattern | Recursive |
 |---|---|---|---|
@@ -126,6 +127,7 @@ The code side is done in 0.32.0. What's left is **[you]**: Steamworks settings, 
 | WinAppDataRoaming | `Hellwall` | `settings.cfg` | no |
 | WinAppDataRoaming | `Hellwall/maps` | `*.json` | no |
 | WinAppDataRoaming | `Hellwall` | `achievements.cfg` | no |
+| WinAppDataRoaming | `Hellwall` | `workshop.cfg` | no |
 
 3. **Root overrides**, so Macs and Linux sync to the same cloud files:
    - Original root WinAppDataRoaming, OS **macOS**, new root **MacAppSupport**.
@@ -167,6 +169,22 @@ The rest of this section is the design, including the parts still to build.
   - a change note when you update it.
   - It's checked first, so a map the game would refuse can't be published.
   - Publishing needs **[you]** to turn the Workshop on in Steamworks and accept its legal agreement.
+**The browser is built (0.35.0):** `game/WorkshopBrowser.cs`, **Workshop** on the main menu.
+- **Browsing:**
+  - sort by Popular (trending over 30 days), Newest, Top rated or Most played;
+  - search by name, and show missions, maps or both;
+  - each row has the map's preview, author, thumbs up and down, player count, tags, and a "played" or "won" mark (kept in `workshop.cfg`).
+- **Play:** it subscribes, downloads (polled until it's installed), reads `map.json`, checks it as an import would, and starts it as its maker set it.
+- **After the run:**
+  - the end screen offers a thumbs up or down;
+  - winning marks the map "won".
+- **Fairness:** Workshop maps count as hand-made for achievements, so they can't farm them.
+- **Well Received:** checked each time the page opens, against your own published missions' thumbs up.
+- **Tested without Steam:** the browser talks to a source. The Steam one uses ISteamUGC queries; a made-up one (`FakeWorkshopSource`, `--workshop-demo`) lists generated maps. `--selftest=workshop`, now part of verify, lists them, searches, presses Play, and checks the map it gets plays and the marks keep.
+- **Not yet tested:** the Steam source itself, which needs a Steam client and the App ID.
+
+The design notes follow.
+
 - **The in-game browser** (a Workshop page off the main menu):
   - It uses Steam's UGC queries: most popular, newest, top rated, most played, and search by name or tag.
   - Each map shows its preview, rating, play count and author.
@@ -187,7 +205,7 @@ The rest of this section is the design, including the parts still to build.
 3. **Cloud saves:** the code side done in 0.32.0 (the save folder laid out for syncing). **[you]** Set up Auto-Cloud, as above.
 4. **Achievements:** the code done in 0.33.0 (tested with scripted runs in the unit tests, not bot runs). **[you]** Add the stat, the list and icons in Steamworks, as above.
 5. **Workshop publishing** from the editor, with previews and tags: done in 0.34.0; **[you]** turn the Workshop on in Steamworks.
-6. **The in-game browser.**
+6. **The in-game browser:** done in 0.35.0.
 7. **Leaderboards per map.**
 
 Steps 1 to 4 are small and independent of each other. Steps 5 to 7 are the bulk, and step 6 is the part players will judge.

@@ -1587,6 +1587,36 @@ last lost by at least one).
 - **What's yours:** turn the Workshop on in Steamworks, and add the tags
   (docs/plans/steam.md).
 
+## The Workshop browser (step 6 of the Steam plan)
+
+- **Workshop** on the main menu lists maps and missions from the Steam Workshop, the way
+  Creeper World 3's browser did.
+  - Sort by Popular, Newest, Top rated or Most played; search by name; show missions, maps
+    or both.
+  - Each row has the preview, the author, thumbs up and down, how many have played it, its
+    tags, and whether you've played or won it.
+  - Play gets it (subscribe, download, check) and starts it as its maker set it.
+- **After a Workshop map:**
+  - the end screen offers a thumbs up or down;
+  - winning marks it "won" in the browser.
+  - The marks live in `workshop.cfg`, which Steam Cloud syncs: seven paths now.
+- **Fairness:** Workshop maps count as hand-made for achievements, so a custom map can't
+  farm them.
+- **Well Received** is checked when the page opens, from your own published missions'
+  thumbs up.
+- **Without Steam,** the page says the Workshop needs Steam, and that a map sent as a file
+  goes in through the editor's Import.
+- **The browser talks to a source,** so it could be built and tested here with no Steam:
+  - Steam's source uses ISteamUGC queries, subscriptions, downloads and votes. As with step
+    5, every Steamworks type is kept where it's only loaded with Steam up.
+  - A made-up source lists generated maps and missions. It's used by
+    `--selftest=workshop`, now part of verify, which lists, searches, presses Play, and
+    checks the map it gets plays and the marks keep. `--workshop-demo` uses it for
+    screenshots.
+- **Not tested here:** Steam's own source. It needs a Steam client, the App ID, and the
+  Workshop turned on.
+- **Menu flags:** `--workshop` opens the page, and `--achievements` the achievements.
+
 ## Buildings from KayKit Medieval Hexagon (you downloaded it and the Medieval Village MegaKit)
 
 - **Every building but walls and gates is now a baked KayKit model** (`tools/bake_buildings.gd`,

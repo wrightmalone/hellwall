@@ -85,6 +85,8 @@ if [[ $RUN_GODOT == 1 ]]; then
   grep -q 'hellwall-selftest: PASS migrate' out/godot-migrate.log || { cat out/godot-migrate.log; echo "FAIL: save folder migration self-test"; exit 1; }
   "$GODOT" --headless --path game -- --selftest=steam >out/godot-steam.log 2>&1 || true
   grep -q 'hellwall-selftest: PASS steam' out/godot-steam.log || { cat out/godot-steam.log; echo "FAIL: Steam library self-test"; exit 1; }
+  "$GODOT" --headless --path game -- --selftest=workshop >out/godot-workshop.log 2>&1 || true
+  grep -q 'hellwall-selftest: PASS workshop' out/godot-workshop.log || { cat out/godot-workshop.log; echo "FAIL: Workshop browser self-test"; exit 1; }
   "$GODOT" --headless --path game -- --selftest=editor >out/godot-editor.log 2>&1 || true
   grep -q 'hellwall-selftest: PASS editor' out/godot-editor.log || { cat out/godot-editor.log; echo "FAIL: map editor self-test"; exit 1; }
   # The new-game menu, which a headless boot otherwise skips.

@@ -210,6 +210,15 @@ public partial class Hud : CanvasLayer
         look.TooltipText = "Hide this and look round the map as it ended";
         look.Pressed += () => { _end.Visible = false; _showEnd!.Visible = true; };
         moreRow.AddChild(look);
+        // A Workshop map: rate it (Steam's thumbs, the browser's Top rated).
+        if (WorkshopRecord.IdOf(World.Scenario) is var workshopId and not 0 && Steam.Running)
+            foreach (var (label, up) in new[] { ("Thumbs up", true), ("Thumbs down", false) })
+            {
+                var rate = UiKit.TextButton(label, 14);
+                rate.TooltipText = "Rate this map on the Workshop";
+                rate.Pressed += () => { new SteamWorkshopSource().Vote(workshopId, up); rate.Text = "Rated, thank you"; rate.Disabled = true; };
+                moreRow.AddChild(rate);
+            }
         moreRow.AddChild(PauseMenu.Confirming("Quit to desktop", "Quit? Click again", () => GetTree().Quit()));
         endBox.AddChild(moreRow);
         _showEnd = UiKit.TextButton("Show the results", 14);

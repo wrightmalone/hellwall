@@ -93,6 +93,7 @@ public partial class Main : Node2D
         _options = ParseUserArgs();
         if (_options.GetValueOrDefault("selftest") == "migrate") { SaveFolder.SelfTest(); GetTree().Quit(); return; }
         if (_options.GetValueOrDefault("selftest") == "steam") { Steam.SelfTest(); GetTree().Quit(); return; }
+        if (_options.GetValueOrDefault("selftest") == "workshop") { WorkshopBrowser.SelfTest(this); return; }
         // Steam, if the game was launched through it (or --steam-test, as Valve's test app): nothing happens otherwise.
         Steam.Start(GetTree(), _options.ContainsKey("steam-test"));
         Diagnostics.Note($"steam: {Steam.Status}");
@@ -169,6 +170,9 @@ public partial class Main : Node2D
             Initial = setup, Start = Play, OpenCampaign = OpenCampaign, OpenEditor = () => { if (_backdrop) { _editorNext = true; GetTree().ReloadCurrentScene(); } else OpenEditor(); },
             ShowNews = _options.ContainsKey("whatsnew"),
             ShowAchievements = _options.ContainsKey("achievements"),
+            ShowWorkshopPage = _options.ContainsKey("workshop"),
+            // --workshop-demo: the page filled with made-up maps (screenshots, and the browser without Steam).
+            WorkshopSource = _options.ContainsKey("workshop-demo") ? () => new FakeWorkshopSource(FakeWorkshopSource.Demo()) : null,
             Saved = NewestSlot() is { } newest ? SlotSummary(newest) : null,
             Continue = () =>
             {
@@ -381,7 +385,7 @@ public partial class Main : Node2D
     /// <summary>What this run is, for achievements: nothing counts with the bot, the backdrop, dev options or a debug key; a hand-made map counts only for the map-maker's.</summary>
     Hellwall.Achievements.RunInfo AchievementRun => new(
         Eligible: !_backdrop && _bot == null && !_cheated && DisplayServer.GetName() != "headless" && !DevOptions.Any(_options.ContainsKey),
-        HandMade: _world.Scenario?.Id.StartsWith("map-") == true,
+        HandMade: _world.Scenario?.Id is { } sid && (sid.StartsWith("map-") || sid.StartsWith("ws-")),
         Campaign: Campaign.Default.Contains(_world.Scenario));
     (int X, int Y)? _hoverOverride;
 
@@ -770,6 +774,7 @@ public partial class Main : Node2D
                         // Won with its bonus goal met: the mission's relic is hallowed from now on.
                         if (o.Outcome == Outcome.Won && _world.BonusDone && Campaign.Default.RelicFrom(done.Id) is { } relic) CampaignProgress.Hallow(Campaign.Default.Id, relic.Id);
                     }
+                    if (o.Outcome != Outcome.Running) WorkshopRecord.Mark(WorkshopRecord.IdOf(_world.Scenario), won: o.Outcome == Outcome.Won);
                     if (o.Outcome != Outcome.Running)
                         GameAchievements.Report(GameAchievements.Tracker.Ended(_world, AchievementRun,
                             Campaign.Default.Contains(_world.Scenario) ? GameAchievements.Facts(Campaign.Default, _world.Relics) : null));

@@ -126,12 +126,36 @@ public partial class NewGameMenu : CanvasLayer
         _pages["home"] = HomePage();
         _pages["skirmish"] = SkirmishPage();
         _pages["load"] = LoadPage();
+        _pages["workshop"] = new VBoxContainer();
         _pages["settings"] = SettingsPage();
         _pages["extras"] = ExtrasPage();
         foreach (var page in _pages.Values) { page.Visible = false; _panel.AddChild(page); }
         Show("home");
         if (ShowNews) CallDeferred(nameof(OpenNews));
         if (ShowAchievements) CallDeferred(nameof(OpenAchievements)); // --achievements: for screenshots of the page
+        if (ShowWorkshopPage) CallDeferred(nameof(ShowWorkshop)); // --workshop: straight to it
+    }
+
+    /// <summary>Where the Workshop page gets its maps (Main sets it: Steam's, or the made-up ones for screenshots).</summary>
+    public Func<IWorkshopSource>? WorkshopSource;
+    public bool ShowWorkshopPage;
+
+    /// <summary>The Workshop page, made afresh each time it's opened (so it asks the Workshop only when wanted).</summary>
+    void ShowWorkshop()
+    {
+        var holder = _pages["workshop"];
+        foreach (var c in holder.GetChildren()) c.QueueFree();
+        var source = WorkshopSource?.Invoke() ?? new SteamWorkshopSource();
+        holder.AddChild(new WorkshopBrowser
+        {
+            Source = source,
+            Back = () => Show("home"),
+            Play = map => { Start(new GameSetup(map.Seed, map.Map, map.IsMission ? map.Difficulty : Difficulty.Normal, false, map)); QueueFree(); },
+        });
+        // Your own missions' thumbs up, for Well Received.
+        if (source is SteamWorkshopSource steam && Steam.Running)
+            steam.BestOfMine(votes => GameAchievements.Report(GameAchievements.Tracker.Grant(Hellwall.Achievements.AchievementKind.WellReceived, votes)));
+        Show("workshop");
     }
 
     void Show(string page)
@@ -177,6 +201,7 @@ public partial class NewGameMenu : CanvasLayer
         }
         MenuButton(page, "Campaign", () => { OpenCampaign(); QueueFree(); });
         MenuButton(page, "Skirmish", () => Show("skirmish"));
+        MenuButton(page, "Workshop", ShowWorkshop);
         MenuButton(page, "Load game", () => Show("load"));
         MenuButton(page, "Settings", () => Show("settings"));
         MenuButton(page, "Extras", () => Show("extras"));
