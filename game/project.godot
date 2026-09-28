@@ -13,6 +13,8 @@ config_version=5
 config/name="Hellwall"
 config/version="0.29.0"
 run/flush_stdout_on_print=true
+config/use_custom_user_dir=true
+config/custom_user_dir_name="Hellwall"
 run/main_scene="res://Main.tscn"
 config/features=PackedStringArray("4.7", "C#", "Forward Plus")
 

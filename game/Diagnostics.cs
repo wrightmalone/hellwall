@@ -5,7 +5,7 @@ namespace Hellwall.Game;
 
 /// <summary>
 /// What's left behind when the game dies, for finding out why. Everything goes in the user
-/// folder (user://, which on Windows is %APPDATA%\Godot\app_userdata\Hellwall):
+/// folder (user://, which on Windows is %APPDATA%\Hellwall; see SaveFolder):
 ///   diagnostics.log  a rolling trail: which screen, focus lost and regained, saves and loads,
 ///                    every engine error and C# exception with its stack, and every 10 seconds a
 ///                    breadcrumb (version, map, day, demons, memory, frame rate)

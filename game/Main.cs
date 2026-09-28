@@ -88,8 +88,11 @@ public partial class Main : Node2D
 
     public override void _Ready()
     {
+        SaveFolder.Migrate(); // before anything reads a setting or a save (a first launch after 0.29 moves the old folder across)
         Diagnostics.Start(GetTree());
+        if (SaveFolder.Migrated is { } moved) Diagnostics.Note(moved);
         _options = ParseUserArgs();
+        if (_options.GetValueOrDefault("selftest") == "migrate") { SaveFolder.SelfTest(); GetTree().Quit(); return; }
         if (_options.TryGetValue("dump-music", out var dump)) Music.DumpTo = dump;
         if (_music == null || !IsInstanceValid(_music))
         {

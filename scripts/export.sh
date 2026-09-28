@@ -33,9 +33,10 @@ controls; Esc (with nothing selected) is the pause menu.
 $1
 
 Please send back: how far you got, what killed you, and anything that
-confused you. If it crashes, send the newest file in its log folder:
-  macOS:   ~/Library/Application Support/Godot/app_userdata/Hellwall/logs/
-  Windows: %APPDATA%\\Godot\\app_userdata\\Hellwall\\logs\\
+confused you. If it crashes, send the newest file in its crashes folder
+(the main menu says when there's one; Settings opens the folder):
+  macOS:   ~/Library/Application Support/Hellwall/crashes/
+  Windows: %APPDATA%\\Hellwall\\crashes\\
 Thank you for playing.
 NOTE
 }

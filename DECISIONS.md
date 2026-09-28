@@ -1427,6 +1427,31 @@ last lost by at least one).
 - **Art:** four new sheets, baked from the Cleric, Wizard, Warrior and Rogue models with
   their own tints (`unit-town-*`; bake with `-- unit-town`).
 
+## The save folder, moved (step 1 of the Steam plan)
+
+- **Where it is now:** the game keeps a player's things in its own folder, not Godot's
+  generic one, so Steam Cloud's paths never change after release.
+  - Windows: `%APPDATA%\Hellwall`
+  - macOS: `~/Library/Application Support/Hellwall`
+  - Linux: `~/.local/share/Hellwall`
+  - It was `...\Godot\app_userdata\Hellwall`. project.godot now sets
+    `use_custom_user_dir`.
+- **What moves across:** the first launch of 0.30 copies the old folder into the new one,
+  once: saves, campaign progress and relics, settings, scores, maps and crash reports.
+  - Nothing already in the new folder is overwritten.
+  - Logs and Godot's caches aren't copied; they rebuild themselves.
+  - The old folder is left exactly as it was, as a backup.
+  - A marker file (`.moved-from-godot-folder`) says it's done and what was copied, so it
+    never runs twice. The diagnostics trail notes it too.
+  - If the copy fails for any reason, the game still starts, and the old folder is still
+    there.
+- **Tested** by `--selftest=migrate`, which verify now runs. It builds a made-up old
+  folder and checks that files are copied, logs skipped, the new folder's own file kept,
+  the old folder left alone, and that it runs only once.
+  - It also ran for real on this Mac: one file (`scores.cfg`) came across.
+- **Where to find things:** the playtester note in each build now points at the new
+  `crashes/` folder.
+
 ## Buildings from KayKit Medieval Hexagon (you downloaded it and the Medieval Village MegaKit)
 
 - **Every building but walls and gates is now a baked KayKit model** (`tools/bake_buildings.gd`,

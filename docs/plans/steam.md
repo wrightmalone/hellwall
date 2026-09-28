@@ -94,7 +94,7 @@ CW3 worked because sharing lived inside the game: browse, search, sort by rating
 
 ## Build order
 
-1. **The save folder moves, with migration.** It's needed before anything syncs, so it goes first even though it's small.
+1. **The save folder moves, with migration.** Done in 0.30.0 (`game/SaveFolder.cs`).
 2. **The Steam module and Steamworks.NET in the build.** Steam starts when present and does nothing when absent. export.sh copies the native libraries.
 3. **Cloud saves:** autosaves in a folder of their own, then **[you]** set up Auto-Cloud.
 4. **Achievements:** the module, data and headless check first. Then **[you]** add the list, icons and stats in Steamworks. Icons need art: placeholders first.
