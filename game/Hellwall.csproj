@@ -33,5 +33,7 @@
     <ProjectReference Include="../src/Sim/Sim.csproj" />
     <!-- The headless harness scripted player, so the autoplay option can show it playing. -->
     <Compile Include="../src/Sim.Headless/Bot.cs" Link="Bot.cs" />
+    <!-- The achievements' rules (pure C#, tested in Sim.Tests), and their list. -->
+    <Compile Include="../src/Achievements/Achievements.cs" Link="AchievementRules.cs" />
   </ItemGroup>
 </Project>

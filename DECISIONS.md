@@ -1511,6 +1511,50 @@ last lost by at least one).
   - One choice to make there: syncing `settings.cfg` also carries UI scale and
     fullscreen between machines. Leave it out if you'd rather not.
 
+## Achievements (step 4 of the Steam plan), and display settings kept per machine
+
+- **Display settings stay per machine:** UI scale and fullscreen now live in `display.cfg`,
+  which Steam Cloud doesn't sync (your call). The rest of `settings.cfg` travels. Values
+  already set move across the first time they're read.
+- **38 achievements:**
+  - one per mission;
+  - the relics: won, hallowed, all hallowed, and the finale with three hallowed;
+  - survival at each difficulty (cumulative), and the 90-day run;
+  - Endless days 50, 100 and 150;
+  - feats: no building lost, the wilds cleared before the Convergence, a Hellgate closed
+    before day 10, every gate closed, 3,000 holy tiles, 1,000 colonists, 5 ruins looted, the
+    map cleared after a win;
+  - demons-slain totals of 10k, 100k and 1M (the Steam stat `demons_slain`);
+  - the editor's three.
+  - The list is `game/data/achievements.json`, where each id is the Steamworks API name.
+    docs/plans/steam.md has the table to enter.
+- **Changed from the draft:** "Three Candles" was to be "win the Hellwall on its bonus
+  goal", but the Hellwall has no bonus goal. It's "win it with three hallowed relics" now.
+- **The rules are pure C#** (`src/Achievements`, linked into the game and the tests), so
+  they're tested against scripted worlds rather than bot runs. That's quicker and exact:
+  - cumulative survival wins;
+  - nothing for the bot, cheats or hand-made maps;
+  - feats mid-run;
+  - kill totals across runs, a loaded save's never counted twice;
+  - the campaign's relics.
+- **Guards:**
+  - nothing counts with the bot, in the menu's background game, with dev options, or
+    after a debug key (K, J, F6);
+  - a hand-made map earns only Cartographer.
+- **Where they go:**
+  - earned ones are kept in `achievements.cfg` (synced), so a build without Steam shows
+    them;
+  - with Steam up, each is sent as it's earned, and everything earned is sent again at
+    launch (for offline play);
+  - an alert shows each one in game ("Achievement: Gatecrasher. Close a Hellgate before
+    day 10.");
+  - Extras has an Achievements page, listing every achievement and the demons slain.
+- **Menu dialogs now scroll** past a fixed height, so the long list and What's new don't
+  run off the screen.
+- **Not yet wired:** Author and Well Received wait for Workshop publishing (step 5).
+- **What's yours:** in Steamworks, the stat, the 38 achievements and their icons (placeholders
+  to start), then publish. docs/plans/steam.md has the steps.
+
 ## Buildings from KayKit Medieval Hexagon (you downloaded it and the Medieval Village MegaKit)
 
 - **Every building but walls and gates is now a baked KayKit model** (`tools/bake_buildings.gd`,

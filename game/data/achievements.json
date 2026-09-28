@@ -1,0 +1,267 @@
+{
+  "_about": "Achievements (docs/plans/steam.md). The id is the API name in Steamworks, and a Steam stat 'demons_slain' carries the DemonsSlain progress. Kinds are rules in src/Achievements/Achievements.cs.",
+  "stats": [
+    {
+      "id": "demons_slain",
+      "name": "Demons slain"
+    }
+  ],
+  "achievements": [
+    {
+      "id": "MISSION_FIRST_NIGHT",
+      "name": "The First Night",
+      "description": "Win The First Night.",
+      "kind": "MissionWon",
+      "mission": "first-night"
+    },
+    {
+      "id": "MISSION_IRON_HILLS",
+      "name": "Iron in the Hills",
+      "description": "Win Iron in the Hills.",
+      "kind": "MissionWon",
+      "mission": "iron-hills"
+    },
+    {
+      "id": "MISSION_GATEKEEPERS",
+      "name": "The Gatekeepers",
+      "description": "Win The Gatekeepers.",
+      "kind": "MissionWon",
+      "mission": "gatekeepers"
+    },
+    {
+      "id": "MISSION_DROWNED",
+      "name": "Drowned Country",
+      "description": "Win Drowned Country.",
+      "kind": "MissionWon",
+      "mission": "drowned"
+    },
+    {
+      "id": "MISSION_CAUSEWAY",
+      "name": "The Causeway",
+      "description": "Win The Causeway.",
+      "kind": "MissionWon",
+      "mission": "causeway"
+    },
+    {
+      "id": "MISSION_THE_PASS",
+      "name": "The Pass",
+      "description": "Win The Pass.",
+      "kind": "MissionWon",
+      "mission": "the-pass"
+    },
+    {
+      "id": "MISSION_TWO_FRONTS",
+      "name": "Two Fronts",
+      "description": "Win Two Fronts.",
+      "kind": "MissionWon",
+      "mission": "two-fronts"
+    },
+    {
+      "id": "MISSION_WILDWOOD",
+      "name": "Wildwood Watch",
+      "description": "Win Wildwood Watch.",
+      "kind": "MissionWon",
+      "mission": "wildwood"
+    },
+    {
+      "id": "MISSION_RELIQUARY",
+      "name": "The Reliquary",
+      "description": "Win The Reliquary.",
+      "kind": "MissionWon",
+      "mission": "reliquary"
+    },
+    {
+      "id": "MISSION_LONG_SIEGE",
+      "name": "The Long Siege",
+      "description": "Win The Long Siege.",
+      "kind": "MissionWon",
+      "mission": "long-siege"
+    },
+    {
+      "id": "MISSION_THE_BRIDGE",
+      "name": "The Bridge",
+      "description": "Win The Bridge.",
+      "kind": "MissionWon",
+      "mission": "the-bridge"
+    },
+    {
+      "id": "MISSION_HELLWALL",
+      "name": "The Hellwall",
+      "description": "Win The Hellwall.",
+      "kind": "MissionWon",
+      "mission": "hellwall"
+    },
+    {
+      "id": "RELIC_BEARER",
+      "name": "Relic-bearer",
+      "description": "Win a relic in the campaign.",
+      "kind": "RelicWon"
+    },
+    {
+      "id": "HALLOWED",
+      "name": "Hallowed",
+      "description": "Hallow a relic: win a mission with its bonus goal met.",
+      "kind": "RelicHallowed"
+    },
+    {
+      "id": "FULL_RELIQUARY",
+      "name": "The Full Reliquary",
+      "description": "Hallow every relic.",
+      "kind": "AllHallowed"
+    },
+    {
+      "id": "THREE_CANDLES",
+      "name": "Three Candles",
+      "description": "Win The Hellwall with three hallowed relics.",
+      "kind": "FinaleHallowed"
+    },
+    {
+      "id": "ENDURE_EASY",
+      "name": "Endure (Easy)",
+      "description": "Win a survival run on Easy or harder.",
+      "kind": "SurvivalWon",
+      "difficulty": "Easy"
+    },
+    {
+      "id": "ENDURE_NORMAL",
+      "name": "Endure (Normal)",
+      "description": "Win a survival run on Normal or harder.",
+      "kind": "SurvivalWon",
+      "difficulty": "Normal"
+    },
+    {
+      "id": "ENDURE_HARD",
+      "name": "Endure (Hard)",
+      "description": "Win a survival run on Hard or harder.",
+      "kind": "SurvivalWon",
+      "difficulty": "Hard"
+    },
+    {
+      "id": "ENDURE_NIGHTMARE",
+      "name": "Endure (Nightmare)",
+      "description": "Win a survival run on Nightmare or harder.",
+      "kind": "SurvivalWon",
+      "difficulty": "Nightmare"
+    },
+    {
+      "id": "LONG_NIGHT",
+      "name": "The Long Night",
+      "description": "Win a 90-day survival run.",
+      "kind": "LongSurvival",
+      "count": 90
+    },
+    {
+      "id": "ENDLESS_50",
+      "name": "Day 50",
+      "description": "Reach day 50 in Endless.",
+      "kind": "EndlessDay",
+      "count": 50
+    },
+    {
+      "id": "ENDLESS_100",
+      "name": "Day 100",
+      "description": "Reach day 100 in Endless.",
+      "kind": "EndlessDay",
+      "count": 100
+    },
+    {
+      "id": "ENDLESS_150",
+      "name": "Day 150",
+      "description": "Reach day 150 in Endless.",
+      "kind": "EndlessDay",
+      "count": 150
+    },
+    {
+      "id": "NOT_ONE_STONE",
+      "name": "Not One Stone",
+      "description": "Win without losing a building (walls and gates aside).",
+      "kind": "NoBuildingsLost"
+    },
+    {
+      "id": "WILDS_QUIET",
+      "name": "The Wilds Are Quiet",
+      "description": "Clear every sleeping demon on the map before the Convergence lands.",
+      "kind": "WildsCleared"
+    },
+    {
+      "id": "GATECRASHER",
+      "name": "Gatecrasher",
+      "description": "Close a Hellgate before day 10.",
+      "kind": "EarlyGate",
+      "count": 10
+    },
+    {
+      "id": "NO_GATE_STANDS",
+      "name": "No Gate Stands",
+      "description": "Close every Hellgate on the map.",
+      "kind": "AllGates"
+    },
+    {
+      "id": "HOLY_GROUND",
+      "name": "Holy Ground",
+      "description": "Have 3,000 tiles of holy ground at once.",
+      "kind": "HolyGround",
+      "count": 3000
+    },
+    {
+      "id": "THOUSAND_SOULS",
+      "name": "A Thousand Souls",
+      "description": "Have 1,000 colonists at once.",
+      "kind": "Colonists",
+      "count": 1000
+    },
+    {
+      "id": "RUIN_ROBBER",
+      "name": "Ruin-Robber",
+      "description": "Loot 5 ruins in one run.",
+      "kind": "RuinsLooted",
+      "count": 5
+    },
+    {
+      "id": "AFTERMATH",
+      "name": "Aftermath",
+      "description": "Play on after a win and clear the map: not a demon left, awake or asleep.",
+      "kind": "AftermathCleared"
+    },
+    {
+      "id": "SLAYER",
+      "name": "Slayer",
+      "description": "Slay 10,000 demons, over all your runs.",
+      "kind": "DemonsSlain",
+      "count": 10000
+    },
+    {
+      "id": "BUTCHER",
+      "name": "Butcher",
+      "description": "Slay 100,000 demons, over all your runs.",
+      "kind": "DemonsSlain",
+      "count": 100000
+    },
+    {
+      "id": "SCOURGE",
+      "name": "Scourge",
+      "description": "Slay 1,000,000 demons, over all your runs.",
+      "kind": "DemonsSlain",
+      "count": 1000000
+    },
+    {
+      "id": "CARTOGRAPHER",
+      "name": "Cartographer",
+      "description": "Make a map of your own in the editor, and play it.",
+      "kind": "MapMade"
+    },
+    {
+      "id": "AUTHOR",
+      "name": "Author",
+      "description": "Publish a mission to the Steam Workshop.",
+      "kind": "Published"
+    },
+    {
+      "id": "WELL_RECEIVED",
+      "name": "Well Received",
+      "description": "A mission of yours reaches 25 thumbs up on the Workshop.",
+      "kind": "WellReceived",
+      "count": 25
+    }
+  ]
+}

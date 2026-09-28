@@ -28,31 +28,67 @@ Hellwall ships on Steam only for now. This plan covers what each part needs, and
   - Nothing unlocks in the editor's test plays.
   - Nothing unlocks on a hand-made map, except the editor ones.
 
-**Draft list** (about 36, for you to cut down; names are placeholders for the writing pass):
+**Built in 0.33.0.** The code side is done:
+- the list is `game/data/achievements.json`;
+- the rules are `src/Achievements/Achievements.cs`, tested in `tests/Sim.Tests/AchievementTests.cs`;
+- `game/Achievements.cs` keeps what's earned in `achievements.cfg`, shows a notice, and sends each one to Steam when it's up;
+- Extras has an Achievements page.
 
-| Group | Achievement | When |
-|---|---|---|
-| Campaign | one per mission (12) | win it |
-| Campaign | Relic-bearer | win a relic |
-| Campaign | Hallowed | hallow a relic |
-| Campaign | The Full Reliquary | hallow every relic |
-| Campaign | The Last Wall | win The Hellwall |
-| Campaign | Three Candles | win The Hellwall on its bonus goal |
-| Survival | Endure (Easy / Normal / Hard / Nightmare) | win a survival run at each difficulty (4) |
-| Survival | The Long Night | win on the longest day setting |
-| Endless | Day 50 / Day 100 / Day 150 | reach it in Endless (3) |
-| Feats | Not One Stone | win without losing a building (walls aside) |
-| Feats | The Wilds Are Quiet | clear every sleeping demon before the Convergence |
-| Feats | Gatecrasher | close a Hellgate before day 10 |
-| Feats | No Gate Stands | close every Hellgate in a run |
-| Feats | Holy Ground | consecrate 3,000 tiles in one run |
-| Feats | A Thousand Souls | 1,000 colonists at once |
-| Feats | Ruin-Robber | loot 5 ruins in one run |
-| Feats | Aftermath | play on after a win and clear the map |
-| Totals | Slayer / Butcher / Scourge | 10,000 / 100,000 / 1,000,000 demons slain across all runs (stats) |
-| Editor | Cartographer | make and play a map of your own |
-| Editor | Author | publish a mission to the Workshop |
-| Editor | Well Received | a mission of yours reaches 25 thumbs up |
+**How they're earned:**
+- **Only in fair runs:**
+  - nothing counts with the bot playing, in the menu's background game, with dev options, or once a debug key (K, J, F6) is used;
+  - a hand-made map earns only Cartographer, so a custom map can't farm the rest (its kills don't count towards the totals either);
+  - a loaded save's kills are never counted twice.
+- **Survival wins are cumulative:** a win on Hard also earns Normal and Easy.
+- **At launch:** the campaign's relic achievements are checked against existing progress. Everything earned locally, including offline, is sent to Steam once it's up.
+- **Not yet wired:** Author and Well Received wait for the Workshop (step 5).
+
+**[you] In Steamworks: App Admin, then Stats & Achievements:**
+1. **Add the stat first:** API name `demons_slain`, type INT, "Increment only", default 0, max 2147483647, display name "Demons slain".
+2. **Add each achievement below.** The API name must match exactly. For Slayer, Butcher and Scourge, set "Progress stat" to `demons_slain`, from 0 to its count, so Steam shows a progress bar.
+3. **Icons:** each needs two 64x64 images, earned and unearned (the unearned one is usually a greyed version). Placeholders are fine to start: the art pass can replace them.
+4. **Publish** the changes.
+
+| API name | Display name | Description | Progress |
+|---|---|---|---|
+| `MISSION_FIRST_NIGHT` | The First Night | Win The First Night. |  |
+| `MISSION_IRON_HILLS` | Iron in the Hills | Win Iron in the Hills. |  |
+| `MISSION_GATEKEEPERS` | The Gatekeepers | Win The Gatekeepers. |  |
+| `MISSION_DROWNED` | Drowned Country | Win Drowned Country. |  |
+| `MISSION_CAUSEWAY` | The Causeway | Win The Causeway. |  |
+| `MISSION_THE_PASS` | The Pass | Win The Pass. |  |
+| `MISSION_TWO_FRONTS` | Two Fronts | Win Two Fronts. |  |
+| `MISSION_WILDWOOD` | Wildwood Watch | Win Wildwood Watch. |  |
+| `MISSION_RELIQUARY` | The Reliquary | Win The Reliquary. |  |
+| `MISSION_LONG_SIEGE` | The Long Siege | Win The Long Siege. |  |
+| `MISSION_THE_BRIDGE` | The Bridge | Win The Bridge. |  |
+| `MISSION_HELLWALL` | The Hellwall | Win The Hellwall. |  |
+| `RELIC_BEARER` | Relic-bearer | Win a relic in the campaign. |  |
+| `HALLOWED` | Hallowed | Hallow a relic: win a mission with its bonus goal met. |  |
+| `FULL_RELIQUARY` | The Full Reliquary | Hallow every relic. |  |
+| `THREE_CANDLES` | Three Candles | Win The Hellwall with three hallowed relics. |  |
+| `ENDURE_EASY` | Endure (Easy) | Win a survival run on Easy or harder. |  |
+| `ENDURE_NORMAL` | Endure (Normal) | Win a survival run on Normal or harder. |  |
+| `ENDURE_HARD` | Endure (Hard) | Win a survival run on Hard or harder. |  |
+| `ENDURE_NIGHTMARE` | Endure (Nightmare) | Win a survival run on Nightmare or harder. |  |
+| `LONG_NIGHT` | The Long Night | Win a 90-day survival run. |  |
+| `ENDLESS_50` | Day 50 | Reach day 50 in Endless. |  |
+| `ENDLESS_100` | Day 100 | Reach day 100 in Endless. |  |
+| `ENDLESS_150` | Day 150 | Reach day 150 in Endless. |  |
+| `NOT_ONE_STONE` | Not One Stone | Win without losing a building (walls and gates aside). |  |
+| `WILDS_QUIET` | The Wilds Are Quiet | Clear every sleeping demon on the map before the Convergence lands. |  |
+| `GATECRASHER` | Gatecrasher | Close a Hellgate before day 10. |  |
+| `NO_GATE_STANDS` | No Gate Stands | Close every Hellgate on the map. |  |
+| `HOLY_GROUND` | Holy Ground | Have 3,000 tiles of holy ground at once. |  |
+| `THOUSAND_SOULS` | A Thousand Souls | Have 1,000 colonists at once. |  |
+| `RUIN_ROBBER` | Ruin-Robber | Loot 5 ruins in one run. |  |
+| `AFTERMATH` | Aftermath | Play on after a win and clear the map: not a demon left, awake or asleep. |  |
+| `SLAYER` | Slayer | Slay 10,000 demons, over all your runs. | stat `demons_slain`, 0 to 10,000 |
+| `BUTCHER` | Butcher | Slay 100,000 demons, over all your runs. | stat `demons_slain`, 0 to 100,000 |
+| `SCOURGE` | Scourge | Slay 1,000,000 demons, over all your runs. | stat `demons_slain`, 0 to 1,000,000 |
+| `CARTOGRAPHER` | Cartographer | Make a map of your own in the editor, and play it. |  |
+| `AUTHOR` | Author | Publish a mission to the Steam Workshop. |  |
+| `WELL_RECEIVED` | Well Received | A mission of yours reaches 25 thumbs up on the Workshop. |  |
 
 ## Cloud saves
 
@@ -67,18 +103,20 @@ The code side is done in 0.32.0. What's left is **[you]**: Steamworks settings, 
 | `autosaves/autosave1-5.hwsave` (+ `.txt`) | the five-slot rotation | no: it stays on each machine |
 | `campaign.cfg` | missions won, relics hallowed, the last loadout | yes |
 | `scores.cfg` | best scores | yes |
-| `settings.cfg` | settings | yes (but see below) |
+| `settings.cfg` | settings | yes |
+| `display.cfg` | UI scale and fullscreen: this machine's screen | no |
 | `maps/*.json` | hand-made maps and missions | yes |
+| `achievements.cfg` | achievements earned, and demons slain (so a build without Steam shows them too) | yes |
 | `logs/`, `crashes/`, `diagnostics.log`, `session.txt`, caches | for debugging | no |
 
 - **Existing saves:** saves loose in the folder, from 0.31 and earlier, are moved into `saves/` and `autosaves/` on first launch.
 - **The Load page:** it lists the synced autosave as "Autosave (another computer's)" only when it's newer than all of this machine's own. That's how an autosave made on the other PC shows up. "Continue" takes whichever save is newest.
-- **Settings:** syncing `settings.cfg` also carries UI scale, minimap size and fullscreen between machines. That's awkward between a laptop and a big monitor. Leave it out of the list below if you'd rather keep those per machine.
+- **Settings:** UI scale and fullscreen are kept per machine, in `display.cfg` (your call), so a laptop and a big monitor each keep their own. Everything else in `settings.cfg` travels.
 
 **[you] In Steamworks: App Admin, then Steam Cloud:**
 
 1. **Byte quota per user:** 50 MB. **Number of files allowed per user:** 500. A save is about 220 KB, so this is generous.
-2. **Enable Auto-Cloud**, and add these **Root paths**, all with **OS: Windows**:
+2. **Enable Auto-Cloud**, and add these **Root paths** (six), all with **OS: Windows**:
 
 | Root | Subdirectory | Pattern | Recursive |
 |---|---|---|---|
@@ -87,6 +125,7 @@ The code side is done in 0.32.0. What's left is **[you]**: Steamworks settings, 
 | WinAppDataRoaming | `Hellwall` | `scores.cfg` | no |
 | WinAppDataRoaming | `Hellwall` | `settings.cfg` | no |
 | WinAppDataRoaming | `Hellwall/maps` | `*.json` | no |
+| WinAppDataRoaming | `Hellwall` | `achievements.cfg` | no |
 
 3. **Root overrides**, so Macs and Linux sync to the same cloud files:
    - Original root WinAppDataRoaming, OS **macOS**, new root **MacAppSupport**.
@@ -128,7 +167,7 @@ CW3 worked because sharing lived inside the game: browse, search, sort by rating
 1. **The save folder moves, with migration.** Done in 0.30.0 (`game/SaveFolder.cs`).
 2. **The Steam module and Steamworks.NET in the build.** Done in 0.31.0 (`game/Steam.cs`, `game/lib/steamworks/`). Apple-silicon Macs go without Steam for now: Steamworks.NET's standalone build is x64 only, so it needs building from its source as any-CPU to reach them.
 3. **Cloud saves:** the code side done in 0.32.0 (the save folder laid out for syncing). **[you]** Set up Auto-Cloud, as above.
-4. **Achievements:** the module, data and headless check first. Then **[you]** add the list, icons and stats in Steamworks. Icons need art: placeholders first.
+4. **Achievements:** the code done in 0.33.0 (tested with scripted runs in the unit tests, not bot runs). **[you]** Add the stat, the list and icons in Steamworks, as above.
 5. **Workshop publishing** from the editor, with previews and tags.
 6. **The in-game browser.**
 7. **Leaderboards per map.**

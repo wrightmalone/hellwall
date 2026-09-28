@@ -49,6 +49,7 @@ public partial class NewGameMenu : CanvasLayer
     public Action? Continue;
     /// <summary>Open What's new at once (screenshots).</summary>
     public bool ShowNews;
+    public bool ShowAchievements;
     /// <summary>What the newest save holds, or null for none.</summary>
     public string? Saved;
 
@@ -130,6 +131,7 @@ public partial class NewGameMenu : CanvasLayer
         foreach (var page in _pages.Values) { page.Visible = false; _panel.AddChild(page); }
         Show("home");
         if (ShowNews) CallDeferred(nameof(OpenNews));
+        if (ShowAchievements) CallDeferred(nameof(OpenAchievements)); // --achievements: for screenshots of the page
     }
 
     void Show(string page)
@@ -307,9 +309,19 @@ public partial class NewGameMenu : CanvasLayer
         page.AddChild(UiKit.Label("Extras", 22, UiKit.Gold));
         if (OpenEditor != null) MenuButton(page, "Map editor", () => { OpenEditor(); QueueFree(); }, 18);
         MenuButton(page, "What's new in this build", () => Dialog("What's new", WhatsNew), 18);
+        MenuButton(page, "Achievements", OpenAchievements, 18);
         MenuButton(page, "Credits", ShowCredits, 18);
         Back(page);
         return page;
+    }
+
+    /// <summary>Every achievement, earned ones first, with the demons slain so far (the Steam stat).</summary>
+    static string AchievementsText()
+    {
+        var t = GameAchievements.Tracker;
+        var lines = t.Defs.OrderBy(a => t.Earned.Contains(a.Id) ? 0 : 1)
+            .Select(a => $"{(t.Earned.Contains(a.Id) ? "[x]" : "[  ]")}  {a.Name}: {a.Description}");
+        return $"{t.Earned.Count} of {t.Defs.Count} earned  ·  {t.DemonsSlain:N0} demons slain\n\n" + string.Join("\n", lines);
     }
 
     void Describe()
@@ -434,11 +446,17 @@ public partial class NewGameMenu : CanvasLayer
 
     void ShowCredits() => Dialog("Credits", CreditsText);
     void OpenNews() => Dialog("What's new", WhatsNew);
+    void OpenAchievements() => Dialog("Achievements", AchievementsText());
 
+    /// <summary>A message with a Close button; a long one (the achievements, what's new) scrolls rather than running off the screen.</summary>
     void Dialog(string title, string text)
     {
-        var dialog = new AcceptDialog { Title = title, DialogText = text, OkButtonText = "Close", MinSize = new Vector2I(720, 0) };
-        dialog.GetLabel().AutowrapMode = TextServer.AutowrapMode.WordSmart;
+        var dialog = new AcceptDialog { Title = title, OkButtonText = "Close", MinSize = new Vector2I(720, 0) };
+        int lines = text.Split('\n').Sum(l => 1 + l.Length / 95);
+        var scroll = new ScrollContainer { HorizontalScrollMode = ScrollContainer.ScrollMode.Disabled, CustomMinimumSize = new Vector2(700, Math.Min(560, lines * 22 + 8)) };
+        var label = new Label { Text = text, AutowrapMode = TextServer.AutowrapMode.WordSmart, SizeFlagsHorizontal = Control.SizeFlags.ExpandFill };
+        scroll.AddChild(label);
+        dialog.AddChild(scroll);
         AddChild(dialog);
         dialog.PopupCentered();
         dialog.Confirmed += dialog.QueueFree;

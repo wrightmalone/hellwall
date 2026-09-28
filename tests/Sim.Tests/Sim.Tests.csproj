@@ -14,5 +14,6 @@
   <ItemGroup>
     <Using Include="Xunit" />
     <ProjectReference Include="../../src/Sim/Sim.csproj" />
+    <Compile Include="../../src/Achievements/Achievements.cs" Link="AchievementRules.cs" />
   </ItemGroup>
 </Project>

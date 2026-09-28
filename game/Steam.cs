@@ -108,6 +108,27 @@ public static partial class Steam
         });
     }
 
+    /// <summary>An achievement earned (its API name): kept by Steam until StoreStats sends it. Nothing without Steam.</summary>
+    public static void Unlock(string id)
+    {
+        if (!Running) return;
+        try { UnlockCore(id); } catch (Exception) { }
+    }
+
+    /// <summary>A stat's value (a progress achievement's), sent with StoreStats.</summary>
+    public static void SetStat(string name, int value)
+    {
+        if (!Running) return;
+        try { SetStatCore(name, value); } catch (Exception) { }
+    }
+
+    /// <summary>Send what's been set to Steam (it shows the unlock, and keeps it).</summary>
+    public static void StoreStats()
+    {
+        if (!Running) return;
+        try { StoreCore(); } catch (Exception) { }
+    }
+
     /// <summary>
     /// --selftest=steam: Steam can never stop the game starting. Where Steamworks.NET is in the build
     /// and loads, Valve's library is found and called (with no Steam client, as on a test machine, it
@@ -160,6 +181,9 @@ public static partial class Steam
     static uint AppIdCore() => throw Missing();
     static void CallbacksCore() { }
     static void ShutdownCore() { }
+    static void UnlockCore(string id) { }
+    static void SetStatCore(string name, int value) { }
+    static void StoreCore() { }
 #else
     [MethodImpl(MethodImplOptions.NoInlining)] static System.Reflection.Assembly SteamAssemblyCore() => typeof(SteamAPI).Assembly;
     [MethodImpl(MethodImplOptions.NoInlining)] static bool IsSteamRunningCore() => SteamAPI.IsSteamRunning();
@@ -168,5 +192,8 @@ public static partial class Steam
     [MethodImpl(MethodImplOptions.NoInlining)] static uint AppIdCore() => SteamUtils.GetAppID().m_AppId;
     [MethodImpl(MethodImplOptions.NoInlining)] static void CallbacksCore() => SteamAPI.RunCallbacks();
     [MethodImpl(MethodImplOptions.NoInlining)] static void ShutdownCore() => SteamAPI.Shutdown();
+    [MethodImpl(MethodImplOptions.NoInlining)] static void UnlockCore(string id) => SteamUserStats.SetAchievement(id);
+    [MethodImpl(MethodImplOptions.NoInlining)] static void SetStatCore(string name, int value) => SteamUserStats.SetStat(name, value);
+    [MethodImpl(MethodImplOptions.NoInlining)] static void StoreCore() => SteamUserStats.StoreStats();
 #endif
 }

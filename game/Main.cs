@@ -96,6 +96,7 @@ public partial class Main : Node2D
         // Steam, if the game was launched through it (or --steam-test, as Valve's test app): nothing happens otherwise.
         Steam.Start(GetTree(), _options.ContainsKey("steam-test"));
         Diagnostics.Note($"steam: {Steam.Status}");
+        if (!_achievementsLaunched && DisplayServer.GetName() != "headless") { _achievementsLaunched = true; GameAchievements.Launch(); }
         if (_options.TryGetValue("dump-music", out var dump)) Music.DumpTo = dump;
         if (_music == null || !IsInstanceValid(_music))
         {
@@ -158,6 +159,7 @@ public partial class Main : Node2D
 
     void ShowMenu(GameSetup setup)
     {
+        GameAchievements.Unlocked = null;
         Diagnostics.Screen = "main menu";
         Diagnostics.Describe = null;
         // A town at war behind the menu (as in Factorio): the bot playing, quietly, the camera drifting round it.
@@ -166,6 +168,7 @@ public partial class Main : Node2D
         {
             Initial = setup, Start = Play, OpenCampaign = OpenCampaign, OpenEditor = () => { if (_backdrop) { _editorNext = true; GetTree().ReloadCurrentScene(); } else OpenEditor(); },
             ShowNews = _options.ContainsKey("whatsnew"),
+            ShowAchievements = _options.ContainsKey("achievements"),
             Saved = NewestSlot() is { } newest ? SlotSummary(newest) : null,
             Continue = () =>
             {
@@ -368,6 +371,18 @@ public partial class Main : Node2D
     void Send(Command command) => _world.Enqueue(command);
 
     bool _withCoach;
+
+    static bool _achievementsLaunched;
+    /// <summary>A debug key was used this run (K, J, F6): nothing counts for achievements after.</summary>
+    bool _cheated;
+    double _achievementClock;
+    static readonly string[] DevOptions = ["skip", "autoplay", "reveal", "patrons-now", "demo", "bench", "hover", "arm", "build", "inspect", "screenshot", "selftest", "autosave-seconds"];
+
+    /// <summary>What this run is, for achievements: nothing counts with the bot, the backdrop, dev options or a debug key; a hand-made map counts only for the map-maker's.</summary>
+    Hellwall.Achievements.RunInfo AchievementRun => new(
+        Eligible: !_backdrop && _bot == null && !_cheated && DisplayServer.GetName() != "headless" && !DevOptions.Any(_options.ContainsKey),
+        HandMade: _world.Scenario?.Id.StartsWith("map-") == true,
+        Campaign: Campaign.Default.Contains(_world.Scenario));
     (int X, int Y)? _hoverOverride;
 
     /// <summary>The screen-space UI for the current world: at the start, and after a quickload.</summary>
@@ -385,6 +400,9 @@ public partial class Main : Node2D
             Order = OrderSelected,
         };
         AddChild(_hud);
+        // An achievement earned shows for a moment in the alerts; a hand-made map played earns the map-maker's.
+        GameAchievements.Unlocked = a => { if (IsInstanceValid(_hud)) _hud.Alerts.Push("ach-" + a.Id, $"Achievement: {a.Name}. {a.Description}", UiKit.Gold, null, 10); };
+        if (AchievementRun is { HandMade: true } run && run.Eligible) GameAchievements.Report(GameAchievements.Tracker.Grant(Hellwall.Achievements.AchievementKind.MapMade));
         if (_withCoach)
         {
             _coach = new Coach { World = _world };
@@ -659,6 +677,11 @@ public partial class Main : Node2D
         UpdateMouseMode();
         if (_state.AttackMoveArmed && _state.SelectedUnits.Count == 0) DisarmAttackMove();
         UpdateDebugLine();
+        if (_started && !_paused && (_achievementClock += delta) >= 1)
+        {
+            _achievementClock = 0;
+            if (_world.Outcome == Outcome.Running) GameAchievements.Report(GameAchievements.Tracker.Watch(_world, AchievementRun));
+        }
 
         if (_benchSeconds > 0) StepBench(delta);
         else if (_demoSeconds > 0) StepDemo(delta);
@@ -747,6 +770,9 @@ public partial class Main : Node2D
                         // Won with its bonus goal met: the mission's relic is hallowed from now on.
                         if (o.Outcome == Outcome.Won && _world.BonusDone && Campaign.Default.RelicFrom(done.Id) is { } relic) CampaignProgress.Hallow(Campaign.Default.Id, relic.Id);
                     }
+                    if (o.Outcome != Outcome.Running)
+                        GameAchievements.Report(GameAchievements.Tracker.Ended(_world, AchievementRun,
+                            Campaign.Default.Contains(_world.Scenario) ? GameAchievements.Facts(Campaign.Default, _world.Relics) : null));
                     break;
                 case CorruptionTook c: _state.Say($"The horde is corrupted: {c.Name}"); break;
                 case ScenarioMessage m when m.Text.Length > 0:
@@ -987,14 +1013,17 @@ public partial class Main : Node2D
                 Send(new Demolish(selected.Id));
                 break;
             case Key.F6:
+                _cheated = true;
                 Send(new MakeNoise(_state.HoveredTile.X, _state.HoveredTile.Y, 40, 3));
                 break;
             case Key.K:
+                _cheated = true;
                 foreach (var c in Scenarios.Wave(_world, Side.West, 100)) Send(c);
                 foreach (var c in Scenarios.Wave(_world, Side.East, 100)) Send(c);
                 _state.Say("Debug: a wave of 200 from west and east");
                 break;
             case Key.J:
+                _cheated = true;
                 foreach (var c in Scenarios.EdgeAssault(_world, 20000, points: 8)) Send(c);
                 break;
         }
