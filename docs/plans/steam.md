@@ -46,7 +46,7 @@ Hellwall ships on Steam only for now. This plan covers what each part needs, and
 **[you] In Steamworks: App Admin, then Stats & Achievements:**
 1. **Add the stat first:** API name `demons_slain`, type INT, "Increment only", default 0, max 2147483647, display name "Demons slain".
 2. **Add each achievement below.** The API name must match exactly. For Slayer, Butcher and Scourge, set "Progress stat" to `demons_slain`, from 0 to its count, so Steam shows a progress bar.
-3. **Icons:** each needs two 64x64 images, earned and unearned (the unearned one is usually a greyed version). Placeholders are fine to start: the art pass can replace them.
+3. **Icons:** each needs two 64x64 images, earned and unearned. Placeholders are made: `steam/achievements/`, where `ID.png` is the achieved icon and `ID_locked.png` the unachieved one, and `contact-sheet.png` shows them all. They're baked from the game's art by `game/tools/bake_achievement_icons.gd`, and the art pass can replace any of them by file name.
 4. **Publish** the changes.
 
 | API name | Display name | Description | Progress |
