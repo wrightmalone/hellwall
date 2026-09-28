@@ -84,6 +84,8 @@ public sealed partial class World
 
     /// <summary>The campaign mission being played, if any.</summary>
     public ScenarioDef? Scenario { get; }
+    /// <summary>Where the Keep stands (its centre tile): the middle of the map, or where a hand-made mission put it. Distances "from home" (packs, gates, ruins) are from here.</summary>
+    public (int X, int Y) Home { get; }
     public ObjectiveDef[] Goals { get; }
     public bool[] GoalsDone { get; }
 
@@ -289,7 +291,10 @@ public sealed partial class World
         Flow = new FlowField(Terrain.Width, Terrain.Height);
         Noise = new NoiseGrid(Terrain.Width, Terrain.Height);
         Vision = new Vision(Terrain.Width, Terrain.Height, Rules.Fog.Enabled && (options.Survival || options.Scenario != null));
-        Vision.Reveal(Terrain.Width / 2f, Terrain.Height / 2f, Rules.Fog.StartReveal);
+        Home = options.Scenario is { KeepX: >= 0, KeepY: >= 0 } k
+            ? (Math.Clamp(k.KeepX, 4, Terrain.Width - 5), Math.Clamp(k.KeepY, 4, Terrain.Height - 5))
+            : (Terrain.Width / 2, Terrain.Height / 2);
+        Vision.Reveal(Home.X, Home.Y, Rules.Fog.StartReveal);
         Spatial = new SpatialHash(Terrain.Width, Terrain.Height);
         if (options.Survival) Survival = new Survival(Rules.Survival, options.Endless);
         Scenario = options.Scenario;
@@ -309,10 +314,29 @@ public sealed partial class World
     {
         var world = new World(options);
         var def = world.Def(BuildingKind.Keep);
-        int centre = options.MapSize / 2;
-        var keep = world.AddBuilding(BuildingKind.Keep, centre - def.W / 2, centre - def.H / 2);
+        var (hx, hy) = world.Home;
+        // A hand-made map may put the Keep anywhere: its ground is made fit to stand on.
+        for (int y = hy - def.H / 2 - 1; y <= hy - def.H / 2 + def.H; y++)
+            for (int x = hx - def.W / 2 - 1; x <= hx - def.W / 2 + def.W; x++)
+                if (world.Terrain.InBounds(x, y) && !Terrain.IsBuildable(world.Terrain.Get(x, y))) world.Terrain.Set(x, y, Tile.Grass);
+        var keep = world.AddBuilding(BuildingKind.Keep, hx - def.W / 2, hy - def.H / 2);
         keep.Complete = true;
         keep.Built = def.BuildSeconds;
+        // A mission's own buildings, standing from the start (where there's room for them).
+        if (options.Scenario is { PlacedBuildings.Length: > 0 } town)
+            foreach (var p in town.PlacedBuildings)
+            {
+                if (p.Kind == BuildingKind.Keep || world.Def(p.Kind).UpgradeOnly && p.Kind is not (BuildingKind.Cottage or BuildingKind.Manor)) continue;
+                var (w, h) = world.Footprint(p.Kind, p.Turned);
+                bool room = true;
+                for (int y = p.Y; y < p.Y + h && room; y++)
+                    for (int x = p.X; x < p.X + w && room; x++)
+                        room = world.Terrain.InBounds(x, y) && Terrain.IsBuildable(world.Terrain.Get(x, y)) && world.BuildingIdAt(x, y) == 0;
+                if (!room) continue;
+                var b = world.AddBuilding(p.Kind, p.X, p.Y, p.Turned);
+                b.Complete = true;
+                b.Built = b.Def.BuildSeconds;
+            }
         ColonySystem.RecomputeNetwork(world);
         world.EnsureFlow();
         if (options.Survival)
@@ -1494,14 +1518,14 @@ public sealed partial class World
             _flowDirty = true;
             return;
         }
-        int centre = Terrain.Width / 2;
+        var (cx0, cy0) = Home;
         int min2 = rules.MinDistance * rules.MinDistance;
         // A narrow place for gates (the Gorge's canyon) takes many more random looks to hit.
         int tries = rules.Count * (MapGen.WaveSides(Map).Length == 1 ? 3000 : 400);
         for (int n = _gates.Count, attempts = 0; n < rules.Count && attempts < tries; attempts++)
         {
             int x = Rng.NextInt(Terrain.Width - Hellgate.Size), y = Rng.NextInt(Terrain.Height - Hellgate.Size);
-            int dx = x - centre, dy = y - centre;
+            int dx = x - cx0, dy = y - cy0;
             if (dx * dx + dy * dy < min2) continue;
             if (!MapGen.GateAllowed(Map, x + 1, y + 1, Terrain.Width)) continue; // where its bands come the way the waves do
             if (_gates.Any(g => Math.Abs(g.X - x) + Math.Abs(g.Y - y) < 40)) continue;
@@ -1561,13 +1585,13 @@ public sealed partial class World
     void ScatterStrays(int count)
     {
         var wilds = Rules.Wilds;
-        int centre = Terrain.Width / 2;
+        var (cx0, cy0) = Home;
         int minD2 = wilds.StrayMinDistance * wilds.StrayMinDistance;
         for (int n = 0, attempts = 0; n < count && attempts < count * 50; attempts++)
         {
             int x = Rng.NextInt(Terrain.Width);
             int y = Rng.NextInt(Terrain.Height);
-            int dx = x - centre, dy = y - centre;
+            int dx = x - cx0, dy = y - cy0;
             if (dx * dx + dy * dy < minD2) continue;
             if (!IsWalkable(x, y) || Flow.DistAt(x, y) == FlowField.Unreachable) continue;
             if (_packs.Any(p => (p.X - x) * (p.X - x) + (p.Y - y) * (p.Y - y) < 25)) continue;
@@ -1590,6 +1614,7 @@ public sealed partial class World
     {
         if (count <= 0) return;
         var wilds = Rules.Wilds;
+        var (cx0, cy0) = Home;
         int centre = Terrain.Width / 2;
         int minD2 = wilds.MinDistance * wilds.MinDistance;
         float farthest = MathF.Sqrt(2) * centre;
@@ -1605,7 +1630,7 @@ public sealed partial class World
                 {
                     int x = (int)(gx + (Rng.NextDouble() - 0.5) * cell * 0.6), y = (int)(gy + (Rng.NextDouble() - 0.5) * cell * 0.6);
                     if (!Terrain.InBounds(x, y)) continue;
-                    int dx = x - centre, dy = y - centre;
+                    int dx = x - cx0, dy = y - cy0;
                     if (dx * dx + dy * dy < minD2) continue;
                     if (!IsWalkable(x, y) || Flow.DistAt(x, y) == FlowField.Unreachable) continue;
                     if (GuardsHomeIron(x, y)) continue;
@@ -1620,7 +1645,7 @@ public sealed partial class World
         for (int n = 0; n < spots.Count && n < count; n++)
         {
             var (x, y) = spots[n];
-            int dx = x - centre, dy = y - centre;
+            int dx = x - cx0, dy = y - cy0;
             float far = Math.Clamp((MathF.Sqrt(dx * dx + dy * dy) - wilds.MinDistance) / (farthest - wilds.MinDistance), 0, 1);
             int size = Math.Max(1, (int)(wilds.NearCount + (wilds.FarCount - wilds.NearCount) * MathF.Pow(far, 1.2f) * (0.7 + 0.6 * Rng.NextDouble())));
             var pack = new Pack { Id = _nextId++, X = x, Y = y, Count = size, Kind = Rng.Chance(wilds.HoundChance) ? DemonKind.Hound : DemonKind.Imp };
@@ -1699,14 +1724,14 @@ public sealed partial class World
     /// </summary>
     bool GuardsHomeIron(int x, int y)
     {
-        int c = Terrain.Width / 2;
+        var (c, cy0) = Home;
         int r = (int)Rules.Wilds.ClearRadius + 2;
         for (int ty = Math.Max(0, y - r); ty <= Math.Min(Terrain.Height - 1, y + r); ty++)
             for (int tx = Math.Max(0, x - r); tx <= Math.Min(Terrain.Width - 1, x + r); tx++)
             {
                 if (Terrain.Get(tx, ty) is not (Tile.Ore or Tile.Rock)) continue;
                 if ((tx - x) * (tx - x) + (ty - y) * (ty - y) > r * r) continue;
-                if ((tx - c) * (tx - c) + (ty - c) * (ty - c) <= 32 * 32) return true;
+                if ((tx - c) * (tx - c) + (ty - cy0) * (ty - cy0) <= 32 * 32) return true;
             }
         return false;
     }

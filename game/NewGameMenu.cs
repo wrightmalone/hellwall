@@ -197,7 +197,7 @@ public partial class NewGameMenu : CanvasLayer
         _mode = Options(box, "Mode", ["Survival: the Convergence at the end", "Endless: until the Keep falls"], Initial.Endless ? 1 : 0);
         _difficulty = Options(box, "Difficulty", Enum.GetNames<Difficulty>(), (int)Initial.Difficulty);
         _handMade.AddRange(MapFiles.All());
-        _map = Options(box, "Map", [.. Enum.GetNames<MapKind>(), .. _handMade.Select(m => $"Hand-made: {m.Name}")], (int)Initial.Map);
+        _map = Options(box, "Map", [.. Enum.GetNames<MapKind>(), .. _handMade.Select(m => m.IsMission ? $"Mission: {m.Name}" : $"Hand-made: {m.Name}")], (int)Initial.Map);
 
         var seedRow = Row(box, "Seed");
         _seed = new LineEdit { Text = Initial.Seed.ToString(), SizeFlagsHorizontal = Control.SizeFlags.ExpandFill };
@@ -315,7 +315,10 @@ public partial class NewGameMenu : CanvasLayer
         string mode = _mode.Selected == 1
             ? "Endless: no Convergence and no victory. Every few days the horde takes a corruption. Your score is the day you fall."
             : $"Survive {DayChoices[_days?.Selected ?? 2]} days of waves, then the Convergence from every side.";
-        string map = _map.Selected < MapKinds ? MapAbout[(MapKind)_map.Selected] : _handMade[_map.Selected - MapKinds].Briefing is { Length: > 0 } b ? b : "A hand-made map.";
+        var picked = _map.Selected < MapKinds ? null : _handMade[_map.Selected - MapKinds];
+        string map = picked == null ? MapAbout[(MapKind)_map.Selected]
+            : picked.IsMission ? $"A mission, played as its maker set it ({picked.Difficulty}; the settings here don't apply).\n{picked.Briefing}\nGoals: {string.Join("; ", picked.Goals.Select(g => g.Describe()))}"
+            : picked.Briefing is { Length: > 0 } b ? b : "A hand-made map.";
         _about.Text = $"{mode}\n{map}\n{DifficultyAbout[difficulty]}";
     }
 
@@ -349,6 +352,13 @@ public partial class NewGameMenu : CanvasLayer
         var difficulty = (Difficulty)_difficulty.Selected;
         bool endless = _mode.Selected == 1;
         var handMade = _map.Selected >= MapKinds ? _handMade[_map.Selected - MapKinds] : null;
+        // A hand-made mission plays as its maker set it: its own difficulty, days, goals and events.
+        if (handMade is { IsMission: true })
+        {
+            Start(new GameSetup(handMade.Seed, handMade.Map, handMade.Difficulty, false, handMade with { Id = "map-" + handMade.Id }));
+            QueueFree();
+            return;
+        }
         var kind = handMade?.Map ?? (MapKind)_map.Selected;
         bool plain = handMade == null && _size.Selected == 1 && _days.Selected == 2 && _waves.Selected == 1 && _gates.Selected == 2
             && _wilds.Selected == 1 && _strays.Selected == 0 && _ruinsOption.Selected == 1 && _start.Selected == 1 && _fog.ButtonPressed;

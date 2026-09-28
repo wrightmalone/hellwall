@@ -31,13 +31,13 @@ internal static class RuinSystem
     {
         var wilds = world.Rules.Wilds;
         var t = world.Terrain;
-        int c = t.Width / 2;
+        var (c, cy) = world.Home;
         float scale = t.Width / 256f;
         int min = (int)(wilds.RuinMinDistance * scale), max = (int)(wilds.RuinMaxDistance * scale);
         for (int n = world.RuinList.Count, attempts = 0; n < wilds.Ruins && attempts < wilds.Ruins * 400; attempts++)
         {
             int x = world.Rng.NextInt(t.Width), y = world.Rng.NextInt(t.Height);
-            int dx = x - c, dy = y - c, d2 = dx * dx + dy * dy;
+            int dx = x - c, dy = y - cy, d2 = dx * dx + dy * dy;
             if (d2 < min * min || d2 > max * max || !MapGen.RuinAllowed(world.Map, x, y, t.Width)) continue;
             if (!world.IsWalkable(x, y) || world.Flow.DistAt(x, y) == FlowField.Unreachable || !World.FairWalk(walk, t.Index(x, y), MathF.Sqrt(d2))) continue;
             if (world.RuinList.Any(r => (r.X - x) * (r.X - x) + (r.Y - y) * (r.Y - y) < 30 * 30)) continue;

@@ -78,6 +78,9 @@ public sealed record PlacedPack(int X, int Y, int Count, DemonKind Kind = DemonK
 /// <summary>A Hellgate put down by hand: its top-left tile (a gate is Hellgate.Size square).</summary>
 public sealed record PlacedGate(int X, int Y);
 
+/// <summary>A building standing when a mission begins (a hand-made mission's): its top-left tile, finished, free.</summary>
+public sealed record PlacedBuilding(BuildingKind Kind, int X, int Y, bool Turned = false);
+
 /// <summary>A voice of the campaign: a name and a portrait (a unit or building kind's picture, until there's art for faces).</summary>
 public sealed record SpeakerDef
 {
@@ -131,6 +134,14 @@ public sealed record ScenarioDef
 
     /// <summary>Hand-placed Hellgates: when there are any, they're the map's gates and none are placed at random.</summary>
     public PlacedGate[] PlacedGates { get; init; } = [];
+
+    /// <summary>A hand-made map made a mission: it plays by its own settings, goals and events, not Skirmish's.</summary>
+    public bool IsMission { get; init; }
+    /// <summary>Where the Keep stands (its centre tile; -1: the middle of the map).</summary>
+    public int KeepX { get; init; } = -1;
+    public int KeepY { get; init; } = -1;
+    /// <summary>Buildings already standing when it begins (a ruined town, an outpost): finished and free.</summary>
+    public PlacedBuilding[] PlacedBuildings { get; init; } = [];
 
     /// <summary>Not available in this mission: the campaign opens the game up as it goes.</summary>
     public BuildingKind[] LockedBuildings { get; init; } = [];
@@ -237,6 +248,19 @@ public sealed record ScenarioDef
         if (Start != null && Enum.GetValues<Resource>().Any(r => Start[r] is < 0 or > 1_000_000 || double.IsNaN(Start[r]))) return "its starting stock is out of range";
         if (PlacedPacks.Length > 2000 || PlacedPacks.Any(p => p.Count is < 1 or > 1000 || !Enum.IsDefined(p.Kind) || p.X < 0 || p.Y < 0 || p.X >= MapSize || p.Y >= MapSize)) return "its hand-placed packs are out of range";
         if (PlacedGates.Length > 16 || PlacedGates.Any(g => g.X < 0 || g.Y < 0 || g.X >= MapSize || g.Y >= MapSize)) return "its hand-placed Hellgates are out of range";
+        bool OnMap(int x, int y) => x >= 0 && y >= 0 && x < MapSize && y < MapSize;
+        if ((KeepX, KeepY) != (-1, -1) && !OnMap(KeepX, KeepY)) return "its Keep is off the map";
+        if (PlacedBuildings.Length > 400 || PlacedBuildings.Any(b => !Enum.IsDefined(b.Kind) || b.Kind == BuildingKind.Keep || !OnMap(b.X, b.Y))) return "its buildings are out of range";
+        if (LockedBuildings.Any(k => !Enum.IsDefined(k)) || LockedUnits.Any(k => !Enum.IsDefined(k)) || LockedTechs.Length > 64 || LockedTechs.Any(t => t.Length > 40)) return "it locks things this build doesn't have";
+        if (Objectives.Length > 8 || Objectives.Any(o => !Enum.IsDefined(o.Kind) || o.Count is < 0 or > 1_000_000 || o.Day is < 0 or > 400)) return "its goals are out of range";
+        if (Triggers.Length > 64) return "it has too many events";
+        foreach (var t in Triggers)
+        {
+            if (t.Say.Length > 600 || t.Speaker.Length > 40) return "an event's message is too long";
+            if (t.Day is < 0 or > 400 || t.AfterGoal < -1 || t.AfterGoal >= Goals.Length) return "an event's timing is out of range";
+            if (t.SpawnCount is < 0 or > 5000 || !Enum.IsDefined(t.SpawnKind) || !Enum.IsDefined(t.SpawnSide)) return "an event's raid is out of range";
+            if (t.Give != null && Enum.GetValues<Resource>().Any(r => t.Give[r] is < 0 or > 1_000_000 || double.IsNaN(t.Give[r]))) return "an event's gift is out of range";
+        }
         if (Tiles.Length > 0)
         {
             Tile[]? tiles;

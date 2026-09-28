@@ -12,7 +12,10 @@ namespace Hellwall.Game;
 /// painted ground when a run starts, the same way as on a generated map.
 ///
 /// Tools: Paint (left-drag), Packs and Gates (click to place; placed gates
-/// replace the random ones), Erase (click a pack or gate). Right- or
+/// replace the random ones), Buildings (click to put one down, standing from
+/// the start), Keep (click to move it), Erase (click a pack, gate or
+/// building). The Mission panel on the right makes the map a mission: its
+/// own briefing, rules, goals and events (MissionPanel). Right- or
 /// middle-drag, WASD or the screen edges pan; the wheel zooms; [ and ] size
 /// the brush; 1-6 pick the tile; Ctrl+Z (Cmd+Z) undoes a stroke or placement.
 /// </summary>
@@ -34,13 +37,19 @@ public partial class MapEditor : Node2D
     Control _minimapHolder = null!;
     Overlay _overlay = null!;
 
-    enum Tool { Paint, Packs, Gates, Erase }
+    enum Tool { Paint, Packs, Gates, Erase, Buildings, Keep }
     Tool _tool = Tool.Paint;
     static readonly int[] PackSizes = [8, 20, 40, 80, 150];
     int _packSize = 40;
     DemonKind _packKind = DemonKind.Imp;
     readonly List<PlacedPack> _packs = new();
     readonly List<PlacedGate> _gates = new();
+    readonly List<PlacedBuilding> _placed = new();
+    /// <summary>Where the Keep stands (its centre tile): the middle unless moved.</summary>
+    (int X, int Y) _keep;
+    BuildingKind _placeKind = BuildingKind.House;
+    bool _placeTurned;
+    MissionPanel _mission = null!;
     CheckButton _randomPacks = null!;
     readonly List<Button> _toolButtons = new();
 
@@ -79,6 +88,10 @@ public partial class MapEditor : Node2D
         _packs.AddRange(def.PlacedPacks);
         _gates.Clear();
         _gates.AddRange(def.PlacedGates);
+        _placed.Clear();
+        _placed.AddRange(def.PlacedBuildings);
+        _keep = def.KeepX >= 0 ? (def.KeepX, def.KeepY) : (def.MapSize / 2, def.MapSize / 2);
+        _mission?.Load(def);
         if (_randomPacks != null) _randomPacks.ButtonPressed = def.Packs != 0;
         _terrain?.QueueFree();
         _sorted?.QueueFree();
@@ -89,7 +102,7 @@ public partial class MapEditor : Node2D
         _terrain = new TerrainView { World = _world, Sorted = _sorted, ZIndex = -2 };
         AddChild(_terrain);
         AddChild(_sorted);
-        _camera.Position = Iso.P(def.MapSize / 2f, def.MapSize / 2f);
+        _camera.Position = Iso.P(_keep.X + 0.5f, _keep.Y + 0.5f);
         _minimap = new Minimap { World = _world, Camera = _camera, MoveCamera = p => _camera.Position = p };
         _minimapHolder.AddChild(_minimap);
         _status.Text = $"{def.MapSize} x {def.MapSize}, from {(def.Tiles.Length > 0 ? $"'{def.Name}'" : $"{def.Map} seed {def.Seed}")}";
@@ -99,12 +112,13 @@ public partial class MapEditor : Node2D
     {
         var t = Iso.Tile(at);
         int cx = (int)t.X, cy = (int)t.Y, r = _brushSize, n = _world.Terrain.Width;
-        int c = n / 2, clear = Balance.KeepClearRadius;
+        var (kx, ky) = _keep;
+        int clear = Balance.KeepClearRadius;
         for (int y = cy - r; y <= cy + r; y++)
             for (int x = cx - r; x <= cx + r; x++)
             {
                 if (!_world.Terrain.InBounds(x, y) || (x - cx) * (x - cx) + (y - cy) * (y - cy) > r * r + r) continue;
-                if ((x - c) * (x - c) + (y - c) * (y - c) <= clear * clear) continue; // the Keep's clearing stays grass
+                if ((x - kx) * (x - kx) + (y - ky) * (y - ky) <= clear * clear) continue; // the Keep's clearing stays grass
                 if (_world.Terrain.Get(x, y) == _brush) continue;
                 _world.Terrain.Set(x, y, _brush);
                 _terrain!.PaintCell(x, y);
@@ -115,7 +129,7 @@ public partial class MapEditor : Node2D
     ScenarioDef Current()
     {
         string name = _name.Text.Trim().Length > 0 ? _name.Text.Trim() : "Untitled";
-        return new ScenarioDef
+        var map = new ScenarioDef
         {
             Id = MapFiles.IdFor(name),
             Name = name,
@@ -125,8 +139,12 @@ public partial class MapEditor : Node2D
             Tiles = ScenarioDef.EncodeTiles(_world.Terrain.Tiles),
             PlacedPacks = [.. _packs],
             PlacedGates = [.. _gates],
+            PlacedBuildings = [.. _placed],
+            KeepX = _keep == (_world.Terrain.Width / 2, _world.Terrain.Height / 2) ? -1 : _keep.X,
+            KeepY = _keep == (_world.Terrain.Width / 2, _world.Terrain.Height / 2) ? -1 : _keep.Y,
             Packs = _randomPacks.ButtonPressed ? -1 : 0,
         };
+        return _mission.Apply(map);
     }
 
     void Save()
@@ -198,8 +216,17 @@ public partial class MapEditor : Node2D
 
     // --- input ---
 
+    /// <summary>Typing in the mission panel (a briefing, a message, a number): keys are for the text, not the map.</summary>
+    bool Typing => GetViewport().GuiGetFocusOwner() is LineEdit or TextEdit;
+
     public override void _UnhandledInput(InputEvent @event)
     {
+        if (@event is InputEventKey k && Typing)
+        {
+            if (k.Pressed && k.Keycode == Key.Escape) GetViewport().GuiReleaseFocus(); // Esc leaves the field, not the editor
+            return;
+        }
+        if (@event is InputEventMouseButton { Pressed: true }) GetViewport().GuiReleaseFocus(); // a click on the map ends typing
         switch (@event)
         {
             case InputEventMouseButton { ButtonIndex: MouseButton.Left } mb:
@@ -235,18 +262,18 @@ public partial class MapEditor : Node2D
     }
 
     /// <summary>Undo: the map as it was before each stroke or placement, newest last (at most 40).</summary>
-    readonly List<(Tile[] Tiles, PlacedPack[] Packs, PlacedGate[] Gates)> _undo = new();
+    readonly List<(Tile[] Tiles, PlacedPack[] Packs, PlacedGate[] Gates, PlacedBuilding[] Buildings, (int, int) Keep)> _undo = new();
 
     void Remember()
     {
-        _undo.Add(((Tile[])_world.Terrain.Tiles.Clone(), [.. _packs], [.. _gates]));
+        _undo.Add(((Tile[])_world.Terrain.Tiles.Clone(), [.. _packs], [.. _gates], [.. _placed], _keep));
         if (_undo.Count > 40) _undo.RemoveAt(0);
     }
 
     void Undo()
     {
         if (_undo.Count == 0) { _status.Text = "Nothing to undo"; return; }
-        var (tiles, packs, gates) = _undo[^1];
+        var (tiles, packs, gates, buildings, keep) = _undo[^1];
         _undo.RemoveAt(_undo.Count - 1);
         var now = _world.Terrain.Tiles;
         int w = _world.Terrain.Width;
@@ -260,17 +287,20 @@ public partial class MapEditor : Node2D
         _packs.AddRange(packs);
         _gates.Clear();
         _gates.AddRange(gates);
+        _placed.Clear();
+        _placed.AddRange(buildings);
+        _keep = keep;
         _dirtyMap = true;
         _status.Text = $"Undone ({_undo.Count} more)";
     }
 
     void Click(Vector2 at)
     {
-        if (_tool != Tool.Erase || _packs.Count + _gates.Count > 0) Remember();
+        if (_tool != Tool.Erase || _packs.Count + _gates.Count + _placed.Count > 0) Remember();
         var t = Iso.Tile(at);
-        int x = (int)t.X, y = (int)t.Y, n = _world.Terrain.Width, c = n / 2;
+        int x = (int)t.X, y = (int)t.Y, n = _world.Terrain.Width;
         if (!_world.Terrain.InBounds(x, y)) return;
-        bool nearKeep = (x - c) * (x - c) + (y - c) * (y - c) < 20 * 20;
+        bool nearKeep = (x - _keep.X) * (x - _keep.X) + (y - _keep.Y) * (y - _keep.Y) < 20 * 20;
         switch (_tool)
         {
             case Tool.Paint: Paint(at); break;
@@ -284,13 +314,44 @@ public partial class MapEditor : Node2D
                 _gates.Add(new PlacedGate(Math.Clamp(x - 1, 0, n - Hellgate.Size), Math.Clamp(y - 1, 0, n - Hellgate.Size)));
                 _status.Text = $"{_gates.Count} Hellgates placed (placed gates replace the random ones)";
                 break;
+            case Tool.Buildings:
+            {
+                var (w, h) = Footprint(_placeKind, _placeTurned);
+                if (x + w > n || y + h > n) { _status.Text = "Off the edge of the map"; break; }
+                bool overlaps = _placed.Any(p => Overlap(p, x, y, w, h)) || Math.Abs(x + w / 2f - _keep.X - 0.5f) < (w + 3) / 2f && Math.Abs(y + h / 2f - _keep.Y - 0.5f) < (h + 3) / 2f;
+                if (overlaps) { _status.Text = "Something's already there"; break; }
+                bool ground = true;
+                for (int ty = y; ty < y + h && ground; ty++)
+                    for (int tx = x; tx < x + w && ground; tx++)
+                        ground = Terrain.IsBuildable(_world.Terrain.Get(tx, ty));
+                if (!ground) { _status.Text = "Not on that ground: buildings stand on grass (paint it first)"; break; }
+                _placed.Add(new PlacedBuilding(_placeKind, x, y, _placeTurned));
+                _status.Text = $"{_placed.Count} buildings standing from the start (finished, and free)";
+                break;
+            }
+            case Tool.Keep:
+                _keep = (Math.Clamp(x, 4, n - 5), Math.Clamp(y, 4, n - 5));
+                _placed.RemoveAll(p => Overlap(p, _keep.X - 2, _keep.Y - 2, 5, 5));
+                _status.Text = $"The Keep moved to {_keep.X}, {_keep.Y}: packs and gates keep 20 tiles away from it";
+                break;
             case Tool.Erase:
+                int building = _placed.FindIndex(p => Overlap(p, x, y, 1, 1));
+                if (building >= 0) { _placed.RemoveAt(building); break; }
                 int pack = _packs.FindIndex(p => (p.X - x) * (p.X - x) + (p.Y - y) * (p.Y - y) <= 16);
                 if (pack >= 0) { _packs.RemoveAt(pack); break; }
                 int gate = _gates.FindIndex(g => Math.Abs(g.X + 1 - x) <= 2 && Math.Abs(g.Y + 1 - y) <= 2);
                 if (gate >= 0) _gates.RemoveAt(gate);
                 break;
         }
+    }
+
+    (int W, int H) Footprint(BuildingKind kind, bool turned) => _world.Footprint(kind, turned);
+
+    /// <summary>Does a placed building cover any of this rectangle.</summary>
+    bool Overlap(PlacedBuilding p, int x, int y, int w, int h)
+    {
+        var (pw, ph) = Footprint(p.Kind, p.Turned);
+        return p.X < x + w && x < p.X + pw && p.Y < y + h && y < p.Y + ph;
     }
 
     /// <summary>
@@ -335,15 +396,40 @@ public partial class MapEditor : Node2D
         bool undone = _gates.Count == 0 && _packs.Count == 0 && _world.Terrain.Get(c + 40, c) == Tile.Water;
         Undo();
         bool dry = _world.Terrain.Get(c + 40, c) != Tile.Water;
-        bool pass = water && pack && gate && plays && shared && undone && dry;
-        GD.Print(pass ? "hellwall-selftest: PASS editor" : $"hellwall-selftest: FAIL editor (saved {saved != null}, water {water}, pack {pack}, gate {gate}, plays {plays}, export and import {shared}, undo {undone}, undo paint {dry})");
+        // A mission: its settings, a building standing from the start, the Keep moved; saved, read back, and played.
+        _mission.SelfTestFill();
+        _placeKind = BuildingKind.House;
+        SetTool((int)Tool.Buildings);
+        Click(Iso.P(c + 4.5f, c + 4.5f)); // the Keep's clearing: always grass
+        SetTool((int)Tool.Keep);
+        Click(Iso.P(c - 30.5f, c - 20.5f));
+        Save();
+        var mission = MapFiles.All().FirstOrDefault(m => m.Id == "selftest-map");
+        bool made = mission is { IsMission: true, Days: 12, Briefing: "Hold the ford." } && mission.Objectives.Length == 1 && mission.Triggers.Length == 1
+            && mission.Locks(BuildingKind.Bombard) && mission.PlacedBuildings.Length == 1 && mission.KeepX >= 0;
+        var run = mission == null ? null : World.Create((mission with { Id = "map-selftest" }).Options(Rules.Default));
+        bool missionPlays = run != null && run.Goals.Single().Kind == ObjectiveKind.Slay && run.Home == (mission!.KeepX, mission.KeepY)
+            && run.Buildings.Any(b => b.Kind == BuildingKind.House && b.Complete) && run.Scenario!.Triggers.Single().SpawnKind == DemonKind.Hound;
+        try { System.IO.File.Delete(System.IO.Path.Combine(MapFiles.Folder, "selftest-map.json")); } catch (System.IO.IOException) { }
+        bool pass = water && pack && gate && plays && shared && undone && dry && made && missionPlays;
+        GD.Print(pass ? "hellwall-selftest: PASS editor" : $"hellwall-selftest: FAIL editor (saved {saved != null}, water {water}, pack {pack}, gate {gate}, plays {plays}, export and import {shared}, undo {undone}, undo paint {dry}, mission saved {made}, mission plays {missionPlays})");
+        GetTree().Quit();
+    }
+
+    /// <summary>--editor --screenshot: the editor as it opens (the mission panel filled in, with mission-demo), saved, then quit.</summary>
+    public async void Screenshot(string path, bool missionDemo)
+    {
+        for (int i = 0; i < 5; i++) await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
+        if (missionDemo) _mission.SelfTestFill();
+        for (int i = 0; i < 20; i++) await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
+        GetViewport().GetTexture().GetImage().SavePng(path);
         GetTree().Quit();
     }
 
     void SetTool(int i)
     {
         _tool = (Tool)i;
-        for (int b = 0; b < _toolButtons.Count; b++) _toolButtons[b].AddThemeColorOverride("font_color", b == i ? UiKit.Gold : UiKit.Text);
+        foreach (var b in _toolButtons) b.AddThemeColorOverride("font_color", (int)b.GetMeta("tool") == i ? UiKit.Gold : UiKit.Text);
     }
 
     void Zoom(float factor)
@@ -355,10 +441,11 @@ public partial class MapEditor : Node2D
     public override void _Process(double delta)
     {
         var dir = Vector2.Zero;
-        if (Input.IsKeyPressed(Key.W) || Input.IsKeyPressed(Key.Up)) dir.Y -= 1;
-        if (Input.IsKeyPressed(Key.S) || Input.IsKeyPressed(Key.Down)) dir.Y += 1;
-        if (Input.IsKeyPressed(Key.A) || Input.IsKeyPressed(Key.Left)) dir.X -= 1;
-        if (Input.IsKeyPressed(Key.D) || Input.IsKeyPressed(Key.Right)) dir.X += 1;
+        // WASD is typing, not panning, while a text field has the keys.
+        if (!Typing && (Input.IsKeyPressed(Key.W) || Input.IsKeyPressed(Key.Up))) dir.Y -= 1;
+        if (!Typing && (Input.IsKeyPressed(Key.S) || Input.IsKeyPressed(Key.Down))) dir.Y += 1;
+        if (!Typing && (Input.IsKeyPressed(Key.A) || Input.IsKeyPressed(Key.Left))) dir.X -= 1;
+        if (!Typing && (Input.IsKeyPressed(Key.D) || Input.IsKeyPressed(Key.Right))) dir.X += 1;
         if (Main.EdgeScroll && GetViewport().GetVisibleRect().HasPoint(GetViewport().GetMousePosition()))
         {
             var m = GetViewport().GetMousePosition();
@@ -433,16 +520,30 @@ public partial class MapEditor : Node2D
         box.AddChild(_open);
         RefreshSaved();
 
-        var tools = new HBoxContainer();
-        foreach (var (name, i) in new[] { ("Paint", 0), ("Packs", 1), ("Gates", 2), ("Erase", 3) })
+        var tools = new GridContainer { Columns = 3 };
+        foreach (var (name, i) in new[] { ("Paint", 0), ("Packs", 1), ("Gates", 2), ("Buildings", 4), ("Keep", 5), ("Erase", 3) })
         {
             var b = UiKit.TextButton(name, 13);
             b.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
             b.Pressed += () => SetTool(i);
+            b.SetMeta("tool", i);
             tools.AddChild(b);
             _toolButtons.Add(b);
         }
         box.AddChild(tools);
+        // Buildings: what to put down (standing from the start, finished and free), and a gate's way round.
+        var buildRow = new HBoxContainer();
+        buildRow.AddChild(UiKit.Label("Building", 13, UiKit.Muted));
+        var buildKind = new OptionButton { SizeFlagsHorizontal = Control.SizeFlags.ExpandFill };
+        var kinds = Enum.GetValues<BuildingKind>().Where(k => k != BuildingKind.Keep).ToArray();
+        foreach (var k in kinds) buildKind.AddItem(k.ToString());
+        buildKind.Selected = Array.IndexOf(kinds, _placeKind);
+        buildKind.ItemSelected += i => { _placeKind = kinds[i]; SetTool((int)Tool.Buildings); };
+        buildRow.AddChild(buildKind);
+        var turned = new CheckButton { Text = "N-S", TooltipText = "Laid north to south (a gate)", FocusMode = Control.FocusModeEnum.None };
+        turned.Toggled += on => _placeTurned = on;
+        buildRow.AddChild(turned);
+        box.AddChild(buildRow);
         var packRow = new HBoxContainer();
         packRow.AddChild(UiKit.Label("Pack", 13, UiKit.Muted));
         var packSize = new OptionButton();
@@ -507,8 +608,17 @@ public partial class MapEditor : Node2D
         _status.AutowrapMode = TextServer.AutowrapMode.WordSmart;
         _status.CustomMinimumSize = new Vector2(280, 0);
         box.AddChild(_status);
-        box.AddChild(UiKit.Label("Packs, stragglers and Hellgates are placed on the painted ground when a run starts; pick days, waves and the rest in Skirmish.", 11, UiKit.Muted));
+        box.AddChild(UiKit.Label("Packs, stragglers and Hellgates are placed on the painted ground when a run starts. A plain map takes days, waves and the rest from Skirmish; a mission (the panel on the right) has its own.", 11, UiKit.Muted));
         foreach (var l in box.GetChildren().OfType<Label>().Where(l => l.Text.StartsWith("Packs"))) { l.AutowrapMode = TextServer.AutowrapMode.WordSmart; l.CustomMinimumSize = new Vector2(280, 0); }
+
+        // The mission settings, down the right-hand side.
+        _mission = new MissionPanel();
+        _mission.SetAnchorsPreset(Control.LayoutPreset.RightWide);
+        _mission.OffsetLeft = -MissionPanel.Width - 16;
+        _mission.OffsetRight = -8;
+        _mission.OffsetTop = 8;
+        _mission.OffsetBottom = -8;
+        layer.AddChild(_mission);
 
         _minimapHolder = new Control { Position = new Vector2(8, 0) };
         layer.AddChild(_minimapHolder);
@@ -559,9 +669,23 @@ public partial class MapEditor : Node2D
             if (e._world == null) return;
             var t = Iso.Tile(GetGlobalMousePosition());
             Iso.Ellipse(this, new Vector2((int)t.X + 0.5f, (int)t.Y + 0.5f), e._brushSize + 0.6f, new Color(1, 1, 1, 0.8f), 2);
-            int c = e._world.Terrain.Width / 2;
-            Iso.Ellipse(this, new Vector2(c + 0.5f, c + 0.5f), Balance.KeepClearRadius, new Color(0.94f, 0.76f, 0.36f, 0.6f), 2);
+            var (kx, ky) = e._keep;
+            Iso.Ellipse(this, new Vector2(kx + 0.5f, ky + 0.5f), Balance.KeepClearRadius, new Color(0.94f, 0.76f, 0.36f, 0.6f), 2);
             var font = ThemeDB.FallbackFont;
+            // The Keep, and the buildings standing from the start: their footprints, named.
+            DrawColoredPolygon(Iso.Diamond(kx - 1, ky - 1, 3, 3), new Color(0.94f, 0.76f, 0.36f, 0.8f));
+            DrawString(font, Iso.P(kx + 0.5f, ky + 0.5f) + new Vector2(-22, 6), "Keep", fontSize: 18, modulate: Colors.Black);
+            foreach (var p in e._placed)
+            {
+                var (w, h) = e.Footprint(p.Kind, p.Turned);
+                DrawColoredPolygon(Iso.Diamond(p.X, p.Y, w, h), new Color(0.45f, 0.7f, 1f, 0.6f));
+                DrawString(font, Iso.P(p.X + w / 2f, p.Y + h / 2f) + new Vector2(-30, 5), p.Kind.ToString(), fontSize: 13, modulate: Colors.White);
+            }
+            if (e._tool == Tool.Buildings)
+            {
+                var (w, h) = e.Footprint(e._placeKind, e._placeTurned);
+                DrawColoredPolygon(Iso.Diamond((int)t.X, (int)t.Y, w, h), new Color(0.45f, 0.7f, 1f, 0.3f));
+            }
             foreach (var p in e._packs)
             {
                 var at = new Vector2(p.X + 0.5f, p.Y + 0.5f);

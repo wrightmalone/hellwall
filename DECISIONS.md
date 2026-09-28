@@ -1354,6 +1354,50 @@ last lost by at least one).
 - **Only the campaign's own missions** have bonus goals (a copy doesn't). Retrying a
   mission keeps the relics it began with.
 
+## Mission-making in the map editor (your call: missions on top of the editor)
+
+- **The Mission panel** on the editor's right makes a hand-made map a mission. It plays by
+  its own settings, not Skirmish's:
+  - a briefing, read out as it begins;
+  - difficulty, days, wave and Convergence size, and how many random Hellgates, ruins
+    and stragglers;
+  - fog and living woods;
+  - which sides waves come from, and a starting stock of its own;
+  - what's not available in it.
+- **Goals:** survive, close gates, grow to N colonists, slay N, or loot N ruins, each with
+  an optional deadline ("by day").
+- **Events** fire on a day, or once a goal is done. Each can have:
+  - a message from any of the campaign's speakers (with their portraits);
+  - a raid: how many, what kind, from which side, told 45 seconds ahead as the campaign's
+    are;
+  - a gift of gold, wood, stone and food.
+  - These are the same goals and events the campaign missions use, so a hand-made
+    mission works just like one.
+- **New tools, for any hand-made map:**
+  - **Buildings** puts one down, standing from the start, finished and free. Only on
+    grass, and "N-S" lays a gate north to south.
+  - **Keep** moves the Keep.
+  - **Erase** removes buildings too.
+  - Undo covers both tools.
+- **The Keep anywhere:** the world has a `Home`, the Keep's tile. Packs, strays, Hellgates
+  and ruins keep their distance from it, not from the map's middle. The fog's first
+  reveal and the camera start there too. An unmoved Keep is exactly as before.
+- **Playing one:** Skirmish lists a mission as "Mission: name". It shows its briefing and
+  goals, and plays as its maker set it: the Skirmish settings don't apply. "Save and play"
+  in the editor does the same.
+- **Sharing:** export and import already carry the whole map, so a mission shares the same
+  way. An imported mission is checked for sane values: goals, events, raids, gifts,
+  buildings, and a Keep on the map. A doctored file is turned away.
+- **Typing in the panel** doesn't pan the map, and Esc leaves the text field, not the
+  editor. A click on the map ends typing.
+- **Tests:**
+  - five sim tests: the Keep's place, buildings standing, goals and events playing, a
+    doctored mission refused, and a save of it all;
+  - the editor self-test now also makes a mission through the editor's own code (panel,
+    building, Keep), saves it, reads it back and starts it.
+  - `--editor --mission-demo --screenshot=path` takes a picture of the editor with the
+    panel filled in.
+
 ## Buildings from KayKit Medieval Hexagon (you downloaded it and the Medieval Village MegaKit)
 
 - **Every building but walls and gates is now a baked KayKit model** (`tools/bake_buildings.gd`,

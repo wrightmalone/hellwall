@@ -143,6 +143,8 @@ public partial class Main : Node2D
         {
             OpenEditor();
             if (o.GetValueOrDefault("selftest") == "editor") GetChildren().OfType<MapEditor>().Last().CallDeferred(nameof(MapEditor.SelfTest));
+            // --editor --screenshot=path [--mission-demo]: a picture of the editor (with its mission panel filled in).
+            else if (o.TryGetValue("screenshot", out var editorShot)) GetChildren().OfType<MapEditor>().Last().Screenshot(editorShot, o.ContainsKey("mission-demo"));
         }
         else if ((flagged || DisplayServer.GetName() == "headless") && !o.ContainsKey("menu") && !_menuNext) Begin(setup);
         else ShowMenu(setup);
@@ -211,7 +213,7 @@ public partial class Main : Node2D
         AddChild(new MapEditor
         {
             Back = () => ShowMenu(new GameSetup(11, MapKind.Plains, Difficulty.Normal, false)),
-            Play = map => Play(new GameSetup(map.Seed, map.Map, Difficulty.Normal, false, map with { Id = "map-" + map.Id })),
+            Play = map => Play(new GameSetup(map.Seed, map.Map, map.IsMission ? map.Difficulty : Difficulty.Normal, false, map with { Id = "map-" + map.Id })),
         });
     }
 
@@ -264,7 +266,7 @@ public partial class Main : Node2D
         AddChild(_tint);
         TheMusic.World = _world;
 
-        _camera = new Camera2D { Position = Iso.P(_world.Terrain.Width / 2f, _world.Terrain.Height / 2f), Zoom = Vector2.One * 1.1f / Display.UiScale };
+        _camera = new Camera2D { Position = Iso.P(_world.Home.X, _world.Home.Y), Zoom = Vector2.One * 1.1f / Display.UiScale };
         if (options.GetValueOrDefault("look") == "ruin" && _world.Ruins.Count > 0) _camera.Position = Iso.P(_world.Ruins[0].X, _world.Ruins[0].Y);
         else if (options.TryGetValue("look", out var look) && look.Split(',') is [var lx, var ly, ..] parts)
         {
