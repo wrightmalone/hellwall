@@ -1490,6 +1490,27 @@ last lost by at least one).
 - **Still to do for Macs:** Apple-silicon Macs get Steam once Steamworks.NET is built from
   its source as any-CPU. That needs its source downloaded.
 
+## Saves laid out for Steam Cloud (step 3 of the Steam plan)
+
+- **Where saves live now:**
+  - Named saves (the quicksave, slots 1-3) are in `saves/`, which Steam Cloud syncs.
+  - The five-slot autosave rotation is in `autosaves/`, which it doesn't: five full saves on
+    every machine would eat the quota for nothing.
+- **The newest autosave still travels:** at each autosave, it's copied to
+  `saves/autosave-latest.hwsave`.
+  - The Load page shows that copy as "Autosave (another computer's)" only when it's newer
+    than all of this machine's own, meaning another PC made it.
+  - "Continue" and the pause menu's autosave take the newest either way.
+- **Saves from 0.31 and earlier,** loose in the folder, are moved into place on first
+  launch, never over one already there. The migration self-test checks this too.
+- **Tested:** a real run with an autosave every 2 seconds filled the rotation, and kept the
+  synced copy up to date.
+- **What's left is yours:** the Steamworks settings, which are exact in
+  docs/plans/steam.md. That's the quota, the five Auto-Cloud paths, and the Mac and Linux
+  root overrides.
+  - One choice to make there: syncing `settings.cfg` also carries UI scale and
+    fullscreen between machines. Leave it out if you'd rather not.
+
 ## Buildings from KayKit Medieval Hexagon (you downloaded it and the Medieval Village MegaKit)
 
 - **Every building but walls and gates is now a baked KayKit model** (`tools/bake_buildings.gd`,

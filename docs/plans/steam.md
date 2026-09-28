@@ -56,16 +56,47 @@ Hellwall ships on Steam only for now. This plan covers what each part needs, and
 
 ## Cloud saves
 
-- **Steam Auto-Cloud: no code.** **[you]** In Steamworks, list the folders to sync under the save folder.
-  - `saves/`: the four save slots, and the latest autosave only. Five full autosaves would eat the quota for little gain.
-  - `campaign.cfg`: missions won, relics hallowed, the last loadout.
-  - `settings.cfg` and `scores.cfg`.
-  - `maps/`: hand-made maps and missions.
-  - Not synced: `logs/`, `crashes/`, `diagnostics.log`, the shader cache.
-- **Autosaves:** they rotate through five slots today. They'd write to a folder of their own, so only the newest can be synced.
-- **Conflicts:** two machines played offline are Steam's to settle, and it asks the player which to keep. Nothing is needed from us.
-- **Quota:** a save is a few hundred KB, so ask for 50 MB and 500 files. That's plenty.
-- **Later, if needed:** Steam Remote Storage (the API) gives more control, but Auto-Cloud covers this game.
+The code side is done in 0.32.0. What's left is **[you]**: Steamworks settings, with no code.
+
+**How the save folder is laid out now:**
+
+| Path (under the save folder) | What | Synced |
+|---|---|---|
+| `saves/quicksave.hwsave`, `saves/slot1-3.hwsave` (+ `.txt`) | the quicksave and the three named slots | yes |
+| `saves/autosave-latest.hwsave` (+ `.txt`) | a copy of the newest autosave, rewritten at every autosave | yes |
+| `autosaves/autosave1-5.hwsave` (+ `.txt`) | the five-slot rotation | no: it stays on each machine |
+| `campaign.cfg` | missions won, relics hallowed, the last loadout | yes |
+| `scores.cfg` | best scores | yes |
+| `settings.cfg` | settings | yes (but see below) |
+| `maps/*.json` | hand-made maps and missions | yes |
+| `logs/`, `crashes/`, `diagnostics.log`, `session.txt`, caches | for debugging | no |
+
+- **Existing saves:** saves loose in the folder, from 0.31 and earlier, are moved into `saves/` and `autosaves/` on first launch.
+- **The Load page:** it lists the synced autosave as "Autosave (another computer's)" only when it's newer than all of this machine's own. That's how an autosave made on the other PC shows up. "Continue" takes whichever save is newest.
+- **Settings:** syncing `settings.cfg` also carries UI scale, minimap size and fullscreen between machines. That's awkward between a laptop and a big monitor. Leave it out of the list below if you'd rather keep those per machine.
+
+**[you] In Steamworks: App Admin, then Steam Cloud:**
+
+1. **Byte quota per user:** 50 MB. **Number of files allowed per user:** 500. A save is about 220 KB, so this is generous.
+2. **Enable Auto-Cloud**, and add these **Root paths**, all with **OS: Windows**:
+
+| Root | Subdirectory | Pattern | Recursive |
+|---|---|---|---|
+| WinAppDataRoaming | `Hellwall/saves` | `*` | no |
+| WinAppDataRoaming | `Hellwall` | `campaign.cfg` | no |
+| WinAppDataRoaming | `Hellwall` | `scores.cfg` | no |
+| WinAppDataRoaming | `Hellwall` | `settings.cfg` | no |
+| WinAppDataRoaming | `Hellwall/maps` | `*.json` | no |
+
+3. **Root overrides**, so Macs and Linux sync to the same cloud files:
+   - Original root WinAppDataRoaming, OS **macOS**, new root **MacAppSupport**.
+   - Original root WinAppDataRoaming, OS **Linux**, new root **LinuxXdgDataHome**.
+
+   Leave "add/replace path" empty; the subdirectories are the same on every OS.
+4. **Save, then publish** the change in Steamworks.
+5. **Test:** play a few minutes on one PC through Steam, quit, then launch on another PC. The campaign progress should be there, and the Load page should offer "Autosave (another computer's)".
+
+**Conflicts:** two machines played offline are Steam's to settle. It asks the player which to keep, so nothing is needed from us.
 
 ## Sharing maps, the way Creeper World 3 did
 
@@ -96,7 +127,7 @@ CW3 worked because sharing lived inside the game: browse, search, sort by rating
 
 1. **The save folder moves, with migration.** Done in 0.30.0 (`game/SaveFolder.cs`).
 2. **The Steam module and Steamworks.NET in the build.** Done in 0.31.0 (`game/Steam.cs`, `game/lib/steamworks/`). Apple-silicon Macs go without Steam for now: Steamworks.NET's standalone build is x64 only, so it needs building from its source as any-CPU to reach them.
-3. **Cloud saves:** autosaves in a folder of their own, then **[you]** set up Auto-Cloud.
+3. **Cloud saves:** the code side done in 0.32.0 (the save folder laid out for syncing). **[you]** Set up Auto-Cloud, as above.
 4. **Achievements:** the module, data and headless check first. Then **[you]** add the list, icons and stats in Steamworks. Icons need art: placeholders first.
 5. **Workshop publishing** from the editor, with previews and tags.
 6. **The in-game browser.**

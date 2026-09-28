@@ -244,11 +244,14 @@ public partial class NewGameMenu : CanvasLayer
         var page = Page();
         page.AddChild(UiKit.Label("Load game", 22, UiKit.Gold));
         bool any = false;
-        foreach (int slot in new[] { 0, 1, 2, 3 }.Concat(Main.AutosaveSlots))
+        // The synced copy of the newest autosave is listed only when it's newer than all of this machine's (another machine made it).
+        DateTime Written(int s) => System.IO.File.Exists(Main.SlotPath(s)) ? System.IO.File.GetLastWriteTime(Main.SlotPath(s)) : DateTime.MinValue;
+        bool fromElsewhere = Written(Main.LatestAutosave) > Main.AutosaveSlots.Max(Written).AddSeconds(2);
+        foreach (int slot in new[] { 0, 1, 2, 3 }.Concat(fromElsewhere ? [Main.LatestAutosave] : []).Concat(Main.AutosaveSlots))
         {
             if (Main.SlotSummary(slot) is not { } what) continue;
             any = true;
-            string name = slot == 0 ? "Quicksave" : slot <= 3 ? $"Slot {slot}" : "Autosave";
+            string name = slot == 0 ? "Quicksave" : slot <= 3 ? $"Slot {slot}" : slot == Main.LatestAutosave ? "Autosave (another computer's)" : "Autosave";
             string when = System.IO.File.GetLastWriteTime(Main.SlotPath(slot)).ToString("ddd d MMM, HH:mm");
             var row = new HBoxContainer();
             row.AddThemeConstantOverride("separation", 10);

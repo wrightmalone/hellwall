@@ -11,7 +11,8 @@ namespace Hellwall.Game;
 /// Builds up to 0.29 kept everything in Godot's app_userdata\Hellwall: the first launch of a newer
 /// build copies it across once (saves, campaign, settings, scores, maps, crash reports), never over
 /// anything already in the new folder, and leaves the old one as it was, as a backup. Logs and
-/// Godot's caches aren't copied: they rebuild themselves.
+/// Godot's caches aren't copied: they rebuild themselves. Then saves loose in it (up to 0.31) are
+/// moved into saves/ and autosaves/ (Tidy), where Steam Cloud syncs the one and not the other.
 /// </summary>
 public static class SaveFolder
 {
@@ -25,7 +26,37 @@ public static class SaveFolder
     public static string OldFolder => System.IO.Path.Combine(OS.GetDataDir(), "Godot", "app_userdata", "Hellwall");
 
     /// <summary>First thing at startup, before anything reads a setting or a save.</summary>
-    public static void Migrate() => Migrated = Migrate(OldFolder, OS.GetUserDataDir());
+    public static void Migrate()
+    {
+        Migrated = Migrate(OldFolder, OS.GetUserDataDir());
+        if (Tidy(OS.GetUserDataDir()) is { } tidied) Migrated = Migrated == null ? tidied : Migrated + "; " + tidied;
+    }
+
+    /// <summary>
+    /// Saves from builds up to 0.31 sat loose in the folder: into saves/ (synced by Steam Cloud) and
+    /// autosaves/ (not) they go, where Main.SlotPath now looks. Never over one already there.
+    /// </summary>
+    public static string? Tidy(string dir)
+    {
+        var moves = new List<(string From, string To)> { ("quicksave.hwsave", "saves/quicksave.hwsave") };
+        foreach (int n in new[] { 1, 2, 3, 9 }) moves.Add(($"slot{n}.hwsave", $"saves/slot{n}.hwsave"));
+        for (int n = 1; n <= 5; n++) moves.Add(($"slot{10 + n}.hwsave", $"autosaves/autosave{n}.hwsave"));
+        int moved = 0;
+        try
+        {
+            foreach (var (from, to) in moves)
+                foreach (var ext in new[] { "", ".txt" })
+                {
+                    string src = System.IO.Path.Combine(dir, from + ext), dst = System.IO.Path.Combine(dir, to + ext);
+                    if (!System.IO.File.Exists(src) || System.IO.File.Exists(dst)) continue;
+                    System.IO.Directory.CreateDirectory(System.IO.Path.GetDirectoryName(dst)!);
+                    System.IO.File.Move(src, dst);
+                    if (ext == "") moved++;
+                }
+        }
+        catch (Exception e) { return $"couldn't move the saves into their folders ({e.Message})"; }
+        return moved > 0 ? $"{moved} saves moved into saves/ and autosaves/" : null;
+    }
 
     /// <summary>Copy an old folder's contents into a new one, once (a marker says it's done). Returns what was done, or null.</summary>
     public static string? Migrate(string oldDir, string newDir)
@@ -90,8 +121,17 @@ public static class SaveFolder
             // Once only: a second launch, even with the old folder changed since, leaves the new one alone.
             Write(oldDir, "campaign.cfg", "changed later");
             bool once = Migrate(oldDir, newDir) == null && Read("campaign.cfg") == "old campaign";
-            bool pass = first && copied && skipped && kept && backup && once;
-            GD.Print(pass ? "hellwall-selftest: PASS migrate" : $"hellwall-selftest: FAIL migrate (first {first}, copied {copied}, logs skipped {skipped}, new kept {kept}, old left {backup}, once {once})");
+            // Saves loose in the folder (up to 0.31) go into saves/ and autosaves/, never over one there.
+            Write(newDir, "quicksave.hwsave", "quick");
+            Write(newDir, "slot12.hwsave", "auto 2");
+            Write(newDir, "slot12.hwsave.txt", "auto 2 summary");
+            Write(newDir, "slot2.hwsave", "loose two");
+            Write(newDir, "saves/slot2.hwsave", "already there");
+            Tidy(newDir);
+            bool tidied = Read("saves/quicksave.hwsave") == "quick" && Read("autosaves/autosave2.hwsave") == "auto 2" && Read("autosaves/autosave2.hwsave.txt") == "auto 2 summary"
+                && Read("saves/slot2.hwsave") == "already there" && Read("quicksave.hwsave") == "";
+            bool pass = first && copied && skipped && kept && backup && once && tidied;
+            GD.Print(pass ? "hellwall-selftest: PASS migrate" : $"hellwall-selftest: FAIL migrate (first {first}, copied {copied}, logs skipped {skipped}, new kept {kept}, old left {backup}, once {once}, saves into folders {tidied})");
             return pass;
         }
         finally

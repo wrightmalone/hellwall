@@ -51,7 +51,6 @@ public partial class Main : Node2D
     /// <summary>Trees, buildings and soldiers, drawn back to front.</summary>
     Node2D? _sorted;
     readonly ClientState _state = new();
-    static readonly string SavePath = ProjectSettings.GlobalizePath("user://quicksave.hwsave");
     /// <summary>Barracks train keys, in the order of its Trains list.</summary>
     static readonly double[] Speeds = [1, 2, 4];
     int _speed;
@@ -1069,8 +1068,22 @@ public partial class Main : Node2D
         return MathF.Abs(p.X - _camera.Position.X) < half.X && MathF.Abs(p.Y - _camera.Position.Y) < half.Y;
     }
 
-    /// <summary>Slot 0 is the quicksave (F5/F9); 1-3 are the pause menu's named slots.</summary>
-    public static string SlotPath(int slot) => slot == 0 ? SavePath : ProjectSettings.GlobalizePath($"user://slot{slot}.hwsave");
+    /// <summary>
+    /// Slot 0 is the quicksave (F5/F9); 1-3 are the pause menu's named slots (9 the self-test's); 10 is
+    /// a copy of the newest autosave: all in saves/, which Steam Cloud syncs. 11-15 are the autosaves'
+    /// rotation, in autosaves/, which it doesn't: five full saves a machine would eat the quota, and
+    /// the newest reaches the others as slot 10 (docs/plans/steam.md).
+    /// </summary>
+    public static string SlotPath(int slot) => ProjectSettings.GlobalizePath(slot switch
+    {
+        0 => "user://saves/quicksave.hwsave",
+        LatestAutosave => "user://saves/autosave-latest.hwsave",
+        >= 11 => $"user://autosaves/autosave{slot - 10}.hwsave",
+        _ => $"user://saves/slot{slot}.hwsave",
+    });
+
+    /// <summary>The newest autosave's copy in saves/ (synced), whichever machine made it.</summary>
+    public const int LatestAutosave = 10;
 
     /// <summary>What a slot holds, in a line: written beside the save so the menu needn't load it to say.</summary>
     public static string? SlotSummary(int slot)
@@ -1087,8 +1100,8 @@ public partial class Main : Node2D
     public static bool Autosave => Settings.Get("autosave", true);
     const double AutosaveSeconds = 300;
 
-    /// <summary>The newest autosave's slot, if any.</summary>
-    public static int? NewestAutosave() => AutosaveSlots.Where(s => System.IO.File.Exists(SlotPath(s)))
+    /// <summary>The newest autosave's slot, if any: one of this machine's, or the synced copy if that's newer (another machine's).</summary>
+    public static int? NewestAutosave() => AutosaveSlots.Append(LatestAutosave).Where(s => System.IO.File.Exists(SlotPath(s)))
         .OrderByDescending(s => System.IO.File.GetLastWriteTime(SlotPath(s))).Select(s => (int?)s).FirstOrDefault();
 
     int _lastAutosaveTick;
@@ -1102,10 +1115,13 @@ public partial class Main : Node2D
         _lastAutosaveTick = _world.Tick;
         int slot = AutosaveSlots.OrderBy(s => System.IO.File.Exists(SlotPath(s)) ? System.IO.File.GetLastWriteTime(SlotPath(s)) : DateTime.MinValue).First();
         SaveTo(slot, quiet: true);
+        // And the copy Steam Cloud carries to the player's other machines.
+        foreach (var ext in new[] { "", ".txt" }) System.IO.File.Copy(SlotPath(slot) + ext, SlotPath(LatestAutosave) + ext, overwrite: true);
+        System.IO.File.SetLastWriteTime(SlotPath(LatestAutosave), System.IO.File.GetLastWriteTime(SlotPath(slot)));
         _state.Say($"Autosaved (day {_world.Day})");
     }
 
-    public static int? NewestSlot() => Enumerable.Range(0, 4).Concat(AutosaveSlots).Where(s => System.IO.File.Exists(SlotPath(s)))
+    public static int? NewestSlot() => Enumerable.Range(0, 4).Concat(AutosaveSlots).Append(LatestAutosave).Where(s => System.IO.File.Exists(SlotPath(s)))
         .OrderByDescending(s => System.IO.File.GetLastWriteTime(SlotPath(s))).Select(s => (int?)s).FirstOrDefault();
 
     void QuickSave() => SaveTo(0);
@@ -1117,6 +1133,7 @@ public partial class Main : Node2D
     void SaveTo(int slot, bool quiet = false)
     {
         _world.FlushCommands();
+        System.IO.Directory.CreateDirectory(System.IO.Path.GetDirectoryName(SlotPath(slot))!);
         System.IO.File.WriteAllBytes(SlotPath(slot), _world.Save());
         string mode = _world.Scenario?.Name ?? (_world.Survival is { Endless: true } ? "Endless" : "Survival");
         System.IO.File.WriteAllText(SlotPath(slot) + ".txt", $"{mode} · {_world.Map} · {_world.Rules.Difficulty} · day {_world.Day}");
