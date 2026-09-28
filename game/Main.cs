@@ -326,6 +326,7 @@ public partial class Main : Node2D
                 _state.Farmers.Step(_world, (float)TickSeconds);
                 _state.Fishers.Step(_world, (float)TickSeconds);
                 _state.Hunters.Step(_world, (float)TickSeconds);
+                _state.Commuters.Step(_world, (float)TickSeconds);
                 var events = _world.DrainEvents();
                 _bot?.See(events);
                 foreach (var e in events)
@@ -639,7 +640,7 @@ public partial class Main : Node2D
         _state.HoveredTile = _hoverOverride ?? Iso.TileAt(_state.MouseWorld);
 
         _horde.Sync(_world, _state.Alpha, delta);
-        if (!_paused) { _state.Farmers.Step(_world, (float)delta); _state.Fishers.Step(_world, (float)delta); _state.Hunters.Step(_world, (float)delta); }
+        if (!_paused) { _state.Farmers.Step(_world, (float)delta); _state.Fishers.Step(_world, (float)delta); _state.Hunters.Step(_world, (float)delta); _state.Commuters.Step(_world, (float)delta); }
         if (_pendingGroup is { } pending) { _pendingGroup = null; SelectGroupForScreenshot(pending); }
         _view.Refresh();
         PanCamera(delta);

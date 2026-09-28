@@ -60,6 +60,7 @@ public sealed class ClientState
 
     /// <summary>The Hunters' crews (for the eye only).</summary>
     public readonly Hunters Hunters = new();
+    public readonly Commuters Commuters = new();
 
     /// <summary>The Fisheries' boats (for the eye only).</summary>
     public readonly Fishers Fishers = new();

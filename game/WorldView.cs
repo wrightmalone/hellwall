@@ -151,6 +151,9 @@ public partial class WorldView : Node2D
             Figure(seen, step, h.Id, sheet, Art.UnitScale * 0.8f, h.X, h.Y, h.PrevX, h.PrevY,
                 shooting ? new Vector2(h.Tree % w + 0.5f - h.X, h.Tree / w + 0.5f - h.Y) : null, ticked: false);
         }
+        // The town going to work: acolytes, scholars, drill-masters and labourers, between home and work (Commuters).
+        foreach (var c in State.Commuters.Walking)
+            Figure(seen, step, c.Id, c.Sheet, Art.UnitScale * 0.8f, c.X, c.Y, c.PrevX, c.PrevY, null, ticked: false);
         // Fishing boats: always rocking (their "walk" is the swell), facing the way they last sailed.
         foreach (var boat in State.Fishers.All)
         {

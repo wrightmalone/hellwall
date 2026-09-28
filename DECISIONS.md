@@ -1398,6 +1398,35 @@ last lost by at least one).
   - `--editor --mission-demo --screenshot=path` takes a picture of the editor with the
     panel filled in.
 
+## The town going to work (your ask: citizens between houses and the Shrine, scholars to the Scriptorium)
+
+- **What they are:** figures for the eye only (`Commuters`), like the farmers and hunters:
+  - acolytes (ivory) walk between their homes and the Shrine;
+  - scholars (deep blue) to the Scriptorium;
+  - drill-masters (iron grey) to the Barracks;
+  - labourers (ash brown) to anything else with a crew no other system shows. Today that's
+    the Silver Mine, and the Woodcutter, Quarry and Mine when living woods or mining is off.
+- **New buildings:** a new kind of building with a crew gets labourers without any work.
+  `Commuters.Trade` is the one place to give it a trade of its own.
+- **How they behave:**
+  - Up to three people per workplace, and 150 in the whole town at most.
+  - Each lives in one of the six nearest houses, or the Keep if there's none within 45
+    tiles.
+  - They walk out, go in for a while, and walk home. They only go out while the building
+    is staffed and not on hold. When its crew flee from demons, they turn back and hurry
+    home.
+- **Paths:**
+  - They take real paths, cheapest-first over open ground.
+  - Walls are never crossed, and gates are the only way through them.
+  - In a town packed so tight that a building has no open ground beside it, they may
+    squeeze through other buildings' ground at a high cost, so nobody's shut in. (The
+    bot's towns are like that; the sim doesn't need gaps, since colonists never walked.)
+- **Visibility:** in the bot's very dense test town, two to four of its fourteen are out at
+  any moment. Buildings hide a good share of them there. An ordinary town shows more.
+- **Unchanged:** the sim. Their work is the building's rate, as always, and nothing is saved.
+- **Art:** four new sheets, baked from the Cleric, Wizard, Warrior and Rogue models with
+  their own tints (`unit-town-*`; bake with `-- unit-town`).
+
 ## Buildings from KayKit Medieval Hexagon (you downloaded it and the Medieval Village MegaKit)
 
 - **Every building but walls and gates is now a baked KayKit model** (`tools/bake_buildings.gd`,
