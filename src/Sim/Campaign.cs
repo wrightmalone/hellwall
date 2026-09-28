@@ -135,6 +135,9 @@ public sealed record ScenarioDef
     /// <summary>Hand-placed Hellgates: when there are any, they're the map's gates and none are placed at random.</summary>
     public PlacedGate[] PlacedGates { get; init; } = [];
 
+    /// <summary>Its Steam Workshop item, once published (0: never): publishing again updates that item.</summary>
+    public ulong WorkshopId { get; init; }
+
     /// <summary>A hand-made map made a mission: it plays by its own settings, goals and events, not Skirmish's.</summary>
     public bool IsMission { get; init; }
     /// <summary>Where the Keep stands (its centre tile; -1: the middle of the map).</summary>

@@ -1555,6 +1555,38 @@ last lost by at least one).
 - **What's yours:** in Steamworks, the stat, the 38 achievements and their icons (placeholders
   to start), then publish. docs/plans/steam.md has the steps.
 
+## Publishing to the Workshop (step 5 of the Steam plan)
+
+- **Publish...** in the map editor puts the map on the Steam Workshop.
+  - It asks for a change note, and says what will be sent.
+  - It saves the map, stages it (`map.json`, the folder the item carries), and draws a
+    512 px preview from its tiles, with the Keep, Hellgates, packs and standing buildings
+    marked.
+  - It creates the item the first time, then sets the title, description (the briefing),
+    tags (mission or map, the kind of map, size, a mission's difficulty), content and
+    preview, and uploads.
+- **Progress and follow-up:**
+  - the editor's status line shows the progress ("Uploading the map: 40%");
+  - the item's id goes back into the map file (`WorkshopId`), so publishing again updates
+    it;
+  - a published mission earns Author;
+  - if Steam says the Workshop legal agreement is needed, the overlay opens it.
+- **Checked first:** a map the game would refuse to load can't be published.
+- **Without Steam** (a playtest zip, a dev run), the button explains that Steam is needed,
+  and that Export... makes a file to send instead.
+- **A trap found on the way:** static fields of Steamworks' types on `Workshop` made .NET
+  load Steamworks.NET whenever anything touched the class. On this Mac (Apple silicon,
+  which can't load it) the editor threw every frame, and its self-test never finished.
+  Those fields now live in a nested class that's only loaded by an actual publish.
+  - The rule, for everything Steam from here on: no Steamworks types in any field or
+    signature that the game touches without Steam.
+- **Tested:** the editor's self-test stages a mission and checks it. The staged map reads
+  back as the same mission, the game would load it, and the preview is 512 px and under
+  1 MB. The Windows build compiles it all.
+  - The upload itself can't be tested here: it needs a Steam client and the App ID.
+- **What's yours:** turn the Workshop on in Steamworks, and add the tags
+  (docs/plans/steam.md).
+
 ## Buildings from KayKit Medieval Hexagon (you downloaded it and the Medieval Village MegaKit)
 
 - **Every building but walls and gates is now a baked KayKit model** (`tools/bake_buildings.gd`,

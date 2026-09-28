@@ -141,6 +141,24 @@ The code side is done in 0.32.0. What's left is **[you]**: Steamworks settings, 
 
 CW3 worked because sharing lived inside the game: browse, search, sort by rating or plays, one click to play, a score to beat, and marks for what you've played and beaten. We'd build that same experience on the Steam Workshop, which already handles hosting, downloads, voting, tags and moderation.
 
+**Publishing is built (0.34.0):** `game/Workshop.cs`, and **Publish...** in the editor.
+- **What it sends:**
+  - the map, staged as `map.json` in `user://workshop/<id>/content`;
+  - a 512 px preview drawn from its tiles, with the Keep, Hellgates, packs and standing buildings marked;
+  - its name, its briefing as the description, a change note, and its tags.
+- **Updates:** the Workshop item's id is written into the map file, so publishing again updates the same item.
+- **Author:** a published mission earns it.
+- **Without Steam:** the button says Steam is needed. Export... still makes a file to send.
+- **Not yet tested against Steam:** no Steam client can run here, and it needs the App ID. Staging and the preview are tested in the editor's self-test.
+- **[you] In Steamworks:**
+  - turn on the Workshop (App Admin, then Workshop, then "Enable ISteamUGC for file transfer");
+  - set the item visibility you want;
+  - add the tags `Mission`, `Map`, each map kind, `128`, `192`, `256`, `320` and each difficulty, so the browser can filter;
+  - publish the change;
+  - you'll also accept the Workshop legal agreement once, and the game opens it if Steam asks.
+
+The rest of this section is the design, including the parts still to build.
+
 - **Publishing** ("Publish to the Workshop", in the editor):
   - it sends the map file (a mission or a plain map);
   - a preview image, made from the map by the existing `mapimage` code with the Keep, gates and packs drawn on;
@@ -168,7 +186,7 @@ CW3 worked because sharing lived inside the game: browse, search, sort by rating
 2. **The Steam module and Steamworks.NET in the build.** Done in 0.31.0 (`game/Steam.cs`, `game/lib/steamworks/`). Apple-silicon Macs go without Steam for now: Steamworks.NET's standalone build is x64 only, so it needs building from its source as any-CPU to reach them.
 3. **Cloud saves:** the code side done in 0.32.0 (the save folder laid out for syncing). **[you]** Set up Auto-Cloud, as above.
 4. **Achievements:** the code done in 0.33.0 (tested with scripted runs in the unit tests, not bot runs). **[you]** Add the stat, the list and icons in Steamworks, as above.
-5. **Workshop publishing** from the editor, with previews and tags.
+5. **Workshop publishing** from the editor, with previews and tags: done in 0.34.0; **[you]** turn the Workshop on in Steamworks.
 6. **The in-game browser.**
 7. **Leaderboards per map.**
 

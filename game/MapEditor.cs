@@ -50,6 +50,9 @@ public partial class MapEditor : Node2D
     BuildingKind _placeKind = BuildingKind.House;
     bool _placeTurned;
     MissionPanel _mission = null!;
+    /// <summary>The Workshop item this map was published as (0: not yet): kept through saves, so publishing again updates it.</summary>
+    ulong _workshopId;
+    Button _publish = null!;
     CheckButton _randomPacks = null!;
     readonly List<Button> _toolButtons = new();
 
@@ -90,6 +93,7 @@ public partial class MapEditor : Node2D
         _gates.AddRange(def.PlacedGates);
         _placed.Clear();
         _placed.AddRange(def.PlacedBuildings);
+        _workshopId = def.WorkshopId;
         _keep = def.KeepX >= 0 ? (def.KeepX, def.KeepY) : (def.MapSize / 2, def.MapSize / 2);
         _mission?.Load(def);
         if (_randomPacks != null) _randomPacks.ButtonPressed = def.Packs != 0;
@@ -140,6 +144,7 @@ public partial class MapEditor : Node2D
             PlacedPacks = [.. _packs],
             PlacedGates = [.. _gates],
             PlacedBuildings = [.. _placed],
+            WorkshopId = _workshopId,
             KeepX = _keep == (_world.Terrain.Width / 2, _world.Terrain.Height / 2) ? -1 : _keep.X,
             KeepY = _keep == (_world.Terrain.Width / 2, _world.Terrain.Height / 2) ? -1 : _keep.Y,
             Packs = _randomPacks.ButtonPressed ? -1 : 0,
@@ -166,6 +171,40 @@ public partial class MapEditor : Node2D
         dialog.Canceled += dialog.QueueFree;
         AddChild(dialog);
         return dialog;
+    }
+
+    /// <summary>Publish to the Steam Workshop: a change note asked for (an update's), then sent. The status line follows it.</summary>
+    void AskPublish()
+    {
+        if (!Steam.Running) { _status.Text = "Publishing needs Steam: start the game from Steam to share maps on the Workshop (Export... makes a file to send instead)"; return; }
+        var map = Current();
+        if (map.Problem() is { } problem) { _status.Text = $"Can't publish it: {problem}"; return; }
+        var ask = new ConfirmationDialog { Title = map.WorkshopId == 0 ? "Publish to the Workshop" : "Update on the Workshop", OkButtonText = "Publish", MinSize = new Vector2I(520, 0) };
+        var box = new VBoxContainer();
+        var about = UiKit.Label($"'{map.Name}' goes on the Steam Workshop as a {(map.IsMission ? "mission" : "map")}, public, with a picture of it and {(map.Briefing.Length > 0 ? "its briefing" : "a line")} as its description. Tags: {string.Join(", ", Workshop.Tags(map))}.", 13);
+        about.AutowrapMode = TextServer.AutowrapMode.WordSmart;
+        box.AddChild(about);
+        var note = new LineEdit { PlaceholderText = map.WorkshopId == 0 ? "A note for the first version (optional)" : "What changed (shown to players)" };
+        box.AddChild(note);
+        ask.AddChild(box);
+        AddChild(ask);
+        ask.Confirmed += () =>
+        {
+            MapFiles.Save(map);
+            _publish.Disabled = true;
+            Workshop.Publish(map, note.Text.Trim(), published =>
+            {
+                _publish.Disabled = false;
+                _status.Text = Workshop.Status;
+                if (published == null) return;
+                _workshopId = published.WorkshopId;
+                MapFiles.Save(published);
+                if (published.IsMission) GameAchievements.Report(GameAchievements.Tracker.Grant(Hellwall.Achievements.AchievementKind.Published));
+            });
+            ask.QueueFree();
+        };
+        ask.Canceled += ask.QueueFree;
+        ask.PopupCentered();
     }
 
     void ExportMap()
@@ -410,9 +449,20 @@ public partial class MapEditor : Node2D
         var run = mission == null ? null : World.Create((mission with { Id = "map-selftest" }).Options(Rules.Default));
         bool missionPlays = run != null && run.Goals.Single().Kind == ObjectiveKind.Slay && run.Home == (mission!.KeepX, mission.KeepY)
             && run.Buildings.Any(b => b.Kind == BuildingKind.House && b.Complete) && run.Scenario!.Triggers.Single().SpawnKind == DemonKind.Hound;
+        // Ready for the Workshop, with no Steam needed: staged as map.json (which reads back as the same mission) and a preview.
+        bool staged = false;
+        if (mission != null)
+        {
+            var (content, preview) = Workshop.Stage(mission);
+            var back = ScenarioDef.FromJson(System.IO.File.ReadAllText(System.IO.Path.Combine(content, "map.json")));
+            var picture = Image.LoadFromFile(preview);
+            staged = back.Tiles == mission.Tiles && back.IsMission && back.Problem() == null && picture.GetWidth() == 512
+                && new System.IO.FileInfo(preview).Length < 1_000_000 && Workshop.Tags(mission).Contains("Mission");
+            try { System.IO.Directory.Delete(ProjectSettings.GlobalizePath($"user://workshop/{mission.Id}"), true); } catch (System.IO.IOException) { }
+        }
         try { System.IO.File.Delete(System.IO.Path.Combine(MapFiles.Folder, "selftest-map.json")); } catch (System.IO.IOException) { }
-        bool pass = water && pack && gate && plays && shared && undone && dry && made && missionPlays;
-        GD.Print(pass ? "hellwall-selftest: PASS editor" : $"hellwall-selftest: FAIL editor (saved {saved != null}, water {water}, pack {pack}, gate {gate}, plays {plays}, export and import {shared}, undo {undone}, undo paint {dry}, mission saved {made}, mission plays {missionPlays})");
+        bool pass = water && pack && gate && plays && shared && undone && dry && made && missionPlays && staged;
+        GD.Print(pass ? "hellwall-selftest: PASS editor" : $"hellwall-selftest: FAIL editor (saved {saved != null}, water {water}, pack {pack}, gate {gate}, plays {plays}, export and import {shared}, undo {undone}, undo paint {dry}, mission saved {made}, mission plays {missionPlays}, staged for the Workshop {staged})");
         GetTree().Quit();
     }
 
@@ -465,6 +515,8 @@ public partial class MapEditor : Node2D
             _minimapClock = 0;
         }
         _overlay.QueueRedraw();
+        if (Workshop.Busy) { Workshop.Poll(); _status.Text = Workshop.Status; }
+        _publish.TooltipText = Steam.Running ? "Share this map on the Steam Workshop (publishing again updates it)" : "Needs Steam: start the game from Steam to publish";
     }
 
     void Leave()
@@ -603,6 +655,9 @@ public partial class MapEditor : Node2D
         share.AddChild(export);
         share.AddChild(import);
         share.AddChild(folder);
+        _publish = UiKit.TextButton("Publish...", 13);
+        _publish.Pressed += AskPublish;
+        share.AddChild(_publish);
         box.AddChild(share);
         _status = UiKit.Label("", 12, UiKit.Muted);
         _status.AutowrapMode = TextServer.AutowrapMode.WordSmart;
