@@ -15,15 +15,35 @@ public enum ObjectiveKind : byte
     Slay,
     /// <summary>Take the loot from this many ruins.</summary>
     LootRuins,
+    // Bonus goals (a relic's: they hallow it). The first three are kept or broken: lose one and it's gone for the run.
+    /// <summary>Lose no building but walls and gates.</summary>
+    LoseNoBuildings,
+    /// <summary>Lose no soldier.</summary>
+    LoseNoSoldiers,
+    /// <summary>Keep this percentage of the forest the map began with standing, to the end.</summary>
+    KeepForest,
+    /// <summary>Nothing left asleep in the wilds before the Convergence lands.</summary>
+    ClearWilds,
 }
 
 public sealed record ObjectiveDef
 {
     public ObjectiveKind Kind { get; init; }
     public int Count { get; init; }
+    /// <summary>A deadline: done by the end of this day (0: any time).</summary>
+    public int Day { get; init; }
 
-    public string Describe() => Kind switch
+    /// <summary>Kept or broken over the whole run, rather than done once.</summary>
+    public bool Kept => Kind is ObjectiveKind.LoseNoBuildings or ObjectiveKind.LoseNoSoldiers or ObjectiveKind.KeepForest;
+
+    public string Describe() => What() + (Day > 0 ? $" by day {Day}" : "");
+
+    string What() => Kind switch
     {
+        ObjectiveKind.LoseNoBuildings => "Lose no building (walls and gates aside)",
+        ObjectiveKind.LoseNoSoldiers => "Lose no soldier",
+        ObjectiveKind.KeepForest => $"Keep {Count}% of the forest standing",
+        ObjectiveKind.ClearWilds => "Clear the wilds before the Convergence",
         ObjectiveKind.Survive => "Survive the Convergence",
         ObjectiveKind.CloseGates => Count == 1 ? "Close a Hellgate" : $"Close {Count} Hellgates",
         ObjectiveKind.Population => $"Grow to {Count} colonists",
@@ -123,6 +143,9 @@ public sealed record ScenarioDef
     /// <summary>Scripted moments: messages, surprise attacks, relief.</summary>
     public TriggerDef[] Triggers { get; init; } = [];
 
+    /// <summary>Exactly this many relics are taken into it (0: the campaign's slots, however many the player has). The finale asks for three.</summary>
+    public int RelicSlots { get; init; }
+
     /// <summary>Missions that must be won first.</summary>
     public string[] Requires { get; init; } = [];
     /// <summary>Where it sits on the campaign map, 0..1 across and down.</summary>
@@ -154,8 +177,11 @@ public sealed record ScenarioDef
         return r;
     }
 
-    public WorldOptions Options(Rules rules) =>
-        new(Seed, MapSize, 0, RulesFrom(rules), Survival: true, Difficulty: Difficulty, Endless: Endless, Map: Map, Scenario: this);
+    public WorldOptions Options(Rules rules, string[]? relics = null) =>
+        new(Seed, MapSize, 0, WithRelics(RulesFrom(rules), relics), Survival: true, Difficulty: Difficulty, Endless: Endless, Map: Map, Scenario: this, Relics: relics ?? []);
+
+    /// <summary>The mission's rules with relics taken (a campaign's own missions only: it holds the relics).</summary>
+    public static Rules WithRelics(Rules rules, string[]? relics) => relics is { Length: > 0 } ? Relics.Apply(rules, Campaign.Default, relics) : rules;
 
     /// <summary>The hand-made map's tiles, or null for a generated one.</summary>
     public Tile[]? DecodeTiles()
@@ -183,7 +209,7 @@ public sealed record ScenarioDef
         if (!Endless)
         {
             int size = (int)Math.Round(r.Survival.ConvergenceSize / 100.0) * 100;
-            yield return $"The Convergence on day {r.Survival.Days}: about {size:N0}, most from one side, told ten minutes ahead"
+            yield return $"The Convergence on day {r.Survival.Days}: about {size:N0}, most from one side, told {r.Survival.ConvergenceWarnSeconds / 60:0} minutes ahead"
                 + (r.Wilds.RiseWithConvergence ? ", and every demon still asleep in the wilds rises with it" : "");
         }
         foreach (var t in Triggers.Where(t => t.SpawnCount > 0))
@@ -235,6 +261,13 @@ public sealed class Campaign
     public string Name { get; init; } = "";
     public ScenarioDef[] Scenarios { get; init; } = [];
     public SpeakerDef[] Speakers { get; init; } = [];
+    public RelicDef[] Relics { get; init; } = [];
+    /// <summary>Relics a mission can take, before any relic adds slots.</summary>
+    public int RelicSlots { get; init; } = 2;
+
+    public RelicDef? Relic(string id) => Relics.FirstOrDefault(r => r.Id == id);
+    /// <summary>The relic a mission gives, if any.</summary>
+    public RelicDef? RelicFrom(string missionId) => Relics.FirstOrDefault(r => r.From == missionId);
 
     public ScenarioDef? Find(string id) => Scenarios.FirstOrDefault(s => s.Id == id);
 
@@ -270,6 +303,12 @@ public sealed class Campaign
                 if (c.Scenarios.All(o => o.Id != r)) throw new FormatException($"campaign: '{s.Id}' requires unknown '{r}'");
             foreach (var t in s.Triggers)
                 if (t.Speaker.Length > 0 && c.Speakers.All(p => p.Id != t.Speaker)) throw new FormatException($"campaign: '{s.Id}' has a line for unknown speaker '{t.Speaker}'");
+        }
+        var relicIds = new HashSet<string>();
+        foreach (var r in c.Relics)
+        {
+            if (!relicIds.Add(r.Id) || r.Id.EndsWith('+')) throw new FormatException($"campaign: relic id '{r.Id}' is repeated or ends in '+'");
+            if (c.Scenarios.All(s => s.Id != r.From)) throw new FormatException($"campaign: relic '{r.Id}' comes from unknown mission '{r.From}'");
         }
         return c;
     }
@@ -307,6 +346,7 @@ internal static class ObjectiveSystem
             all &= done[i];
         }
         Fire(world);
+        CheckBonus(world); // before the win, so the goal that wins can also meet it
         if (all) world.Win();
         // The Convergence is the deadline: once it has broken on the walls, whatever is still undone never will be.
         else if (world.Survival is { ConvergenceSpent: true }) world.Lose();
@@ -335,6 +375,27 @@ internal static class ObjectiveSystem
             if (t.SpawnCount > 0) world.RaidDue[i] = world.Tick + (int)(Campaign.RaidLeadSeconds * Balance.TickHz);
             if (t.Give != null) world.Colony.Refund(t.Give, 1);
             world.Emit(new ScenarioMessage(world.Tick, i, t.Say, t.SpawnCount, t.SpawnSide, t.Speaker, t.SpawnKind));
+        }
+    }
+
+    /// <summary>A relic's bonus goal: a once goal is met while its deadline stands; a kept one is broken the moment it fails.</summary>
+    static void CheckBonus(World world)
+    {
+        if (world.Bonus is not { } b || world.BonusMet || world.BonusBroken) return;
+        bool late = b.Day > 0 && world.Day > b.Day;
+        switch (b.Kind)
+        {
+            case ObjectiveKind.LoseNoBuildings: world.BonusBroken = world.Stats.StructuresLost > 0; break;
+            case ObjectiveKind.LoseNoSoldiers: world.BonusBroken = world.Stats.UnitsLost > 0; break;
+            case ObjectiveKind.KeepForest: break; // judged as it stands (World.BonusDone)
+            case ObjectiveKind.ClearWilds:
+                if (world.Survival is { FinalLanded: true }) world.BonusBroken = true; // too late: they've risen
+                else if (world.Sleeping == 0) world.BonusMet = true;
+                break;
+            default:
+                if (late) world.BonusBroken = true;
+                else if (Met(world, b)) world.BonusMet = true;
+                break;
         }
     }
 

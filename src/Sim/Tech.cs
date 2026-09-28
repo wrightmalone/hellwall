@@ -80,16 +80,22 @@ public sealed class TechState
                     else if (m.Stat == "holyGroundDps") fire = (float)(fire * m.Mul + m.Add);
                     continue;
                 }
-                for (int k = 0; k < b.Length; k++)
-                    if (Matches(m, (BuildingKind)k, b[k])) b[k] = Apply(b[k], m);
-                for (int k = 0; k < u.Length; k++)
-                    if (m.Unit == (UnitKind)k || m.Group == "units") u[k] = Apply(u[k], m);
+                ApplyTo(b, u, m);
             }
         }
         Buildings = b;
         Units = u;
         ColonistGoldMultiplier = gold;
         HolyGroundDps = fire;
+    }
+
+    /// <summary>One modifier onto every building and unit definition it matches.</summary>
+    internal static void ApplyTo(BuildingDef[] b, UnitDef[] u, TechModifier m)
+    {
+        for (int k = 0; k < b.Length; k++)
+            if (Matches(m, (BuildingKind)k, b[k])) b[k] = Apply(b[k], m);
+        for (int k = 0; k < u.Length; k++)
+            if (m.Unit == (UnitKind)k || m.Group == "units") u[k] = Apply(u[k], m);
     }
 
     static bool Matches(TechModifier m, BuildingKind kind, BuildingDef def) =>

@@ -17,7 +17,7 @@ namespace Hellwall.Sim;
 public sealed partial class World
 {
     const uint Magic = 0x56535748; // "HWSV"
-    const int FormatVersion = 19;
+    const int FormatVersion = 20;
 
     public byte[] Save()
     {
@@ -41,6 +41,8 @@ public sealed partial class World
             if (inline) w.Write(Scenario!.ToJson());
             w.Write(Rules.Woods.Blocks); // a run option (living woods), so the save carries it
             w.Write(Rules.Mining.Enabled); // likewise miners
+            w.Write(Relics.Length); // campaign relics taken: they're part of the mission's rules
+            foreach (var relic in Relics) w.Write(relic);
 
             w.Write(Tick);
             w.Write((byte)Outcome);
@@ -56,6 +58,10 @@ public sealed partial class World
             w.Write(Stats.DemonsKilled);
             w.Write(Stats.BuildingsLost);
             w.Write(Stats.UnitsLost);
+            w.Write(Stats.StructuresLost);
+            w.Write(BonusMet);
+            w.Write(BonusBroken);
+            w.Write(ForestAtStart);
             w.Write(Stats.History.Count);
             foreach (var sample in Stats.History) { w.Write(sample.Tick); w.Write(sample.Colonists); w.Write(sample.Soldiers); w.Write(sample.Horde); }
 
@@ -288,10 +294,12 @@ public sealed partial class World
         bool woods = r.ReadBoolean(), mining = r.ReadBoolean();
         if (woods != rules.Woods.Blocks) rules = rules.WithWoods(w => w with { Blocks = woods });
         if (mining != rules.Mining.Enabled) rules = rules.WithMining(m => m with { Enabled = mining });
-        if (scenario != null) rules = scenario.RulesFrom(rules);
+        var relics = new string[r.ReadInt32()];
+        for (int i = 0; i < relics.Length; i++) relics[i] = r.ReadString();
+        if (scenario != null) rules = ScenarioDef.WithRelics(scenario.RulesFrom(rules), relics);
         if (rulesHash != rules.ForDifficulty(difficulty).Hash) throw new FormatException("this save was made under different rules");
 
-        var world = new World(new WorldOptions(seed, size, 0, rules, survival, difficulty, endless, map, scenario));
+        var world = new World(new WorldOptions(seed, size, 0, rules, survival, difficulty, endless, map, scenario, relics));
         world.Tick = r.ReadInt32();
         world.Outcome = (Outcome)r.ReadByte();
         world.Aftermath = r.ReadBoolean();
@@ -308,6 +316,10 @@ public sealed partial class World
         world.Stats.DemonsKilled = r.ReadInt32();
         world.Stats.BuildingsLost = r.ReadInt32();
         world.Stats.UnitsLost = r.ReadInt32();
+        world.Stats.StructuresLost = r.ReadInt32();
+        world.BonusMet = r.ReadBoolean();
+        world.BonusBroken = r.ReadBoolean();
+        world.ForestAtStart = r.ReadInt32();
         for (int n = r.ReadInt32(); n > 0; n--) world.Stats.History.Add(new HistorySample(r.ReadInt32(), r.ReadInt32(), r.ReadInt32(), r.ReadInt32()));
 
         var colony = world.Colony;

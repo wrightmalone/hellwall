@@ -4,7 +4,8 @@ using Hellwall.Sim;
 namespace Hellwall.Game;
 
 /// <summary>What a new run is: every choice the menu offers, and what the command line can set instead.</summary>
-public sealed record GameSetup(uint Seed, MapKind Map, Difficulty Difficulty, bool Endless, ScenarioDef? Mission = null);
+/// <summary>How a run begins. Relics: the campaign relics taken into a mission (ids, "+" when hallowed).</summary>
+public sealed record GameSetup(uint Seed, MapKind Map, Difficulty Difficulty, bool Endless, ScenarioDef? Mission = null, string[]? Relics = null);
 
 /// <summary>
 /// The screen before a run: survival or endless, difficulty, kind of map and

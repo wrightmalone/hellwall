@@ -201,10 +201,23 @@ Tags: [mod] is a modifier the game already has (as techs use); [start] is a chan
 - **Replacements:** if a relic turns out dull, the easiest swaps are start bonuses ([start]), which are always safe.
 - **After the campaign:** winning The Hellwall could let Skirmish and Endless take relics too. Every relic taken would lower the score, so scores stay comparable.
 
-**Open questions (these change the design):**
-1. **Loadout or always on?** Choosing relics before each mission is a real choice, but it adds a screen. The alternative, every relic always on, is simpler, but difficulty creeps up as the campaign goes and there's no choice.
-2. **What does the finale ask?** For example, "every relic you've won is yours" as a gift for the last fight. Or "choose three; the rest are spent to seal the wall", as a sacrifice that matches the story.
-3. **Where do bonus goals show?** On the campaign map, as marks on each mission, and in the briefing, or only after the first win, so a new player isn't overloaded.
+**Decided (your answers):**
+1. A loadout before each mission.
+2. The finale takes exactly three.
+3. Bonus goals show in the briefing, on the threat card during play, and on the win screen. On the campaign map, a gold ring marks a hallowed relic and a faint one a relic still to hallow.
+
+**Built (0.27.0), and where it differs from the table above:**
+- **Slot relics work by being owned.** The Reliquary Casket isn't taken, so it never wastes a slot: it's listed as "always with you".
+  - Hallowed, the Casket gives two slots rather than a free hallowing. That's simpler, and nearly as good.
+  - The Refugee's Bell's slot works the same way. Its housing is taken like any relic's.
+- **Some bonus goals changed, for goals the game can check:**
+  - Drowned Country: grow to 50 by day 20 (was "lose no Fishery").
+  - The Causeway: grow to 80 (was "wall all four far gaps").
+  - The Long Siege: grow to 90.
+  - The Woodward's Axe, hallowed: lodges gather 30% more (was "+2 woodsmen", which needed new code).
+- **Not yet built:**
+  - The Last Candle, and relics in Skirmish.
+  - The win screen's "yours from now on" line for the kit.
 
 **To build it:**
 - **Rules:** a relic is a set of tech-style modifiers, a start change, or a rules value, applied to the mission's rules when it starts.

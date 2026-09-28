@@ -14,13 +14,15 @@ public enum Outcome : byte
 /// <param name="Endless">With Survival: no Convergence, no win; waves and corruptions until the Keep falls.</param>
 /// <param name="Map">Which kind of terrain the seed grows.</param>
 /// <param name="Scenario">A campaign mission: its locks and goals (Rules should already be its RulesFrom; ScenarioDef.Options does both).</param>
-public readonly record struct WorldOptions(uint Seed, int MapSize = Balance.DefaultMapSize, int DormantPacks = 0, Rules? Rules = null, bool Survival = false, Difficulty Difficulty = Difficulty.Normal, bool Endless = false, MapKind Map = MapKind.Plains, ScenarioDef? Scenario = null);
+public readonly record struct WorldOptions(uint Seed, int MapSize = Balance.DefaultMapSize, int DormantPacks = 0, Rules? Rules = null, bool Survival = false, Difficulty Difficulty = Difficulty.Normal, bool Endless = false, MapKind Map = MapKind.Plains, ScenarioDef? Scenario = null, string[]? Relics = null);
 
 public sealed class WorldStats
 {
     public int DemonsKilled;
     public int BuildingsLost;
     public int UnitsLost;
+    /// <summary>Buildings lost that weren't walls or gates (a bonus goal's).</summary>
+    public int StructuresLost;
     /// <summary>The run over time, sampled every half day: for the end panel's chart.</summary>
     public readonly List<HistorySample> History = new();
 }
@@ -84,6 +86,18 @@ public sealed partial class World
     public ScenarioDef? Scenario { get; }
     public ObjectiveDef[] Goals { get; }
     public bool[] GoalsDone { get; }
+
+    /// <summary>The campaign relics taken into this mission (ids, "+" for hallowed), in the order their rules were applied.</summary>
+    public string[] Relics { get; }
+    /// <summary>This mission's bonus goal, if it's a campaign mission with a relic: met by the win, the relic is hallowed.</summary>
+    public ObjectiveDef? Bonus { get; }
+    /// <summary>A bonus goal done (a once goal) or broken (a kept one): see BonusDone.</summary>
+    public bool BonusMet, BonusBroken;
+    /// <summary>Is the bonus goal done, as things stand: a kept goal until it's broken, a once goal once it's met.</summary>
+    public bool BonusDone => Bonus is { } b && (b.Kept ? !BonusBroken && (b.Kind != ObjectiveKind.KeepForest || ForestLeftPercent >= b.Count) : BonusMet);
+    /// <summary>Forest tiles when the map was made (for KeepForest).</summary>
+    public int ForestAtStart;
+    public int ForestLeftPercent => ForestAtStart == 0 ? 100 : (int)(100L * Terrain.Tiles.Count(t => t == Tile.Forest) / ForestAtStart);
     public bool[] TriggersFired { get; }
     /// <summary>Per trigger, the tick its announced raid lands (0: none coming, -1: landed).</summary>
     public int[] RaidDue { get; }
@@ -279,6 +293,9 @@ public sealed partial class World
         Spatial = new SpatialHash(Terrain.Width, Terrain.Height);
         if (options.Survival) Survival = new Survival(Rules.Survival, options.Endless);
         Scenario = options.Scenario;
+        Relics = options.Relics ?? [];
+        Bonus = Campaign.Default.Contains(Scenario) ? Campaign.Default.RelicFrom(Scenario!.Id)?.Bonus : null;
+        ForestAtStart = Terrain.Tiles.Count(t => t == Tile.Forest); // a save's own count replaces it on load
         // What winning takes: the mission's goals, or for a plain survival run, surviving.
         Goals = Scenario?.Goals ?? (options.Survival ? [new ObjectiveDef { Kind = ObjectiveKind.Survive }] : []);
         GoalsDone = new bool[Goals.Length];
@@ -1357,6 +1374,7 @@ public sealed partial class World
             RefundQueue(b);
             RemoveBuilding(b);
             Stats.BuildingsLost++;
+            if (!b.IsWallLike) Stats.StructuresLost++;
             _events.Add(new BuildingDestroyed(Tick, b.Id, b.Kind, b.X, b.Y));
             if (b.Kind == BuildingKind.Keep)
             {

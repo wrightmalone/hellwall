@@ -305,6 +305,10 @@ public partial class Hud : CanvasLayer
                     var wonSet = CampaignProgress.Won(c.Id);
                     var next = c.Scenarios.Where(x => x.Requires.Contains(won.Id) && c.IsOpen(x, wonSet)).Select(x => x.Name).ToList();
                     if (next.Count > 0) opens = $"\nNow open: {string.Join(", ", next)}";
+                    // What it gave: its relic, and whether the bonus goal hallowed it.
+                    if (c.RelicFrom(won.Id) is { } relic)
+                        opens += $"\nRelic won: {relic.Name}: {(World.BonusDone ? relic.Hallowed.Text + " (hallowed: the bonus goal was met)" : relic.Effect.Text)}"
+                            + (!World.BonusDone && relic.Bonus is { } b ? $"\nBonus goal not met ({b.Describe().ToLowerInvariant()}): play it again to hallow it" : "");
                 }
                 var (score, best) = Score.Record(World, mode);
                 string scoreLine = $"Score {score:N0}" + (best > score ? $"   (best {best:N0})" : best == score ? "   (a new best)" : "") + "\n";

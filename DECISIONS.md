@@ -1322,6 +1322,38 @@ last lost by at least one).
 - **Next time it crashes:** send the newest file in `crashes/`, and say what you were
   doing.
 
+## Relics (your answers: a loadout each mission, three for the finale)
+
+- **What they are:** eleven relics, one from each mission but the finale. They're data in
+  campaign.json (`relics`), and the list is in docs/plans/campaign.md.
+  - Each is a set of changes to the mission's rules: tech-style modifiers folded into the
+    base definitions (so research builds on them), a gift of starting stock, or one of a
+    few numbers: Hellgate band size, how fast woodsmen fell trees, how early the
+    Convergence is told, when the first wave comes.
+  - They're applied when a mission starts and again when a save loads. The save keeps the
+    relics taken (format 20), and the rules hash covers them.
+- **Before a mission:** the campaign column lists your relics, and you tick up to your
+  slots.
+  - Two slots to start. The Reliquary Casket adds one (two when hallowed), and the
+    Refugee's Bell one more.
+  - The Hellwall asks for exactly three: Begin waits until three are ticked.
+  - The last loadout is remembered.
+  - Slot-only relics work by being owned and aren't taken.
+  - The column now scrolls, with Begin fixed below.
+- **Bonus goals:** each mission has one (the relic's), which hallows its relic.
+  - Some are done once, by a deadline: grow to 40 by day 10, close both gates by day 20.
+  - Others are kept or broken over the whole run: lose no building (walls aside), lose no
+    soldier, keep 75% of the forest.
+  - The Bridge's is to clear the wilds before the Convergence.
+  - You see it in the briefing, on the threat card during play (`[ ]`, `[x]`, or broken),
+    and on the win screen.
+  - Winning with it met hallows the relic for good. On the campaign map, a gold ring marks
+    a hallowed relic, and a faint ring one still to earn.
+- **Balance:** unchanged, since the bot's campaign check plays with no relics, as intended.
+  Relics are the player's edge. I haven't probed the strongest loadouts yet.
+- **Only the campaign's own missions** have bonus goals (a copy doesn't). Retrying a
+  mission keeps the relics it began with.
+
 ## Buildings from KayKit Medieval Hexagon (you downloaded it and the Medieval Village MegaKit)
 
 - **Every building but walls and gates is now a baked KayKit model** (`tools/bake_buildings.gd`,

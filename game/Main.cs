@@ -132,7 +132,7 @@ public partial class Main : Node2D
         {
             var again = _retry;
             _retry = null;
-            Begin(new GameSetup(again.Seed, again.Map, again.Difficulty, false, again));
+            Begin(new GameSetup(again.Seed, again.Map, again.Difficulty, false, again, _retryRelics)); // the same relics as the first try
         }
         else if (_campaignNext || o.ContainsKey("campaign"))
         {
@@ -221,7 +221,7 @@ public partial class Main : Node2D
         CampaignMap? map = null;
         map = new CampaignMap
         {
-            Begin = mission => { map!.QueueFree(); Play(new GameSetup(mission.Seed, mission.Map, mission.Difficulty, false, mission)); },
+            Begin = (mission, relics) => { map!.QueueFree(); Play(new GameSetup(mission.Seed, mission.Map, mission.Difficulty, false, mission, relics)); },
             Back = () => { map!.QueueFree(); ShowMenu(new GameSetup(11, MapKind.Plains, Difficulty.Normal, false)); },
         };
         AddChild(map);
@@ -251,7 +251,7 @@ public partial class Main : Node2D
         if (options.ContainsKey("patrons-now")) rules = rules.WithSurvival(s => s with { PatronMilestones = [1, .. s.PatronMilestones] }); // screenshots of the picker
         // A survival run takes its packs from rules.json (wilds).
         _world = setup.Mission is { } mission && !scripted
-            ? World.Create(mission.Options(rules))
+            ? World.Create(mission.Options(rules, setup.Relics))
             : World.Create(new WorldOptions(seed, MapSize, 0, rules, Survival: !scripted, Difficulty: setup.Difficulty, Endless: setup.Endless && !scripted, Map: setup.Map));
 
         BuildViews();
@@ -556,12 +556,14 @@ public partial class Main : Node2D
     void RetryMission()
     {
         _retry = _world.Scenario;
+        _retryRelics = _world.Relics;
         Input.MouseMode = Input.MouseModeEnum.Visible;
         DisarmAttackMove();
         GetTree().ReloadCurrentScene();
     }
 
     static ScenarioDef? _retry;
+    static string[]? _retryRelics;
 
     /// <summary>The same run from the start: the setup it began with, in a fresh scene.</summary>
     void PlayAgain()
@@ -730,7 +732,12 @@ public partial class Main : Node2D
                 case OutcomeChanged o:
                     _state.Say(o.Outcome == Outcome.Lost ? $"The Keep has fallen on day {_world.Day}." : "Victory.");
                     // Played on after a win: the win stands, whatever happens after.
-                    if (!_world.Aftermath && _world.Scenario is { } done && Campaign.Default.Contains(done)) CampaignProgress.Record(Campaign.Default.Id, done.Id, o.Outcome == Outcome.Won, _world.Day);
+                    if (!_world.Aftermath && _world.Scenario is { } done && Campaign.Default.Contains(done))
+                    {
+                        CampaignProgress.Record(Campaign.Default.Id, done.Id, o.Outcome == Outcome.Won, _world.Day);
+                        // Won with its bonus goal met: the mission's relic is hallowed from now on.
+                        if (o.Outcome == Outcome.Won && _world.BonusDone && Campaign.Default.RelicFrom(done.Id) is { } relic) CampaignProgress.Hallow(Campaign.Default.Id, relic.Id);
+                    }
                     break;
                 case CorruptionTook c: _state.Say($"The horde is corrupted: {c.Name}"); break;
                 case ScenarioMessage m when m.Text.Length > 0:

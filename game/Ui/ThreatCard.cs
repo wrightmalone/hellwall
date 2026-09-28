@@ -38,6 +38,7 @@ public partial class ThreatCard : PanelContainer
         _asleep.AutowrapMode = TextServer.AutowrapMode.WordSmart;
         box.AddChild(_asleep);
         _goals = UiKit.Label("", 13, UiKit.Gold);
+        _goals.AutowrapMode = TextServer.AutowrapMode.WordSmart;
         box.AddChild(_goals);
         _corrupt = UiKit.Label("", 13, new Color(0.85f, 0.55f, 0.95f));
         _corrupt.AutowrapMode = TextServer.AutowrapMode.WordSmart;
@@ -88,7 +89,10 @@ public partial class ThreatCard : PanelContainer
         // A mission's goals, ticked off as they're met.
         _goals.Visible = World.Scenario != null;
         if (World.Scenario is { } m)
-            _goals.Text = m.Name + ":  " + string.Join("   ", World.Goals.Select((g, i) => $"{(World.GoalsDone[i] ? "[x]" : "[ ]")} {g.Describe()}"));
+            _goals.Text = m.Name + ":  " + string.Join("   ", World.Goals.Select((g, i) => $"{(World.GoalsDone[i] ? "[x]" : "[ ]")} {g.Describe()}"))
+                // The relic's bonus goal: kept ones show as kept until broken, once ones when met.
+                + (World.Bonus is { } bonus ? $"\nBonus:  {(World.BonusBroken ? "[-] broken:" : World.BonusDone ? "[x]" : "[ ]")} {bonus.Describe()}{(bonus.Kind == ObjectiveKind.KeepForest ? $" ({World.ForestLeftPercent}% now)" : "")}" : "")
+                + (World.Relics.Length > 0 ? "\nRelics:  " + string.Join(", ", World.Relics.Select(t => { var (id, h) = Relics.Parse(t); return Campaign.Default.Relic(id)!.Name + (h ? " (hallowed)" : ""); })) : "");
         _corrupt.Text = corrupt.TrimEnd();
         _corrupt.Visible = corrupt.Length > 0;
         _line.QueueRedraw();

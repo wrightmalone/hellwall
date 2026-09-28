@@ -3,7 +3,7 @@ using Hellwall.Sim;
 
 namespace Hellwall.Game;
 
-/// <summary>Which missions have been won, in user://campaign.cfg: the campaign's only memory between runs.</summary>
+/// <summary>Which missions have been won and which relics hallowed, in user://campaign.cfg: the campaign's only memory between runs.</summary>
 public static class CampaignProgress
 {
     const string Path = "user://campaign.cfg";
@@ -17,6 +17,44 @@ public static class CampaignProgress
 
     public static HashSet<string> Won(string campaign) =>
         new(((string)Load().GetValue(campaign, "won", "")).Split(',', StringSplitOptions.RemoveEmptyEntries));
+
+    /// <summary>Relics whose bonus goal has been met: taken hallowed from now on.</summary>
+    public static HashSet<string> Hallowed(string campaign) =>
+        new(((string)Load().GetValue(campaign, "hallowed", "")).Split(',', StringSplitOptions.RemoveEmptyEntries));
+
+    public static void Hallow(string campaign, string relic)
+    {
+        var f = Load();
+        var set = Hallowed(campaign);
+        set.Add(relic);
+        f.SetValue(campaign, "hallowed", string.Join(",", set));
+        f.Save(Path);
+    }
+
+    /// <summary>The relics won so far (their missions won), each as it's taken: its id, "+" when hallowed.</summary>
+    public static List<string> Owned(Campaign c)
+    {
+        var won = Won(c.Id);
+        var hallowed = Hallowed(c.Id);
+        return c.Relics.Where(r => won.Contains(r.From)).Select(r => Relics.Taken(r.Id, hallowed.Contains(r.Id))).ToList();
+    }
+
+    /// <summary>How many relics a mission can take: the campaign's own slots, plus what owned relics add, or exactly the mission's number.</summary>
+    public static int Slots(Campaign c, ScenarioDef mission)
+    {
+        if (mission.RelicSlots > 0) return mission.RelicSlots;
+        return c.RelicSlots + Owned(c).Sum(t => { var (id, h) = Relics.Parse(t); var r = c.Relic(id)!; return (h ? r.Hallowed : r.Effect).Slots; });
+    }
+
+    /// <summary>The last relics taken (ids without "+"), offered again next time.</summary>
+    public static string[] Loadout(string campaign) => ((string)Load().GetValue(campaign, "loadout", "")).Split(',', StringSplitOptions.RemoveEmptyEntries);
+
+    public static void SetLoadout(string campaign, IEnumerable<string> ids)
+    {
+        var f = Load();
+        f.SetValue(campaign, "loadout", string.Join(",", ids));
+        f.Save(Path);
+    }
 
     public static int BestDay(string campaign, string mission) => (int)Load().GetValue(campaign, "best-" + mission, 0);
 
@@ -38,7 +76,8 @@ public static class CampaignProgress
 /// </summary>
 public partial class CampaignMap : CanvasLayer
 {
-    public Action<ScenarioDef> Begin = null!;
+    /// <summary>Start a mission, with the relics taken into it (ids, "+" when hallowed).</summary>
+    public Action<ScenarioDef, string[]> Begin = null!;
     public Action Back = null!;
 
     readonly Campaign _campaign = Campaign.Default;
@@ -46,12 +85,20 @@ public partial class CampaignMap : CanvasLayer
     ScenarioDef? _picked;
     Board _board = null!;
     const float SideWidth = 420;
-    Label _name = null!, _facts = null!, _brief = null!, _goals = null!;
+    Label _name = null!, _facts = null!, _brief = null!, _goals = null!, _reward = null!, _relicHead = null!;
     Button _begin = null!;
+    VBoxContainer _relicBox = null!;
+    /// <summary>The relics ticked to take (ids, without "+").</summary>
+    readonly HashSet<string> _taking = new();
+    List<string> _owned = new();
+    HashSet<string> _hallowed = new();
 
     public override void _Ready()
     {
         _won = CampaignProgress.Won(_campaign.Id);
+        _owned = CampaignProgress.Owned(_campaign);
+        _hallowed = CampaignProgress.Hallowed(_campaign.Id);
+        foreach (var id in CampaignProgress.Loadout(_campaign.Id)) if (_owned.Any(t => Relics.Parse(t).Id == id)) _taking.Add(id);
         var backdrop = new ColorRect { Color = new Color(0.06f, 0.04f, 0.05f, 0.97f) };
         backdrop.SetAnchorsPreset(Control.LayoutPreset.FullRect);
         AddChild(backdrop);
@@ -82,24 +129,42 @@ public partial class CampaignMap : CanvasLayer
         var side = UiKit.PanelBox();
         // One width whatever the mission says: every line wraps, so the text never widens it (and the map beside it never repaints).
         side.CustomMinimumSize = new Vector2(SideWidth, 0);
-        var box = new VBoxContainer();
+        // Everything but Begin scrolls: a late mission's briefing and a full shelf of relics don't fit a 1080p screen.
+        var column = new VBoxContainer();
+        column.AddThemeConstantOverride("separation", 10);
+        side.AddChild(column);
+        var scroll = new ScrollContainer { HorizontalScrollMode = ScrollContainer.ScrollMode.Disabled, SizeFlagsVertical = Control.SizeFlags.ExpandFill };
+        column.AddChild(scroll);
+        var box = new VBoxContainer { SizeFlagsHorizontal = Control.SizeFlags.ExpandFill };
         box.AddThemeConstantOverride("separation", 10);
-        side.AddChild(box);
+        scroll.AddChild(box);
         _name = UiKit.Label("", 22, UiKit.Gold);
         _facts = UiKit.Label("", 13, UiKit.Muted);
         _brief = UiKit.Label("", 14);
         _brief.AutowrapMode = TextServer.AutowrapMode.WordSmart;
         _goals = UiKit.Label("", 14);
         foreach (var label in new[] { _name, _facts, _brief, _goals }) label.AutowrapMode = TextServer.AutowrapMode.WordSmart;
+        // (the reward and relic labels are made with Begin, below, and wrap too)
         _begin = UiKit.TextButton("Begin", 18);
-        _begin.Pressed += () => { if (_picked != null) Begin(_picked); };
+        _begin.Pressed += () =>
+        {
+            if (_picked == null) return;
+            CampaignProgress.SetLoadout(_campaign.Id, _taking);
+            Begin(_picked, _owned.Where(t => _taking.Contains(Relics.Parse(t).Id)).ToArray());
+        };
+        _reward = UiKit.Label("", 13, UiKit.Gold);
+        _relicHead = UiKit.Label("", 13, UiKit.Muted);
+        _relicBox = new VBoxContainer();
+        _relicBox.AddThemeConstantOverride("separation", 2);
         box.AddChild(_name);
         box.AddChild(_facts);
         box.AddChild(_brief);
         box.AddChild(UiKit.Label("Goals", 13, UiKit.Muted));
         box.AddChild(_goals);
-        box.AddChild(new Control { SizeFlagsVertical = Control.SizeFlags.ExpandFill });
-        box.AddChild(_begin);
+        box.AddChild(_reward);
+        box.AddChild(_relicHead);
+        box.AddChild(_relicBox);
+        column.AddChild(_begin);
         body.AddChild(side);
 
         // Start on the furthest mission that's open and not yet won, or the first.
@@ -118,9 +183,68 @@ public partial class CampaignMap : CanvasLayer
         _brief.Text = open ? s.Briefing : $"Win {string.Join(" and ", s.Requires.Select(r => _campaign.Find(r)!.Name))} to open this mission.";
         _goals.Text = string.Join("\n", s.Goals.Select(g => "·  " + g.Describe()))
             + (open ? "\n\nWhat's coming:\n" + string.Join("\n", s.Threats(Rules.Default).Select(t => "·  " + t)) : "");
-        _begin.Disabled = !open;
+        // What winning it gives: its relic, and the bonus goal that hallows it.
+        _reward.AutowrapMode = TextServer.AutowrapMode.WordSmart;
+        _reward.Text = "";
+        if (open && _campaign.RelicFrom(s.Id) is { } relic)
+        {
+            bool hallowed = _hallowed.Contains(relic.Id);
+            _reward.Text = (_won.Contains(s.Id) ? $"Won: {relic.Name}" : $"Win it for {relic.Name}") + $" ({relic.Effect.Text.ToLowerInvariant()})"
+                + (relic.Bonus is { } bonus ? hallowed ? $"\nHallowed: {relic.Hallowed.Text.ToLowerInvariant()}" : $"\nBonus: {bonus.Describe().ToLowerInvariant()}, and it's hallowed ({relic.Hallowed.Text.ToLowerInvariant()})" : "");
+        }
+        _slots = CampaignProgress.Slots(_campaign, s);
+        _exact = s.RelicSlots > 0;
+        RefreshRelics(open);
         _begin.Text = _won.Contains(s.Id) ? "Play again" : "Begin";
         _board.QueueRedraw();
+    }
+
+    int _slots;
+    bool _exact;
+
+    /// <summary>The relics you have, to tick the ones to take: up to the slots, or exactly the finale's number.</summary>
+    void RefreshRelics(bool open)
+    {
+        foreach (var c in _relicBox.GetChildren()) c.QueueFree();
+        while (_taking.Count > _slots) _taking.Remove(_taking.Last());
+        foreach (var t in _owned) { var (pid, ph) = Relics.Parse(t); if ((ph ? _campaign.Relic(pid)!.Hallowed : _campaign.Relic(pid)!.Effect).Passive) _taking.Remove(pid); }
+        int takeable = _owned.Count(t => { var (pid, ph) = Relics.Parse(t); var r = _campaign.Relic(pid)!; return !(ph ? r.Hallowed : r.Effect).Passive; });
+        int need = _exact ? Math.Min(_slots, takeable) : 0;
+        _relicHead.Visible = open && _owned.Count > 0;
+        _relicHead.Text = _exact ? $"Relics: choose {need} to take to the last wall ({_taking.Count} of {need})" : $"Relics: take up to {_slots} ({_taking.Count} taken)";
+        _relicHead.AutowrapMode = TextServer.AutowrapMode.WordSmart;
+        if (open)
+            foreach (var t in _owned)
+            {
+                var (id, hallowed) = Relics.Parse(t);
+                var relic = _campaign.Relic(id)!;
+                var effect = hallowed ? relic.Hallowed : relic.Effect;
+                if (effect.Passive)
+                {
+                    // Works by being owned (more slots): shown, never taken.
+                    var always = UiKit.Label($"{relic.Name}{(hallowed ? " (hallowed)" : "")}: always with you. {effect.Text}", 12, UiKit.Gold);
+                    always.AutowrapMode = TextServer.AutowrapMode.WordSmart;
+                    always.TooltipText = relic.Lore;
+                    always.MouseFilter = Control.MouseFilterEnum.Pass;
+                    _relicBox.AddChild(always);
+                    continue;
+                }
+                var tick = new CheckButton { Text = $"{relic.Name}{(hallowed ? " (hallowed)" : "")}", ButtonPressed = _taking.Contains(id), FocusMode = Control.FocusModeEnum.None };
+                tick.AddThemeFontSizeOverride("font_size", 13);
+                tick.TooltipText = $"{effect.Text}\n{relic.Lore}";
+                tick.Disabled = !tick.ButtonPressed && _taking.Count >= _slots;
+                tick.Toggled += on =>
+                {
+                    if (on) _taking.Add(id); else _taking.Remove(id);
+                    RefreshRelics(true);
+                };
+                _relicBox.AddChild(tick);
+                var what = UiKit.Label("   " + effect.Text, 12, UiKit.Muted);
+                what.AutowrapMode = TextServer.AutowrapMode.WordSmart;
+                _relicBox.AddChild(what);
+            }
+        _relicHead.Text = _exact ? $"Relics: choose {need} to take to the last wall ({_taking.Count} of {need})" : $"Relics: take up to {_slots} ({_taking.Count} taken)";
+        _begin.Disabled = !open || (_exact && _taking.Count != need);
     }
 
     /// <summary>The map itself: a drawn board of mission markers, clickable.</summary>
@@ -227,6 +351,9 @@ public partial class CampaignMap : CanvasLayer
                 DrawCircle(at, R + (picked ? 5 : 2), picked ? UiKit.Text : new Color(0.08f, 0.07f, 0.06f));
                 DrawCircle(at, R, fill);
                 if (won) DrawPolyline([at + new Vector2(-7, 0), at + new Vector2(-2, 6), at + new Vector2(8, -6)], new Color(0.15f, 0.12f, 0.05f), 3);
+                // Its relic hallowed (the bonus goal met): a gold ring round it; won but not yet, a faint one, still to earn.
+                if (won && Map._campaign.RelicFrom(s.Id) is { } relic)
+                    DrawArc(at, R + 9, 0, Mathf.Tau, 40, Map._hallowed.Contains(relic.Id) ? UiKit.Gold : new Color(UiKit.Gold, 0.25f), 3);
                 var label = s.Name;
                 var size = font.GetStringSize(label, fontSize: 15);
                 var labelAt = at + new Vector2(-size.X / 2, R + 22);

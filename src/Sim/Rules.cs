@@ -52,6 +52,8 @@ public sealed class Cost
         _ => Silver,
     };
 
+    public Cost Plus(Cost o) => new() { Gold = Gold + o.Gold, Wood = Wood + o.Wood, Stone = Stone + o.Stone, Food = Food + o.Food, Iron = Iron + o.Iron, Silver = Silver + o.Silver };
+
     public Cost Scale(double f) => new() { Gold = Gold * f, Wood = Wood * f, Stone = Stone * f, Food = Food * f, Iron = Iron * f, Silver = Silver * f };
 
     public override string ToString()
@@ -502,6 +504,16 @@ public sealed class Rules
 
     /// <summary>A copy with different starting resources, for probes and scenarios.</summary>
     public Rules WithStartingResources(Cost start) => Copy(r => r.StartingResources = start);
+
+    /// <summary>Tech-style modifiers folded into the base definitions (a campaign relic's), so research builds on them.</summary>
+    public Rules WithModifiers(IEnumerable<TechModifier> mods) => Copy(r =>
+    {
+        var b = (BuildingDef[])r.Buildings.Clone();
+        var u = (UnitDef[])r.Units.Clone();
+        foreach (var m in mods) TechState.ApplyTo(b, u, m);
+        r.Buildings = b;
+        r.Units = u;
+    });
 
     /// <summary>A copy with one building's definition replaced, for probes (an unkillable Keep for the bench).</summary>
     public Rules WithBuilding(BuildingKind kind, Func<BuildingDef, BuildingDef> change)
