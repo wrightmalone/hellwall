@@ -6,7 +6,7 @@ namespace Hellwall.Game;
 
 /// <summary>
 /// The player's economy (Settings, Economy): each resource's income times a multiplier, and how fast
-/// workers use up trees, rock and iron ore, 25% to 400%, for every run they start from now on:
+/// workers use up trees, rock and iron ore, and demons' hit points, 25% to 400%, for every run they start from now on:
 /// campaign missions, skirmishes, Workshop and hand-made maps alike (Rules.WithEconomy). A run keeps
 /// the economy it began with, in its saves. Anything off 100% is a tuned game: achievements,
 /// leaderboards and best scores leave it out. The menu's backdrop, the bot and headless runs always
@@ -31,7 +31,10 @@ public static class EconomySettings
         new(Rules.OreWear, "wear_ore", "Iron ore", "ore mined"),
     ];
 
-    public static IEnumerable<Slot> All => Incomes.Concat(Wear);
+    /// <summary>How tough the demons are.</summary>
+    public static readonly Slot[] Demons = [new(Rules.DemonHealth, "demon_health", "Health", "demon health")];
+
+    public static IEnumerable<Slot> All => Incomes.Concat(Wear).Concat(Demons);
 
     public static double Get(Slot s) => Math.Clamp(Settings.Get(s.Key, 1f), Min, Max);
     public static void Set(Slot s, double m) => Settings.Set(s.Key, (float)Math.Clamp(Math.Round(m * 20) / 20, Min, Max));

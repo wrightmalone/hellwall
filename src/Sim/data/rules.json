@@ -129,7 +129,7 @@
                     "weapon": { "range": 7, "damage": 20, "cooldown": 0.5, "noise": 14 } },
     "Bombard":    { "size": [2, 2], "hp": 500,  "buildSeconds": 12, "cost": { "gold": 120, "stone": 40 },
                     "sanctityUse": 6, "possessable": false,
-                    "weapon": { "range": 8, "damage": 50, "cooldown": 2.0, "splash": 2.2, "noise": 30 } },
+                    "weapon": { "range": 8, "damage": 50, "cooldown": 3.0, "splash": 2.2, "noise": 30 } },
     "Barracks":   { "size": [3, 3], "hp": 600,  "buildSeconds": 15, "cost": { "gold": 120, "wood": 30 },
                     "workers": 4, "sanctityUse": 4, "trains": ["Militia", "Marksman", "Templar", "Crossbowman", "Chaplain", "Outrider", "Exorcist"] },
     "Belfry":     { "size": [2, 2], "hp": 350,  "buildSeconds": 10, "cost": { "gold": 90, "wood": 60, "stone": 10 },

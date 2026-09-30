@@ -76,6 +76,26 @@ public class WearTests
     }
 
     [Fact]
+    public void DemonHealthScalesEveryKindAndNothingElse()
+    {
+        var d = Rules.Default;
+        var tough = d.WithEconomy(Wear(Rules.DemonHealth, 1.5));
+        foreach (var kind in Enum.GetValues<DemonKind>())
+        {
+            Assert.Equal(d.Demons[(int)kind].Hp * 1.5f, tough.Demons[(int)kind].Hp, 3);
+            Assert.Equal(d.Demons[(int)kind].Damage, tough.Demons[(int)kind].Damage);
+        }
+        Assert.Equal(d.Woods.TreeHp, tough.Woods.TreeHp);
+        Assert.Equal(d.ColonistGoldPerSecond, tough.ColonistGoldPerSecond);
+        // And a run made with it spawns them so.
+        var normal = World.Create(new WorldOptions(7, 128, 0, d, Survival: true));
+        var e = Wear(Rules.DemonHealth, 1.5);
+        var world = World.Create(new WorldOptions(7, 128, 0, d.WithEconomy(e), Survival: true, Economy: e)); // as the game makes one
+        Assert.Equal(normal.Def(DemonKind.Imp).Hp * 1.5f, world.Def(DemonKind.Imp).Hp, 3);
+        Assert.Equal(StateHash.Compute(world), StateHash.Compute(World.Load(world.Save(), d)));
+    }
+
+    [Fact]
     public void RockAndOreWearAwayQuickerOrSlower()
     {
         var d = Rules.Default;

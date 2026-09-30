@@ -373,7 +373,12 @@ public partial class NewGameMenu : CanvasLayer
         wear.CustomMinimumSize = new Vector2(360, 0);
         side.AddChild(wear);
         foreach (var slot in EconomySettings.Wear) Row(slot);
-        var reset = UiKit.TextButton("Back to the game's own economy (all 100%)", 13);
+        var demons = UiKit.Label("Demons: how many hit points each one has, every kind, in the waves and the wilds alike.", 12, UiKit.Muted);
+        demons.AutowrapMode = TextServer.AutowrapMode.WordSmart;
+        demons.CustomMinimumSize = new Vector2(360, 0);
+        side.AddChild(demons);
+        foreach (var slot in EconomySettings.Demons) Row(slot);
+        var reset = UiKit.TextButton("Back to the game's own settings (all 100%)", 13);
         reset.Pressed += () =>
         {
             EconomySettings.Reset();

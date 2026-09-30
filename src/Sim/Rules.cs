@@ -516,8 +516,8 @@ public sealed class Rules
 
     /// <summary>
     /// A player's economy (Settings, Economy): each resource's income times its multiplier (indexed
-    /// by Resource), then how fast workers use up trees, rock and ore (TreesWear, RockWear, OreWear;
-    /// null or all 1: these rules unchanged). Gold is colonists' pay and buildings' own
+    /// by Resource), then how fast workers use up trees, rock and ore (TreesWear, RockWear, OreWear),
+    /// then demons' hit points (DemonHealth; null or all 1: these rules unchanged). Gold is colonists' pay and buildings' own
     /// gold; wood, stone and iron are their gatherers' rates and what woodsmen and miners get per
     /// blow; food and silver their gatherers' rates. Upkeep, costs and loot are left alone.
     /// </summary>
@@ -552,11 +552,14 @@ public sealed class Rules
                 StonePerHp = (float)(r.Mining.StonePerHp * At(Resource.Stone)), IronPerHp = (float)(r.Mining.IronPerHp * At(Resource.Iron)),
                 RockHp = (float)(r.Mining.RockHp / Wear(RockWear)), OreHp = (float)(r.Mining.OreHp / Wear(OreWear)),
             };
+            // How tough the demons are: every kind's hit points, waves and the wilds alike.
+            double health = Wear(DemonHealth);
+            if (health != 1) r.Demons = r.Demons.Select(d => d with { Hp = (float)(d.Hp * health) }).ToArray();
         });
     }
 
-    /// <summary>Slots in an economy after the resources (WithEconomy): how fast workers wear away trees, rock and iron ore.</summary>
-    public const int TreesWear = 6, RockWear = 7, OreWear = 8, EconomySlots = 9;
+    /// <summary>Slots in an economy after the resources (WithEconomy): how fast workers wear away trees, rock and iron ore, then demons' hit points.</summary>
+    public const int TreesWear = 6, RockWear = 7, OreWear = 8, DemonHealth = 9, EconomySlots = 10;
 
     /// <summary>Tech-style modifiers folded into the base definitions (a campaign relic's), so research builds on them.</summary>
     public Rules WithModifiers(IEnumerable<TechModifier> mods) => Copy(r =>

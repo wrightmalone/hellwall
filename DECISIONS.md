@@ -1700,6 +1700,24 @@ last lost by at least one).
   toughness, that rock and ore change only their own deposits, and that a world's rock
   really is that much softer.
 
+## Bombards slowed, and a demon health slider (you: "bombards are too strong")
+
+- **Bombard:** a shot every 3 s instead of every 2, so a third fewer shots. Damage, splash
+  and range are unchanged. Artillery's 25% faster reload still applies on top.
+- **What that did to the bot's Normal runs** (8 seeds each):
+  - Pyre: won 7 before, 5 now.
+  - Legion: won 3 before, 2 now.
+  - Fortress: won 5 before, 6 now, which is seed noise.
+  - Endless: fortress fell on days 52, 62 and 78 before; 56, 57 and 58 now.
+  - The campaign gate still passes.
+- **Demon health slider:** one more row under Economy, "Demons: Health", from 25% to 400%.
+  - It scales every kind's hit points, in the waves and the wilds alike, and nothing else.
+  - It's slot 9 in the economy array (`Rules.DemonHealth`), so it saves with a run and marks
+    it as tuned, like the other sliders.
+  - A save from 0.39 has only nine entries and loads at 100%.
+- **Test:** every kind scales and nothing else does, and a run made with it spawns demons
+  that tough and survives a save.
+
 ## The Observatory (your call: nearest first, gold and workers, Cartography, "Observatory")
 
 - **What it does:** like Factorio's radar sector scan. Every 20 s of work it charts one 6x6
