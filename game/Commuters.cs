@@ -52,7 +52,7 @@ public sealed class Commuters
         {
             case BuildingKind.Farm or BuildingKind.Fishery or BuildingKind.Hunter: return null; // Farmers, Fishers, Hunters
             case BuildingKind.Shrine: return "res://art/baked/unit-town-acolyte.png";
-            case BuildingKind.Scriptorium: return "res://art/baked/unit-town-scholar.png";
+            case BuildingKind.Scriptorium or BuildingKind.Observatory: return "res://art/baked/unit-town-scholar.png";
             case BuildingKind.Barracks: return "res://art/baked/unit-town-drillmaster.png";
         }
         if (world.HasCrew(b.Def)) return null; // the sim's own woodsmen and miners walk for it

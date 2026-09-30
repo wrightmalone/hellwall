@@ -35,6 +35,7 @@ var items := [
 	["Skyspire", "blue/building_tower_B_blue", 1, 0.95, 0],
 	["Censer", "blue/building_tower_A_blue", 1, 0.95, 0],
 	["Wardstone", "blue/building_tower_base_blue", 1, 0.9, 0],
+	["Observatory", "blue/building_tower_base_blue", 2, 0.8, 0, "dome"],
 	["scaffold-1", "neutral/building_scaffolding", 1, 0.95, 0],
 	["scaffold-2", "neutral/building_scaffolding", 2, 0.95, 0],
 	["scaffold-3", "neutral/building_scaffolding", 3, 0.95, 0],
@@ -92,6 +93,8 @@ func bake_one(it) -> Array:
 	viewport.add_child(model)
 	model.rotation_degrees.y = it[4]
 	var height := fit(model, tiles * it[3])
+	if it.size() > 5 and it[5] == "dome":
+		height += add_dome(tiles * it[3], height)
 	# The canvas: the footprint's diamond across, and tall enough for the model above it.
 	var width := tiles * 132 + 24
 	var tall := int(tiles * 66 + height * PX_PER_UNIT * cos(deg_to_rad(30.0)) + 40)
@@ -110,8 +113,45 @@ func bake_one(it) -> Array:
 	img.save_png("res://art/baked/buildings/" + it[0] + ".png")
 	var base := camera.unproject_position(Vector3.ZERO)
 	model.queue_free()
+	for e in get_nodes_in_group("extras"):
+		e.queue_free()
 	await process_frame
 	return [base.x, base.y]
+
+# The Observatory: KayKit has none, so a brass dome and a telescope go on a tower base (as bake.gd builds the Fishery's boat). Returns the height added.
+func add_dome(across: float, top: float) -> float:
+	var brass := StandardMaterial3D.new()
+	brass.albedo_color = Color(0.78, 0.62, 0.32)
+	brass.metallic = 0.6
+	brass.roughness = 0.45
+	var r := across * 0.3
+	var dome := MeshInstance3D.new()
+	var sphere := SphereMesh.new()
+	sphere.radius = r
+	sphere.height = r
+	sphere.is_hemisphere = true
+	sphere.material = brass
+	dome.mesh = sphere
+	dome.position = Vector3(0, top, 0)
+	viewport.add_child(dome)
+	var slit := StandardMaterial3D.new()
+	slit.albedo_color = Color(0.55, 0.42, 0.22)
+	slit.metallic = 0.5
+	var tube := MeshInstance3D.new()
+	var cyl := CylinderMesh.new()
+	cyl.top_radius = r * 0.2
+	cyl.bottom_radius = r * 0.26
+	cyl.height = r * 1.9
+	cyl.material = slit
+	tube.mesh = cyl
+	# Pointing up and across the view, so it reads as a telescope rather than a knob.
+	var axis := Vector3(-1, 1.1, 1).normalized()
+	tube.basis = Basis(Quaternion(Vector3.UP, axis))
+	tube.position = Vector3(0, top + r * 0.55, 0) + axis * r * 0.75
+	viewport.add_child(tube)
+	dome.add_to_group("extras")
+	tube.add_to_group("extras")
+	return r * 1.6
 
 # Scale so the model's wider horizontal side spans `across` tiles (a tile is one unit), centred on the origin, base on the ground. Returns its height.
 func fit(model: Node3D, across: float) -> float:

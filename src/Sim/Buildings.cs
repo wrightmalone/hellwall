@@ -35,6 +35,8 @@ public enum BuildingKind : byte
     Manor,
     /// <summary>A gate in stone: a stone wall your people can walk through. After Masonry.</summary>
     StoneGate,
+    /// <summary>Charts the fog: every so often it reveals a patch of unexplored ground within its range, nearest first. After Cartography.</summary>
+    Observatory,
 }
 
 public sealed class Building
@@ -68,6 +70,8 @@ public sealed class Building
     public bool Exhausted;
     /// <summary>Seconds its crew stay fled from demons that came too close with no wall between (FlightSystem); nothing gathered meanwhile.</summary>
     public float FleeTimer;
+    /// <summary>The Observatory: seconds of work towards its next chart (Vision.StepObservatories).</summary>
+    public float ScanTimer;
     public bool Fleeing => FleeTimer > 0;
     /// <summary>Demons close, but enough soldiers by to keep the crew at work (FlightSystem, rechecked every second; for the display).</summary>
     public bool Steadied;

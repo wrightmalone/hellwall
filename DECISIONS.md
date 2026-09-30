@@ -1700,6 +1700,42 @@ last lost by at least one).
   toughness, that rock and ore change only their own deposits, and that a world's rock
   really is that much softer.
 
+## The Observatory (your call: nearest first, gold and workers, Cartography, "Observatory")
+
+- **What it does:** like Factorio's radar sector scan. Every 20 s of work it charts one 6x6
+  patch of unexplored ground whose centre lies within 40 tiles, and that patch stays
+  explored. It isn't lit up: you see the land, and what sleeps on it, as it was.
+- **Nearest first:** it looks only at patches at least three-quarters unknown, and picks
+  among those within a patch's width of the nearest. The pick hashes the building's id
+  and the tick, not the rng, so building one doesn't change which demons a run draws.
+- **What it reveals is information only.** Placement still needs holy ground, so a
+  charted patch can't be built on from afar. Sleeping packs, ruins and hellgates already
+  show once their ground is explored, so the scan marks them on the map and minimap.
+- **Cost:** 120 gold, 40 wood, 30 stone to build; 2 workers (scholars, who commute to it);
+  2 sanctity; and 1.5 gold a second while it works. The Keep makes 1 gold a second, so
+  that's steep early on.
+  - The existing hold button stops both the charting and the cost.
+  - The gold slider doesn't raise the running cost: `WithEconomy` now scales only
+    positive building gold.
+- **Nothing left:** when no patch in range is worth charting, it waits with its work done,
+  and doesn't waste a chart. The panel says "Nothing left to chart in range: put it on
+  hold to save the gold".
+- **Tech:** Cartography (tier 1: 120 gold, 40 wood, 35 s) unlocks it. Star Charts (tier 2,
+  after Cartography: 250 gold, 60 stone) charts 40% faster and 16 tiles further.
+  Scouting is worth most early on, which is why it isn't locked deeper.
+- **On screen:**
+  - Works tab, after the Scriptorium.
+  - A KayKit tower base with a brass dome and telescope, added in `bake_buildings.gd`.
+  - A beam from the dome out to each patch as it's charted, and the patch outlined in
+    gold as it fades.
+  - A gold square pulses on the minimap.
+  - The panel counts down to the next patch.
+- **Save format 22:** each building now saves its chart timer.
+- **Tests:** six. It charts unknown ground in range, near the known edge; when paused it
+  charts nothing and costs nothing; with nothing left it waits; Star Charts is faster and
+  reaches further; the gold slider leaves the running cost alone; a save mid-chart carries
+  on identically.
+
 ## Buildings from KayKit Medieval Hexagon (you downloaded it and the Medieval Village MegaKit)
 
 - **Every building but walls and gates is now a baked KayKit model** (`tools/bake_buildings.gd`,

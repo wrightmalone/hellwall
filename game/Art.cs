@@ -172,6 +172,7 @@ public static class Art
         BuildingKind.Belfry => [Red(23)],
         BuildingKind.Barracks => [Red(14)],
         BuildingKind.Scriptorium => [Red(34)],
+        BuildingKind.Observatory => [Grey(36)],
         _ => [Grey(1)],
     };
 

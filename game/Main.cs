@@ -320,6 +320,12 @@ public partial class Main : Node2D
         // --build=Kind: put one on the first place it can go near the Keep, before any fast-forward (screenshots of what it does).
         if (options.TryGetValue("build", out var buildKind) && Enum.TryParse<BuildingKind>(buildKind, true, out var toBuild))
         {
+            // A dev switch: the tech it needs comes with it.
+            if (_world.Def(toBuild).RequiresTech is { } needs && !_world.Tech.Has(needs))
+            {
+                _world.Tech.Researched.Add(needs);
+                _world.Tech.Recompute(_world.Rules);
+            }
             int c = _world.Terrain.Width / 2;
             bool placed = false;
             for (int r = 4; r < 40 && !placed; r++)
@@ -349,6 +355,14 @@ public partial class Main : Node2D
                 foreach (var e in events)
                     if (e is TreeFelled f) _terrainView!.PaintCell(f.X, f.Y);
                     else if (e is DepositWorn worn) _terrainView!.PaintCell(worn.X, worn.Y);
+                    else if (e is GroundCharted g) _state.Charts.Add((g, 0));
+            }
+            // Charts from the skip keep only the last few seconds' worth, aged as they would be.
+            for (int i = _state.Charts.Count - 1; i >= 0; i--)
+            {
+                double age = (_world.Tick - _state.Charts[i].Chart.Tick) * TickSeconds;
+                if (age >= ClientState.ChartLife) _state.Charts.RemoveAt(i);
+                else _state.Charts[i] = (_state.Charts[i].Chart, age);
             }
             HandleEvents();
         }
@@ -666,6 +680,7 @@ public partial class Main : Node2D
             else _state.Marks[i] = (m.X, m.Y, m.Size, m.Age + delta);
         }
         Age(_state.Howls, delta, 1.2);
+        Age(_state.Charts, delta, ClientState.ChartLife);
         Age(_state.Log, delta, 8);
 
         _state.Alpha = _paused ? 1f : (float)Math.Clamp(_accumulator / TickSeconds, 0, 1);
@@ -767,6 +782,10 @@ public partial class Main : Node2D
                 case DemonBurst d: _state.Bursts.Add((d, 0)); break;
                 case DemonSpat sp: _state.Spits.Add((sp, 0)); break;
                 case DemonHowled h: _state.Howls.Add((h, 0)); break;
+                case GroundCharted g:
+                    _state.Charts.Add((g, 0));
+                    _minimap.Charted(new Vector2(g.X + g.Size / 2f, g.Y + g.Size / 2f), g.Size);
+                    break;
                 case OutcomeChanged { Outcome: Outcome.Running }:
                     _state.Say("The field is yours: no more waves. Clear it at your leisure.");
                     break;

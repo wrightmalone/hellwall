@@ -239,6 +239,8 @@ public partial class CommandCard : PanelContainer
             string techId = tech.Id;
             var button = Cell(cell++, null, Short(tech.Name), () => Send(new Research(bid, techId)));
             button.TooltipText = $"{tech.Name} (tier {tech.Tier}): {UiKit.CostText(tech.Cost, World.Colony)}, {tech.Seconds:0} s\n{tech.Description}";
+            int longest = Short(tech.Name).Split('\n').Max(l => l.Length); // Husbandry, Cartography: whole, a size or two down
+            if (longest > 8) button.AddThemeFontSizeOverride("font_size", longest > 10 ? 9 : 10);
         }
     }
 

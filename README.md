@@ -261,9 +261,11 @@ once they're in sight of the colony and wake the sleeping packs near it;
 Broodmothers (from wave 8), which burst into five Imps when killed; and siege
 Brutes (from wave 10).
 
-**Research** happens at a Scriptorium. Twelve techs in three tiers; tier 3
+**Research** happens at a Scriptorium. Fourteen techs in three tiers; tier 3
 is two exclusive pairs (Bastions or Holy Fire, Standing Army or Artillery),
 so paths part for good. Holy Fire makes consecrated ground burn demons.
+Cartography unlocks the **Observatory**, which charts the fog a patch at a
+time, nearest first, for a steep running cost in gold (put it on hold to stop).
 
 **Possession is the cascade.** A demon reaching an inhabited building
 (a House, or a workplace with its crew in) takes it: its people come out as

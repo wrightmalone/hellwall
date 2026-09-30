@@ -140,7 +140,10 @@
                     "weapon": { "range": 12, "damage": 40, "cooldown": 0.4, "splash": 0.8, "noise": 10, "airOnly": true } },
     "Censer":     { "size": [1, 1], "hp": 250,  "buildSeconds": 5,  "cost": { "gold": 40, "wood": 10, "stone": 10 },
                     "sanctityUse": 2, "possessable": false,
-                    "weapon": { "range": 3, "damage": 8, "cooldown": 0.3, "splash": 1.2, "noise": 4 } }
+                    "weapon": { "range": 3, "damage": 8, "cooldown": 0.3, "splash": 1.2, "noise": 4 } },
+    "Observatory": { "size": [2, 2], "hp": 300, "buildSeconds": 14, "cost": { "gold": 120, "wood": 40, "stone": 30 },
+                    "workers": 2, "sanctityUse": 2, "gold": -1.5, "requiresTech": "cartography",
+                    "scanRange": 40, "scanEvery": 20, "scanPatch": 6 }
   },
 
   "units": {
@@ -201,6 +204,9 @@
       "description": "Farms and Hunters yield 35% more; Outriders.",
       "unlocksUnits": ["Outrider"],
       "modifiers": [ { "group": "food", "stat": "rate", "mul": 1.35 } ] },
+    { "id": "cartography", "name": "Cartography", "tier": 1, "cost": { "gold": 120, "wood": 40 }, "seconds": 35,
+      "description": "The Observatory: charts the fog for a running cost in gold.",
+      "unlocksBuildings": ["Observatory"] },
 
     { "id": "ballistics", "name": "Ballistics", "tier": 2, "requires": ["fletching"], "cost": { "gold": 300, "stone": 120 }, "seconds": 60,
       "description": "Lance Towers: long-range heavy bolts.",
@@ -216,6 +222,9 @@
       "description": "Crossbowmen; every soldier +30% hit points.",
       "unlocksUnits": ["Crossbowman"],
       "modifiers": [ { "group": "units", "stat": "hp", "mul": 1.3 } ] },
+    { "id": "starcharts", "name": "Star Charts", "tier": 2, "requires": ["cartography"], "cost": { "gold": 250, "stone": 60 }, "seconds": 50,
+      "description": "Observatories chart 40% faster and 16 tiles further.",
+      "modifiers": [ { "building": "Observatory", "stat": "scanEvery", "mul": 0.6 }, { "building": "Observatory", "stat": "scanRange", "add": 16 } ] },
 
     { "id": "bastions", "name": "Bastions", "tier": 3, "requires": ["masonry", "pitch"], "exclusiveWith": "holyfire",
       "cost": { "gold": 500, "stone": 250 }, "seconds": 80,

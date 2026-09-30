@@ -164,15 +164,18 @@ public partial class Inspector : PanelContainer
                 b.Fleeing ? "Crew fled: demons close, and no wall between. Nothing gathered till they're gone" :
                 b.Steadied ? "Demons close, but your soldiers are keeping the crew at work" :
                 b.NeedsCrew && !b.Staffed ? $"Idle: needs {b.Def.Workers} workers" :
+                b.Exhausted && b.Def.ScanEvery > 0 ? "Nothing left to chart in range: put it on hold to save the gold" :
+                b.Def.ScanEvery > 0 ? $"Charting: next patch in {Math.Max(0, (b.Def.ScanEvery - b.ScanTimer) / Math.Max(0.01, World.Colony.Power)):0} s" :
                 b.Exhausted && World.HasCrew(b.Def) ? $"Worked out: no {(b.Kind == BuildingKind.Woodcutter ? "trees" : b.Kind == BuildingKind.Mine ? "ore" : "rock")} left in reach. Build another further out" :
                 "Working";
-            _status.AddThemeColorOverride("font_color", b.Paused ? UiKit.Muted : b.Fleeing || b.Possessed || !b.OnGround || (b.NeedsCrew && !b.Staffed) || (b.Exhausted && World.HasCrew(b.Def)) ? UiKit.Threat : UiKit.Text);
+            _status.AddThemeColorOverride("font_color", b.Paused ? UiKit.Muted : b.Fleeing || b.Possessed || !b.OnGround || (b.NeedsCrew && !b.Staffed) || (b.Exhausted && (World.HasCrew(b.Def) || b.Def.ScanEvery > 0)) ? UiKit.Threat : UiKit.Text);
             var d = new List<string>();
             if (b.Def.Produces is { } r && b.Complete) d.Add($"{b.Rate * World.Colony.Power:0.00} {r.ToString().ToLowerInvariant()} a second");
             if (b.Def.Weapon is { } w) d.Add($"range {w.Range:0.#}, {w.Damage:0} damage every {w.Cooldown:0.##} s");
             if (b.Def.Housing > 0) d.Add($"houses {b.Def.Housing}");
             if (b.Def.SanctitySupply > 0) d.Add($"supplies {b.Def.SanctitySupply:0} sanctity");
             if (b.Def.SanctityUse > 0) d.Add($"draws {b.Def.SanctityUse:0} sanctity");
+            if (b.Def.Gold < 0) d.Add(b.Active ? $"costs {-b.Def.Gold:0.##} gold a second" : "costs nothing while it isn't working");
             _detail.Text = string.Join("\n", d);
             _demolish.Visible = b.Kind != BuildingKind.Keep;
             _hold.Visible = b.NeedsCrew && b.Complete && !b.Possessed;

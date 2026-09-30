@@ -86,6 +86,9 @@ public sealed record ObjectiveCompleted(int Tick, int Index, ObjectiveKind Kind)
 
 public sealed record WaveLanded(int Tick, int Number, int Spawned, bool Final) : SimEvent(Tick);
 
+/// <summary>An Observatory charted a patch of the fog: X, Y its top-left tile, Size its side.</summary>
+public sealed record GroundCharted(int Tick, int BuildingId, int X, int Y, int Size) : SimEvent(Tick);
+
 public sealed record TechResearched(int Tick, string TechId) : SimEvent(Tick);
 
 public sealed record HellgateClosed(int Tick, int GateId, int X, int Y) : SimEvent(Tick);

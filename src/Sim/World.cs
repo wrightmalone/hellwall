@@ -397,6 +397,7 @@ public sealed partial class World
         FlightSystem.Step(this, dt);
         WoodsSystem.Step(this, dt);
         Vision.Step(this);
+        Vision.StepObservatories(this, dt);
         RepairSystem.Step(this, dt);
         RuinSystem.Step(this);
         StepUpgrades(dt);

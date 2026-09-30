@@ -70,6 +70,9 @@ public sealed class ClientState
     /// <summary>Each marching wave column's centre (tiles) and head-count, for its marker.</summary>
     public readonly List<(int Column, Godot.Vector2 Centre, int Count)> Columns = new();
     public readonly List<(DemonHowled Howl, double Age)> Howls = new();
+    /// <summary>Patches an Observatory just charted: a beam out to it and its outline, fading.</summary>
+    public readonly List<(GroundCharted Chart, double Age)> Charts = new();
+    public const double ChartLife = 3;
     public readonly List<(string Text, double Age)> Log = new();
 
     public void Say(string text)

@@ -519,6 +519,7 @@ public partial class NewGameMenu : CanvasLayer
         "Soldiers rank up with kills. Buildings mend themselves when left alone, for a fee.\n" +
         "Upgrade Houses to Cottages and Manors; raise the Keep itself (select it). Stone gates after Masonry.\n" +
         "Patron saints offer a blessing at 40, 90 and 160 colonists. Fishery (Town) for food from water.\n" +
+        "Cartography unlocks the Observatory (Works): it charts the fog nearest first, for gold a second. Hold it when you've seen enough.\n" +
         "Ctrl+A: every soldier. Home: back to the Keep. F4: noise view.\n" +
         "Esc: the pause menu, with save slots, volume, music, fullscreen and interface size.\n" +
         "Skirmish settings, a weekly challenge, a map editor, a ninth mission, music, and an end-of-run chart.";

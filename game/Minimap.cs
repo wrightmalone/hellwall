@@ -43,6 +43,11 @@ public partial class Minimap : Control
 
     public void Alarm(Vector2 tile) => _alarms.Add((tile, AlarmSeconds));
 
+    readonly List<(Vector2 At, float Size, float Life)> _charts = new();
+    const float ChartSeconds = 3;
+    /// <summary>An Observatory charted a patch: a gold square there, fading, so a far one isn't missed.</summary>
+    public void Charted(Vector2 centre, float size) => _charts.Add((centre, size, ChartSeconds));
+
     public override void _Ready()
     {
         CustomMinimumSize = new Vector2(W, H + 16);
@@ -187,6 +192,15 @@ public partial class Minimap : Control
             DrawArc(M(at), 3 + (1.5f - life) * 6, 0, Mathf.Tau, 16, new Color(1, 0.3f, 0.2f, life / 1.5f), 1.5f);
         }
 
+        for (int i = _charts.Count - 1; i >= 0; i--)
+        {
+            var (at, size, life) = _charts[i];
+            life -= (float)GetProcessDeltaTime();
+            if (life <= 0) { _charts.RemoveAt(i); continue; }
+            _charts[i] = (at, size, life);
+            float r = size / 2 + 1.5f * (1 - life / ChartSeconds);
+            DrawPolyline([M(at.X - r, at.Y - r), M(at.X + r, at.Y - r), M(at.X + r, at.Y + r), M(at.X - r, at.Y + r), M(at.X - r, at.Y - r)], new Color(UiKit.Gold, life / ChartSeconds), 1.5f);
+        }
         for (int i = _alarms.Count - 1; i >= 0; i--)
         {
             var (at, life) = _alarms[i];

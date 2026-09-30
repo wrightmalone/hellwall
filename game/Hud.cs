@@ -250,6 +250,8 @@ public partial class Hud : CanvasLayer
         if (def.Produces is { } r) parts.Add($"gathers {r.ToString().ToLowerInvariant()} from {string.Join("/", def.Gathers)}");
         if (def.Weapon is { } w) parts.Add($"range {w.Range}, {w.Damage} dmg / {w.Cooldown}s{(w.Splash > 0 ? $", splash {w.Splash}" : "")}");
         if (def.SlowRadius > 0) parts.Add($"slows demons within {def.SlowRadius} to {def.SlowFactor:P0}");
+        if (def.ScanEvery > 0) parts.Add($"charts a {def.ScanPatch}x{def.ScanPatch} patch of the fog every {def.ScanEvery:0} s, up to {def.ScanRange:0} tiles out");
+        if (def.Gold < 0) parts.Add($"costs {-def.Gold:0.##} gold a second while it works (put it on hold to stop)");
         return parts.Count == 0 ? "" : "\n" + string.Join("\n", parts);
     }
 

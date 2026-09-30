@@ -45,6 +45,7 @@ public static class Palette
         BuildingKind.Belfry => new(0.80f, 0.70f, 0.45f),
         BuildingKind.Skyspire => new(0.60f, 0.75f, 0.90f),
         BuildingKind.Censer => new(0.90f, 0.45f, 0.20f),
+        BuildingKind.Observatory => new(0.80f, 0.66f, 0.35f),
         _ => Colors.Magenta,
     };
 
@@ -71,6 +72,7 @@ public static class Palette
         BuildingKind.Belfry => "Bel",
         BuildingKind.Skyspire => "Sk",
         BuildingKind.Censer => "Ce",
+        BuildingKind.Observatory => "Ob",
         _ => "",
     };
 

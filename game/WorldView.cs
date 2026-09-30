@@ -537,6 +537,22 @@ public partial class WorldView : Node2D
                 Iso.Ellipse(this, new Vector2(howl.X, howl.Y), howl.Radius * 0.5f * t, new Color(0.9f, 0.3f, 0.9f, 0.6f * (1 - t)), 1.5f);
             }
 
+            // Charting: a pale beam from the Observatory's dome out to the patch, then the patch outlined in gold, fading.
+            foreach (var (chart, age) in state.Charts)
+            {
+                float t = (float)(age / ClientState.ChartLife);
+                float x = chart.X, y = chart.Y, s = chart.Size;
+                Vector2[] patch = [Iso.P(x, y), Iso.P(x + s, y), Iso.P(x + s, y + s), Iso.P(x, y + s)];
+                DrawColoredPolygon(patch, new Color(1, 0.9f, 0.55f, 0.18f * (1 - t)));
+                DrawPolyline([.. patch, patch[0]], new Color(1, 0.85f, 0.4f, 0.9f * (1 - t)), 2);
+                if (age < 1.2 && world.BuildingById(chart.BuildingId) is { } obs)
+                {
+                    float beam = (float)(1 - age / 1.2);
+                    var from = Iso.P(obs.CentreX, obs.CentreY) - new Vector2(0, 115);
+                    DrawLine(from, Iso.P(x + s / 2, y + s / 2), new Color(1, 0.95f, 0.7f, 0.55f * beam), 3);
+                }
+            }
+
             foreach (var (burst, age) in state.Bursts)
             {
                 float t = (float)(age / 0.4);

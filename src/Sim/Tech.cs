@@ -119,6 +119,8 @@ public sealed class TechState
         "sanctitySupply" => d with { SanctitySupply = F(d.SanctitySupply, m) },
         "housing" => d with { Housing = (int)Math.Round(d.Housing * m.Mul + m.Add) },
         "gold" => d with { Gold = d.Gold * m.Mul + m.Add },
+        "scanRange" => d with { ScanRange = F(d.ScanRange, m) },
+        "scanEvery" => d with { ScanEvery = F(d.ScanEvery, m) },
         "damage" or "range" or "cooldown" or "splash" when d.Weapon != null => d with { Weapon = Apply(d.Weapon, m) },
         _ => d,
     };

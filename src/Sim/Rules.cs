@@ -285,6 +285,15 @@ public sealed record BuildingDef
     public float SlowRadius { get; init; }
     public float SlowFactor { get; init; } = 1;
 
+    /// <summary>
+    /// Charts the fog (the Observatory): every ScanEvery seconds of work it
+    /// reveals one ScanPatch-square patch of unexplored ground whose centre is
+    /// within ScanRange tiles, nearest first.
+    /// </summary>
+    public float ScanRange { get; init; }
+    public float ScanEvery { get; init; }
+    public int ScanPatch { get; init; }
+
     public int W => Size[0];
     public int H => Size[1];
 }
@@ -524,7 +533,7 @@ public sealed class Rules
             {
                 var d = b[k];
                 if (d.Produces is { } res) d = d with { PerTile = d.PerTile * At(res) };
-                if (d.Gold != 0) d = d with { Gold = d.Gold * At(Resource.Gold) };
+                if (d.Gold > 0) d = d with { Gold = d.Gold * At(Resource.Gold) }; // an income; a running cost (the Observatory's) stays
                 b[k] = d;
             }
             r.Buildings = b;

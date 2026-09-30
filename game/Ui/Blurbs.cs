@@ -31,6 +31,7 @@ public static class Blurbs
         BuildingKind.Belfry => "no weapon: its bells slow every demon in earshot",
         BuildingKind.Barracks => "trains soldiers; select it for the queue and a rally point",
         BuildingKind.Scriptorium => "research: select it to choose a line",
+        BuildingKind.Observatory => "charts the fog a patch at a time, nearest first: find the packs, the ore and the ways in before you expand. Dear to run: put it on hold when you've seen enough",
         _ => "",
     };
 
