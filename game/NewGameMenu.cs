@@ -134,11 +134,14 @@ public partial class NewGameMenu : CanvasLayer
         if (ShowNews) CallDeferred(nameof(OpenNews));
         if (ShowAchievements) CallDeferred(nameof(OpenAchievements)); // --achievements: for screenshots of the page
         if (ShowWorkshopPage) CallDeferred(nameof(ShowWorkshop)); // --workshop: straight to it
+        if (StartPage is { } start && _pages.ContainsKey(start)) CallDeferred(nameof(Show), start);
     }
 
     /// <summary>Where the Workshop page gets its maps (Main sets it: Steam's, or the made-up ones for screenshots).</summary>
     public Func<IWorkshopSource>? WorkshopSource;
     public bool ShowWorkshopPage;
+    /// <summary>--page=name: open straight onto a page (settings, load, extras...), for screenshots.</summary>
+    public string? StartPage;
 
     /// <summary>The Workshop page, made afresh each time it's opened (so it asks the Workshop only when wanted).</summary>
     void ShowWorkshop()
@@ -318,6 +321,7 @@ public partial class NewGameMenu : CanvasLayer
         side.AddChild(PauseMenu.Toggle("Screen shake", "screen_shake", true));
         side.AddChild(PauseMenu.Toggle("Pause when a building is possessed", "pause_on_possession", false));
         side.AddChild(PauseMenu.Toggle("Autosave every 5 minutes (the last five kept)", "autosave", true));
+        EconomyRows(side);
         var folder = UiKit.TextButton("Open the game's folder (saves, logs, crash reports)", 13);
         folder.Pressed += Diagnostics.OpenFolder;
         side.AddChild(folder);
@@ -327,6 +331,50 @@ public partial class NewGameMenu : CanvasLayer
     }
 
     // --- extras ---
+
+    /// <summary>
+    /// The economy sliders: each resource's income, 25% to 400% on a doubling scale (100% in the middle),
+    /// for every run from the next one. Off 100%, runs don't count for achievements or leaderboards.
+    /// </summary>
+    static void EconomyRows(VBoxContainer side)
+    {
+        side.AddChild(new Control { CustomMinimumSize = new Vector2(0, 8) });
+        side.AddChild(UiKit.Label("Economy", 17, UiKit.Gold));
+        var about = UiKit.Label("How fast each resource comes in, for every run you start from now on: campaign, skirmish and the Workshop. Tuned runs don't count for achievements or leaderboards, and keep their own best scores.", 12, UiKit.Muted);
+        about.AutowrapMode = TextServer.AutowrapMode.WordSmart;
+        about.CustomMinimumSize = new Vector2(360, 0);
+        side.AddChild(about);
+        var sliders = new List<(HSlider, Label)>();
+        foreach (var r in EconomySettings.All)
+        {
+            var row = new HBoxContainer();
+            var name = UiKit.Label(r.ToString(), 13);
+            name.CustomMinimumSize = new Vector2(70, 0);
+            row.AddChild(name);
+            var slider = new HSlider { MinValue = -2, MaxValue = 2, Step = 0.01, Value = Math.Log2(EconomySettings.Get(r)), SizeFlagsHorizontal = Control.SizeFlags.ExpandFill, FocusMode = Control.FocusModeEnum.None };
+            var value = UiKit.Label($"{EconomySettings.Get(r) * 100:0}%", 12, EconomySettings.Get(r) == 1 ? UiKit.Muted : UiKit.Gold);
+            value.CustomMinimumSize = new Vector2(48, 0);
+            var res = r;
+            slider.ValueChanged += v =>
+            {
+                EconomySettings.Set(res, Math.Pow(2, v));
+                double m = EconomySettings.Get(res);
+                value.Text = $"{m * 100:0}%";
+                value.AddThemeColorOverride("font_color", m == 1 ? UiKit.Muted : UiKit.Gold);
+            };
+            row.AddChild(slider);
+            row.AddChild(value);
+            side.AddChild(row);
+            sliders.Add((slider, value));
+        }
+        var reset = UiKit.TextButton("Back to the game's own economy (all 100%)", 13);
+        reset.Pressed += () =>
+        {
+            EconomySettings.Reset();
+            foreach (var (slider, value) in sliders) { slider.SetValueNoSignal(0); value.Text = "100%"; value.AddThemeColorOverride("font_color", UiKit.Muted); }
+        };
+        side.AddChild(reset);
+    }
 
     Control ExtrasPage()
     {

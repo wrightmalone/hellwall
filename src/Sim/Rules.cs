@@ -505,6 +505,33 @@ public sealed class Rules
     /// <summary>A copy with different starting resources, for probes and scenarios.</summary>
     public Rules WithStartingResources(Cost start) => Copy(r => r.StartingResources = start);
 
+    /// <summary>
+    /// A player's economy (Settings, Economy): each resource's income times its multiplier (indexed
+    /// by Resource; null or all 1: these rules unchanged). Gold is colonists' pay and buildings' own
+    /// gold; wood, stone and iron are their gatherers' rates and what woodsmen and miners get per
+    /// blow; food and silver their gatherers' rates. Upkeep, costs and loot are left alone.
+    /// </summary>
+    public Rules WithEconomy(double[]? m)
+    {
+        if (m == null || m.All(x => x == 1)) return this;
+        double At(Resource r) => (int)r < m.Length ? m[(int)r] : 1;
+        return Copy(r =>
+        {
+            var b = (BuildingDef[])r.Buildings.Clone();
+            for (int k = 0; k < b.Length; k++)
+            {
+                var d = b[k];
+                if (d.Produces is { } res) d = d with { PerTile = d.PerTile * At(res) };
+                if (d.Gold != 0) d = d with { Gold = d.Gold * At(Resource.Gold) };
+                b[k] = d;
+            }
+            r.Buildings = b;
+            r.ColonistGoldPerSecond = ColonistGoldPerSecond * At(Resource.Gold);
+            r.Woods = r.Woods with { WoodPerHp = (float)(r.Woods.WoodPerHp * At(Resource.Wood)) };
+            r.Mining = r.Mining with { StonePerHp = (float)(r.Mining.StonePerHp * At(Resource.Stone)), IronPerHp = (float)(r.Mining.IronPerHp * At(Resource.Iron)) };
+        });
+    }
+
     /// <summary>Tech-style modifiers folded into the base definitions (a campaign relic's), so research builds on them.</summary>
     public Rules WithModifiers(IEnumerable<TechModifier> mods) => Copy(r =>
     {
@@ -619,16 +646,17 @@ public sealed class Rules
         public MiningRules Mining = new();
         public FogRules Fog = new();
         public RepairRules Repair = new();
+        public double ColonistGoldPerSecond;
     }
 
     Rules Copy(Action<Builder> change)
     {
-        var b = new Builder { StartingResources = StartingResources, Buildings = Buildings, Units = Units, Demons = Demons, Survival = Survival, Hellgates = Hellgates, Wilds = Wilds, Woods = Woods, Mining = Mining, Fog = Fog, Repair = Repair };
+        var b = new Builder { ColonistGoldPerSecond = ColonistGoldPerSecond, StartingResources = StartingResources, Buildings = Buildings, Units = Units, Demons = Demons, Survival = Survival, Hellgates = Hellgates, Wilds = Wilds, Woods = Woods, Mining = Mining, Fog = Fog, Repair = Repair };
         change(b);
         return new Rules
         {
             StartingResources = b.StartingResources,
-            ColonistGoldPerSecond = ColonistGoldPerSecond,
+            ColonistGoldPerSecond = b.ColonistGoldPerSecond,
             ColonistFoodPerSecond = ColonistFoodPerSecond,
             RefundFraction = RefundFraction,
             PossessionSpawnSeconds = PossessionSpawnSeconds,
@@ -653,7 +681,7 @@ public sealed class Rules
     }
 
     static string Describe(Builder b) =>
-        JsonSerializer.Serialize(new { b.StartingResources, b.Buildings, b.Units, b.Demons, b.Survival, b.Hellgates, b.Wilds, b.Woods, b.Mining, b.Fog, b.Repair }, Options);
+        JsonSerializer.Serialize(new { b.ColonistGoldPerSecond, b.StartingResources, b.Buildings, b.Units, b.Demons, b.Survival, b.Hellgates, b.Wilds, b.Woods, b.Mining, b.Fog, b.Repair }, Options);
 
     static T[] Dense<TKey, T>(Dictionary<TKey, T> map, string what) where TKey : struct, Enum
     {

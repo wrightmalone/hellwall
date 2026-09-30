@@ -11,6 +11,9 @@ namespace Hellwall.Game;
 /// </summary>
 public partial class Coach : PanelContainer
 {
+    /// <summary>Where the threat card ends (the HUD's word), to sit just under it.</summary>
+    public Func<float>? Below;
+
     public World World = null!;
 
     sealed record Tip(string Id, Func<string> Text, Func<bool> Show, Func<bool> Done);
@@ -122,6 +125,6 @@ public partial class Coach : PanelContainer
         Visible = _current != null && World.Outcome == Outcome.Running;
         if (_current != null) _text.Text = _current.Text();
         var screen = GetViewport().GetVisibleRect().Size;
-        Position = new Vector2(screen.X - Size.X - 8, 170); // below the threat card
+        Position = new Vector2(screen.X - Size.X - 8, Below?.Invoke() + 8 ?? 170); // below the threat card, however tall it's grown
     }
 }

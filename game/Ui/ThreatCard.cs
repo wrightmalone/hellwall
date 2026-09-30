@@ -93,6 +93,7 @@ public partial class ThreatCard : PanelContainer
                 // The relic's bonus goal: kept ones show as kept until broken, once ones when met.
                 + (World.Bonus is { } bonus ? $"\nBonus:  {(World.BonusBroken ? "[-] broken:" : World.BonusDone ? "[x]" : "[ ]")} {bonus.Describe()}{(bonus.Kind == ObjectiveKind.KeepForest ? $" ({World.ForestLeftPercent}% now)" : "")}" : "")
                 + (World.Relics.Length > 0 ? "\nRelics:  " + string.Join(", ", World.Relics.Select(t => { var (id, h) = Relics.Parse(t); return Campaign.Default.Relic(id)!.Name + (h ? " (hallowed)" : ""); })) : "");
+        if (World.CustomEconomy) corrupt += $"Economy: {EconomySettings.Describe(World.Economy)} (no achievements or leaderboards)";
         _corrupt.Text = corrupt.TrimEnd();
         _corrupt.Visible = corrupt.Length > 0;
         _line.QueueRedraw();

@@ -1645,6 +1645,42 @@ last lost by at least one).
   Workshop on with its tags. Then a first test through Steam: `--steam-test` on a Windows PC
   with Steam running is the quickest way to see it all start.
 
+## Economy sliders (a tester was "swimming in every resource except iron")
+
+- **Settings has an Economy section:** one slider per resource (gold, wood, stone, food,
+  iron, silver). Each runs from 25% to 400% on a doubling scale, so 100% sits in the
+  middle, and there's a reset to 100%.
+- **They apply to every run started from then on:** campaign missions, skirmishes,
+  Workshop and hand-made maps alike. That's what you asked for, so a tester can tune the
+  numbers and replay a mission.
+- **What each slider scales:**
+  - Gold: colonists' pay and buildings' own gold.
+  - Wood, stone and iron: their gatherers' rates, and what woodsmen and miners get per
+    blow.
+  - Food and silver: their gatherers' rates.
+  - Costs, upkeep, loot and mission gifts are left alone. So is starting stock, which
+    Skirmish already has.
+- **Saves:** a run keeps the economy it began with, in its saves (format 21), so a
+  loaded game plays as it was started whatever the sliders say now.
+- **At 100% the rules are untouched** (the same object), so the default game, the bot and
+  the balance checks are unchanged.
+- **A tuned run is marked:**
+  - the threat card says so ("Economy: iron 200% (no achievements or leaderboards)");
+  - achievements and leaderboards don't count it;
+  - its best scores are kept under their own mode, apart from the game's own.
+- **Never tuned:** the menu's backdrop, the bot, and headless tests and tools always play
+  the game's own economy.
+- **Found on the way:** the first-run hints sat at a fixed height, and overlapped the
+  threat card once it grew a line. They now sit just under the card, however tall it is.
+- **Tests:**
+  - four sim tests: 100% changes nothing, each slider scales only its own resource, costs
+    stay, and a save keeps its economy;
+  - a real run with iron at 200% and food at 50% showed the line on the card.
+  - `--page=settings` (or any menu page) opens the menu straight onto a page, for
+    screenshots.
+- **Next:** once testers settle on numbers, iron's default is worth raising for everyone.
+  Their settings are in `settings.cfg` as `economy_iron` and the like.
+
 ## Buildings from KayKit Medieval Hexagon (you downloaded it and the Medieval Village MegaKit)
 
 - **Every building but walls and gates is now a baked KayKit model** (`tools/bake_buildings.gd`,

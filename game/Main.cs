@@ -171,6 +171,7 @@ public partial class Main : Node2D
             ShowNews = _options.ContainsKey("whatsnew"),
             ShowAchievements = _options.ContainsKey("achievements"),
             ShowWorkshopPage = _options.ContainsKey("workshop"),
+            StartPage = _options.GetValueOrDefault("page"),
             // --workshop-demo: the page filled with made-up maps (screenshots, and the browser without Steam).
             WorkshopSource = _options.ContainsKey("workshop-demo") ? () => new FakeWorkshopSource(FakeWorkshopSource.Demo()) : null,
             Saved = NewestSlot() is { } newest ? SlotSummary(newest) : null,
@@ -262,12 +263,15 @@ public partial class Main : Node2D
         bool woods = !options.ContainsKey("no-woods");
         if (woods != rules.Woods.Blocks) rules = rules.WithWoods(w => w with { Blocks = woods });
         if (options.ContainsKey("no-mining")) rules = rules.WithMining(m => m with { Enabled = false });
+        // The player's economy (Settings), for their own runs only: after the run options, before the mission's own rules, as a save reapplies it.
+        double[]? economy = !_backdrop && !scripted && !options.ContainsKey("autoplay") && DisplayServer.GetName() != "headless" ? EconomySettings.Current() : null;
+        rules = rules.WithEconomy(economy);
         if (options.ContainsKey("reveal") || _backdrop) rules = rules.WithFog(f => f with { Enabled = false });
         if (options.ContainsKey("patrons-now")) rules = rules.WithSurvival(s => s with { PatronMilestones = [1, .. s.PatronMilestones] }); // screenshots of the picker
         // A survival run takes its packs from rules.json (wilds).
         _world = setup.Mission is { } mission && !scripted
-            ? World.Create(mission.Options(rules, setup.Relics))
-            : World.Create(new WorldOptions(seed, MapSize, 0, rules, Survival: !scripted, Difficulty: setup.Difficulty, Endless: setup.Endless && !scripted, Map: setup.Map));
+            ? World.Create(mission.Options(rules, setup.Relics) with { Economy = economy })
+            : World.Create(new WorldOptions(seed, MapSize, 0, rules, Survival: !scripted, Difficulty: setup.Difficulty, Endless: setup.Endless && !scripted, Map: setup.Map, Economy: economy));
 
         BuildViews();
         _horde = new HordeRenderer(_world.Terrain.Width) { ZIndex = 1 };
@@ -384,7 +388,7 @@ public partial class Main : Node2D
 
     /// <summary>What this run is, for achievements: nothing counts with the bot, the backdrop, dev options or a debug key; a hand-made map counts only for the map-maker's.</summary>
     Hellwall.Achievements.RunInfo AchievementRun => new(
-        Eligible: !_backdrop && _bot == null && !_cheated && DisplayServer.GetName() != "headless" && !DevOptions.Any(_options.ContainsKey),
+        Eligible: !_backdrop && _bot == null && !_cheated && !_world.CustomEconomy && DisplayServer.GetName() != "headless" && !DevOptions.Any(_options.ContainsKey),
         HandMade: _world.Scenario?.Id is { } sid && (sid.StartsWith("map-") || sid.StartsWith("ws-")),
         Campaign: Campaign.Default.Contains(_world.Scenario));
     (int X, int Y)? _hoverOverride;
@@ -410,7 +414,7 @@ public partial class Main : Node2D
         if (AchievementRun is { HandMade: true } run && run.Eligible) GameAchievements.Report(GameAchievements.Tracker.Grant(Hellwall.Achievements.AchievementKind.MapMade));
         if (_withCoach)
         {
-            _coach = new Coach { World = _world };
+            _coach = new Coach { World = _world, Below = () => _hud.ThreatBottom };
             _hud.AddChild(_coach);
         }
     }

@@ -17,7 +17,7 @@ namespace Hellwall.Sim;
 public sealed partial class World
 {
     const uint Magic = 0x56535748; // "HWSV"
-    const int FormatVersion = 20;
+    const int FormatVersion = 21;
 
     public byte[] Save()
     {
@@ -43,6 +43,8 @@ public sealed partial class World
             w.Write(Rules.Mining.Enabled); // likewise miners
             w.Write(Relics.Length); // campaign relics taken: they're part of the mission's rules
             foreach (var relic in Relics) w.Write(relic);
+            w.Write(Economy?.Length ?? 0); // the player's economy: part of the rules too, applied before the mission's
+            foreach (var m in Economy ?? []) w.Write(m);
 
             w.Write(Tick);
             w.Write((byte)Outcome);
@@ -296,10 +298,13 @@ public sealed partial class World
         if (mining != rules.Mining.Enabled) rules = rules.WithMining(m => m with { Enabled = mining });
         var relics = new string[r.ReadInt32()];
         for (int i = 0; i < relics.Length; i++) relics[i] = r.ReadString();
+        var economy = new double[r.ReadInt32()];
+        for (int i = 0; i < economy.Length; i++) economy[i] = r.ReadDouble();
+        rules = rules.WithEconomy(economy.Length > 0 ? economy : null);
         if (scenario != null) rules = ScenarioDef.WithRelics(scenario.RulesFrom(rules), relics);
         if (rulesHash != rules.ForDifficulty(difficulty).Hash) throw new FormatException("this save was made under different rules");
 
-        var world = new World(new WorldOptions(seed, size, 0, rules, survival, difficulty, endless, map, scenario, relics));
+        var world = new World(new WorldOptions(seed, size, 0, rules, survival, difficulty, endless, map, scenario, relics, economy.Length > 0 ? economy : null));
         world.Tick = r.ReadInt32();
         world.Outcome = (Outcome)r.ReadByte();
         world.Aftermath = r.ReadBoolean();

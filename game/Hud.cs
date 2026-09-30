@@ -114,6 +114,9 @@ public partial class Hud : CanvasLayer
     /// <summary>A key on the command card's grid: true if it pressed something.</summary>
     public bool PressCard(Key key) => _card.Visible && _card.Press(key);
 
+    /// <summary>The bottom edge of the threat card, for what sits under it (the first-run hints).</summary>
+    public float ThreatBottom => _threat.Visible ? _threat.Position.Y + _threat.Size.Y : 170;
+
     public override void _Ready()
     {
         _bar = new ResourceBar { World = World, Speed = Speed };
@@ -313,6 +316,8 @@ public partial class Hud : CanvasLayer
                 string corruptions = s is { Endless: true, Corruptions.Count: > 0 }
                     ? $"\nThe horde became: {string.Join(", ", s.Corruptions.Select(id => World.Rules.Corruption(id).Name))}" : "";
                 string mode = World.Scenario is { } m ? m.Name : s == null ? "" : s.Endless ? "Endless" : "Survival";
+                // A tuned economy keeps its own best scores, apart from the game's own.
+                if (World.CustomEconomy) mode += $" (economy: {EconomySettings.Describe(World.Economy)})";
                 string goals = World.Scenario == null ? "" : "\n" + string.Join("\n", World.Goals.Select((g, i) => $"{(World.GoalsDone[i] ? "done" : "not done")}:  {g.Describe()}")) + "\n";
                 string opens = "";
                 if (World.Scenario is { } won && World.Outcome == Outcome.Won && Campaign.Default.Contains(won))

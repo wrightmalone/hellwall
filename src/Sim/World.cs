@@ -14,7 +14,7 @@ public enum Outcome : byte
 /// <param name="Endless">With Survival: no Convergence, no win; waves and corruptions until the Keep falls.</param>
 /// <param name="Map">Which kind of terrain the seed grows.</param>
 /// <param name="Scenario">A campaign mission: its locks and goals (Rules should already be its RulesFrom; ScenarioDef.Options does both).</param>
-public readonly record struct WorldOptions(uint Seed, int MapSize = Balance.DefaultMapSize, int DormantPacks = 0, Rules? Rules = null, bool Survival = false, Difficulty Difficulty = Difficulty.Normal, bool Endless = false, MapKind Map = MapKind.Plains, ScenarioDef? Scenario = null, string[]? Relics = null);
+public readonly record struct WorldOptions(uint Seed, int MapSize = Balance.DefaultMapSize, int DormantPacks = 0, Rules? Rules = null, bool Survival = false, Difficulty Difficulty = Difficulty.Normal, bool Endless = false, MapKind Map = MapKind.Plains, ScenarioDef? Scenario = null, string[]? Relics = null, double[]? Economy = null);
 
 public sealed class WorldStats
 {
@@ -91,6 +91,10 @@ public sealed partial class World
 
     /// <summary>The campaign relics taken into this mission (ids, "+" for hallowed), in the order their rules were applied.</summary>
     public string[] Relics { get; }
+    /// <summary>The player's economy this run was made with (Rules.WithEconomy; indexed by Resource), or null for the game's own.</summary>
+    public double[]? Economy { get; }
+    /// <summary>Played with the economy changed from the game's own: achievements and leaderboards don't count it.</summary>
+    public bool CustomEconomy => Economy != null && Economy.Any(x => x != 1);
     /// <summary>This mission's bonus goal, if it's a campaign mission with a relic: met by the win, the relic is hallowed.</summary>
     public ObjectiveDef? Bonus { get; }
     /// <summary>A bonus goal done (a once goal) or broken (a kept one): see BonusDone.</summary>
@@ -299,6 +303,7 @@ public sealed partial class World
         if (options.Survival) Survival = new Survival(Rules.Survival, options.Endless);
         Scenario = options.Scenario;
         Relics = options.Relics ?? [];
+        Economy = options.Economy is { } e && e.Any(x => x != 1) ? e : null;
         Bonus = Campaign.Default.Contains(Scenario) ? Campaign.Default.RelicFrom(Scenario!.Id)?.Bonus : null;
         ForestAtStart = Terrain.Tiles.Count(t => t == Tile.Forest); // a save's own count replaces it on load
         // What winning takes: the mission's goals, or for a plain survival run, surviving.
