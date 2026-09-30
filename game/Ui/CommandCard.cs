@@ -307,12 +307,13 @@ public partial class CommandCard : PanelContainer
             bool locked = mission || (def.RequiresTech is { } needs && !World.Tech.Has(needs));
             bool affordable = colony.CanAfford(def.Cost);
             button.Modulate = State.Armed == kind ? new Color(0.75f, 1, 0.7f) : locked ? new Color(1, 1, 1, 0.3f) : affordable ? Colors.White : new Color(1, 0.75f, 0.75f, 0.75f);
-            button.TooltipText = $"{kind}: {Blurbs.Of(kind)}\n{UiKit.CostText(def.Cost, colony)} · {def.Hp:0} hp · {def.BuildSeconds:0} s to build{Hud.Describe(def)}" + (mission ? "\nnot in this mission" : locked ? $"\nneeds {World.Rules.Tech(def.RequiresTech!).Name}" : affordable ? "" : "\n[color=#ff6a55]you can't afford it yet[/color]");
+            button.TooltipText = $"{kind}: {Blurbs.Of(kind)}\n{UiKit.CostText(def.Cost, colony)} · {def.Hp:0} hp · {def.BuildSeconds:0} s to build{Hud.Describe(def)}" + (mission ? "\n[color=#ff6a55]not in this mission[/color]" : locked ? $"\n[color=#ff6a55]needs {World.Rules.Tech(def.RequiresTech!).Name} (research it at a Scriptorium)[/color]" : affordable ? "" : "\n[color=#ff6a55]you can't afford it yet[/color]");
         }
         for (int i = 0; i < _tabs.Count; i++) _tabs[i].ButtonPressed = i == _tab;
         foreach (var (cell, source, shortName) in _mirrors)
         {
-            cell.Visible = true;
+            // Only what this building can do: no Upgrade on one that has nothing to become, no Hold on one without a crew.
+            cell.Visible = source.Visible;
             cell.Disabled = !source.Visible || source.Disabled;
             cell.Modulate = source.Visible ? Colors.White : new Color(1, 1, 1, 0.25f);
             cell.Text = source == Inspector.DemolishButton && source.Text.Contains("Purge") ? "Purge" : source == Inspector.HoldButton && source.Text.Contains("Back") ? "Resume" : shortName;
@@ -332,7 +333,7 @@ public partial class CommandCard : PanelContainer
                 bool affordable = colony.CanAfford(def.Cost);
                 button.Modulate = locked ? new Color(1, 1, 1, 0.3f) : affordable ? Colors.White : new Color(1, 0.75f, 0.75f, 0.75f);
                 button.TooltipText = $"{kind}: {Blurbs.Of(kind)}\n{UiKit.CostText(def.Cost, colony)}\n{def.Hp:0} hp, range {def.Weapon.Range}, {def.Weapon.Damage:0} dmg every {def.Weapon.Cooldown}s" +
-                    (mission ? "\nnot in this mission" : locked ? $"\nneeds {World.Rules.Tech(def.RequiresTech!).Name}" : "") + "\nshift: five";
+                    (mission ? "\n[color=#ff6a55]not in this mission[/color]" : locked ? $"\n[color=#ff6a55]needs {World.Rules.Tech(def.RequiresTech!).Name} (research it at a Scriptorium)[/color]" : "") + "\nshift: five";
             }
             for (int i = 0; i < _queue.Count; i++)
             {

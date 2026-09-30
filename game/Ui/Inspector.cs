@@ -137,7 +137,8 @@ public partial class Inspector : PanelContainer
             _upgrade.Text = locked ? $"{target} needs {World.Rules.Tech(def.RequiresTech!).Name}"
                 : n == eligible.Count ? $"Upgrade {n} to {target} ({def.Cost} each)"
                 : $"Upgrade {n} of {eligible.Count} to {target} ({def.Cost} each; that's all you can pay for)";
-            _upgrade.TooltipText = $"Costs {UiKit.CostText(def.Cost, World.Colony)} each\n{target}: {Blurbs.Of(target)}\nThey work as they are while the builders are at it.";
+            _upgrade.TooltipText = $"Costs {UiKit.CostText(def.Cost, World.Colony)} each\n{target}: {Blurbs.Of(target)}\nThey work as they are while the builders are at it."
+                + (locked ? $"\n[color=#ff6a55]needs {World.Rules.Tech(def.RequiresTech!).Name} (research it at a Scriptorium)[/color]" : "");
         }
     }
 
@@ -205,7 +206,8 @@ public partial class Inspector : PanelContainer
                 _upgrade.Disabled = b.Upgrading || locked || !World.Colony.CanAfford(upDef.Cost);
                 _upgrade.Text = b.Upgrading ? $"Upgrading to {to}... {b.UpgradeProgress / upDef.BuildSeconds:P0}"
                     : locked ? $"{to} needs {World.Rules.Tech(upDef.RequiresTech!).Name}" : $"Upgrade to {to} ({upDef.Cost})";
-                _upgrade.TooltipText = $"Costs {UiKit.CostText(upDef.Cost, World.Colony)}\n{to}: {Blurbs.Of(to)}\n{upDef.Hp:0} hp{Hud.Describe(upDef)}\nIt works as it is while the builders are at it.";
+                _upgrade.TooltipText = $"Costs {UiKit.CostText(upDef.Cost, World.Colony)}\n{to}: {Blurbs.Of(to)}\n{upDef.Hp:0} hp{Hud.Describe(upDef)}\nIt works as it is while the builders are at it."
+                    + (locked ? $"\n[color=#ff6a55]needs {World.Rules.Tech(upDef.RequiresTech!).Name} (research it at a Scriptorium)[/color]" : "");
             }
             _demolish.Text = b.Possessed ? "Purge" : "Demolish";
         }
