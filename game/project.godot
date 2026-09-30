@@ -11,7 +11,7 @@ config_version=5
 [application]
 
 config/name="Hellwall"
-config/version="0.39.1"
+config/version="0.40.0"
 run/flush_stdout_on_print=true
 config/use_custom_user_dir=true
 config/custom_user_dir_name="Hellwall"
