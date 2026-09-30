@@ -507,7 +507,8 @@ public sealed class Rules
 
     /// <summary>
     /// A player's economy (Settings, Economy): each resource's income times its multiplier (indexed
-    /// by Resource; null or all 1: these rules unchanged). Gold is colonists' pay and buildings' own
+    /// by Resource), then how fast workers use up trees, rock and ore (TreesWear, RockWear, OreWear;
+    /// null or all 1: these rules unchanged). Gold is colonists' pay and buildings' own
     /// gold; wood, stone and iron are their gatherers' rates and what woodsmen and miners get per
     /// blow; food and silver their gatherers' rates. Upkeep, costs and loot are left alone.
     /// </summary>
@@ -515,6 +516,7 @@ public sealed class Rules
     {
         if (m == null || m.All(x => x == 1)) return this;
         double At(Resource r) => (int)r < m.Length ? m[(int)r] : 1;
+        double Wear(int slot) => slot < m.Length ? m[slot] : 1;
         return Copy(r =>
         {
             var b = (BuildingDef[])r.Buildings.Clone();
@@ -527,10 +529,25 @@ public sealed class Rules
             }
             r.Buildings = b;
             r.ColonistGoldPerSecond = ColonistGoldPerSecond * At(Resource.Gold);
-            r.Woods = r.Woods with { WoodPerHp = (float)(r.Woods.WoodPerHp * At(Resource.Wood)) };
-            r.Mining = r.Mining with { StonePerHp = (float)(r.Mining.StonePerHp * At(Resource.Stone)), IronPerHp = (float)(r.Mining.IronPerHp * At(Resource.Iron)) };
+            // How fast workers use the land up. Trees: woodsmen chop faster for less wood a blow, so a
+            // forest goes quicker, the wood comes in as fast as before, and it stands against demons as
+            // it did. Rock and ore aren't walls: their deposits are just smaller (or bigger).
+            double trees = Wear(TreesWear);
+            r.Woods = r.Woods with
+            {
+                WoodPerHp = (float)(r.Woods.WoodPerHp * At(Resource.Wood) / trees),
+                ChopDps = (float)(r.Woods.ChopDps * trees),
+            };
+            r.Mining = r.Mining with
+            {
+                StonePerHp = (float)(r.Mining.StonePerHp * At(Resource.Stone)), IronPerHp = (float)(r.Mining.IronPerHp * At(Resource.Iron)),
+                RockHp = (float)(r.Mining.RockHp / Wear(RockWear)), OreHp = (float)(r.Mining.OreHp / Wear(OreWear)),
+            };
         });
     }
+
+    /// <summary>Slots in an economy after the resources (WithEconomy): how fast workers wear away trees, rock and iron ore.</summary>
+    public const int TreesWear = 6, RockWear = 7, OreWear = 8, EconomySlots = 9;
 
     /// <summary>Tech-style modifiers folded into the base definitions (a campaign relic's), so research builds on them.</summary>
     public Rules WithModifiers(IEnumerable<TechModifier> mods) => Copy(r =>

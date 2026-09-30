@@ -345,20 +345,20 @@ public partial class NewGameMenu : CanvasLayer
         about.CustomMinimumSize = new Vector2(360, 0);
         side.AddChild(about);
         var sliders = new List<(HSlider, Label)>();
-        foreach (var r in EconomySettings.All)
+        void Row(EconomySettings.Slot slot)
         {
             var row = new HBoxContainer();
-            var name = UiKit.Label(r.ToString(), 13);
+            var name = UiKit.Label(slot.Name, 13);
             name.CustomMinimumSize = new Vector2(70, 0);
             row.AddChild(name);
-            var slider = new HSlider { MinValue = -2, MaxValue = 2, Step = 0.01, Value = Math.Log2(EconomySettings.Get(r)), SizeFlagsHorizontal = Control.SizeFlags.ExpandFill, FocusMode = Control.FocusModeEnum.None };
-            var value = UiKit.Label($"{EconomySettings.Get(r) * 100:0}%", 12, EconomySettings.Get(r) == 1 ? UiKit.Muted : UiKit.Gold);
+            double now = EconomySettings.Get(slot);
+            var slider = new HSlider { MinValue = -2, MaxValue = 2, Step = 0.01, Value = Math.Log2(now), SizeFlagsHorizontal = Control.SizeFlags.ExpandFill, FocusMode = Control.FocusModeEnum.None };
+            var value = UiKit.Label($"{now * 100:0}%", 12, now == 1 ? UiKit.Muted : UiKit.Gold);
             value.CustomMinimumSize = new Vector2(48, 0);
-            var res = r;
             slider.ValueChanged += v =>
             {
-                EconomySettings.Set(res, Math.Pow(2, v));
-                double m = EconomySettings.Get(res);
+                EconomySettings.Set(slot, Math.Pow(2, v));
+                double m = EconomySettings.Get(slot);
                 value.Text = $"{m * 100:0}%";
                 value.AddThemeColorOverride("font_color", m == 1 ? UiKit.Muted : UiKit.Gold);
             };
@@ -367,6 +367,12 @@ public partial class NewGameMenu : CanvasLayer
             side.AddChild(row);
             sliders.Add((slider, value));
         }
+        foreach (var slot in EconomySettings.Incomes) Row(slot);
+        var wear = UiKit.Label("How fast workers use up the land: woodsmen felling trees (the wood comes in as fast; forests stand against demons as before), miners wearing away rock and iron ore (each deposit bigger or smaller).", 12, UiKit.Muted);
+        wear.AutowrapMode = TextServer.AutowrapMode.WordSmart;
+        wear.CustomMinimumSize = new Vector2(360, 0);
+        side.AddChild(wear);
+        foreach (var slot in EconomySettings.Wear) Row(slot);
         var reset = UiKit.TextButton("Back to the game's own economy (all 100%)", 13);
         reset.Pressed += () =>
         {

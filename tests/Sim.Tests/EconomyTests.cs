@@ -55,3 +55,43 @@ public class EconomyTests
         Assert.Equal(StateHash.Compute(world), StateHash.Compute(loaded));
     }
 }
+
+public class WearTests
+{
+    static double[] Wear(int slot, double m)
+    {
+        var e = Enumerable.Repeat(1.0, Rules.EconomySlots).ToArray();
+        e[slot] = m;
+        return e;
+    }
+
+    [Fact]
+    public void FasterFellingTakesTreesQuickerForTheSameWood()
+    {
+        var d = Rules.Default;
+        var fast = d.WithEconomy(Wear(Rules.TreesWear, 2));
+        Assert.Equal(d.Woods.ChopDps * 2, fast.Woods.ChopDps, 4);
+        Assert.Equal(d.Woods.ChopDps * d.Woods.WoodPerHp, fast.Woods.ChopDps * fast.Woods.WoodPerHp, 4); // wood a second: the same
+        Assert.Equal(d.Woods.TreeHp, fast.Woods.TreeHp); // forests stand against demons as before
+    }
+
+    [Fact]
+    public void RockAndOreWearAwayQuickerOrSlower()
+    {
+        var d = Rules.Default;
+        var rock = d.WithEconomy(Wear(Rules.RockWear, 4));
+        Assert.Equal(d.Mining.RockHp / 4, rock.Mining.RockHp, 3);
+        Assert.Equal(d.Mining.OreHp, rock.Mining.OreHp);
+        var ore = d.WithEconomy(Wear(Rules.OreWear, 0.5));
+        Assert.Equal(d.Mining.OreHp * 2, ore.Mining.OreHp, 3);
+        Assert.Equal(d.Mining.IronPerHp, ore.Mining.IronPerHp); // iron a blow: the same
+    }
+
+    [Fact]
+    public void AMinedTileGoesAsFastAsItsToughnessSays()
+    {
+        var world = World.Create(new WorldOptions(7, 128, 0, Rules.Default.WithEconomy(Wear(Rules.RockWear, 4)), Economy: Wear(Rules.RockWear, 4)));
+        Assert.Equal(Rules.Default.Mining.RockHp / 4, world.FullHp(Tile.Rock), 3);
+        Assert.True(world.CustomEconomy);
+    }
+}

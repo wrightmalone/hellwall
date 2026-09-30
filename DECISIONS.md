@@ -1681,6 +1681,25 @@ last lost by at least one).
 - **Next:** once testers settle on numbers, iron's default is worth raising for everyone.
   Their settings are in `settings.cfg` as `economy_iron` and the like.
 
+## How fast workers use up the land (sliders, beside the economy's)
+
+- **Three more sliders** under Economy: Trees, Rock and Iron ore. Each runs from 25% to
+  400%, and sets how fast workers wear the land away. They apply, save, mark a run and
+  pause achievements just as the income sliders do.
+- **Trees:** woodsmen chop that much faster, for that much less wood a blow.
+  - So a forest goes quicker (or slower), and wood still comes in at the income slider's
+    rate.
+  - Tree toughness is unchanged, so forests stand against demons exactly as before. It's
+    what makes them walls.
+- **Rock and ore:** each deposit is that much smaller (or bigger), so miners wear it away
+  sooner. Stone or iron a blow is unchanged. Rock and ore aren't walls, so there's nothing
+  else to protect.
+- **The economy array** gains three slots after the six resources (`Rules.TreesWear`,
+  `RockWear`, `OreWear`). A 0.37 save with only six entries still loads.
+- **Tests:** three, checking that felling faster keeps the wood a second and the trees'
+  toughness, that rock and ore change only their own deposits, and that a world's rock
+  really is that much softer.
+
 ## Buildings from KayKit Medieval Hexagon (you downloaded it and the Medieval Village MegaKit)
 
 - **Every building but walls and gates is now a baked KayKit model** (`tools/bake_buildings.gd`,
