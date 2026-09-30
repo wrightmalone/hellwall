@@ -146,7 +146,7 @@ internal static class Combat
             if (weapon == null || !b.Active) continue;
             b.Cooldown = Math.Max(0, b.Cooldown - dt * power);
             if (b.Cooldown > 0) continue;
-            int target = NearestDemon(world, b.CentreX, b.CentreY, weapon.Range, weapon.AirOnly);
+            int target = NearestDemon(world, b.CentreX, b.CentreY, weapon.Range, weapon.AirOnly, weapon.GroundOnly);
             if (target < 0) continue;
             Fire(world, b.CentreX, b.CentreY, world.Horde.X[target], world.Horde.Y[target], target, weapon, fromUnit: false);
             b.Cooldown = weapon.Cooldown;
@@ -174,6 +174,7 @@ internal static class Combat
                         int j = grid.Items[k];
                         float dx = h.X[j] - tx, dy = h.Y[j] - ty;
                         if (dx * dx + dy * dy > s2 || h.Hp[j] <= 0) continue;
+                        if (weapon.GroundOnly && world.Demons[(int)h.Kind[j]].Flies) continue; // the blast is on the ground
                         h.Hp[j] -= damage;
                         if (fromUnit) Provoke(h, j, fx, fy);
                         if (h.Hp[j] <= 0) killed++;
@@ -203,7 +204,7 @@ internal static class Combat
     }
 
     /// <summary>The nearest live demon within range of a point, or -1. Ties go to the lower slot.</summary>
-    public static int NearestDemon(World world, float x, float y, float range, bool airOnly = false)
+    public static int NearestDemon(World world, float x, float y, float range, bool airOnly = false, bool groundOnly = false)
     {
         var h = world.Horde;
         var demons = world.Demons;
@@ -222,6 +223,7 @@ internal static class Combat
                     int j = grid.Items[k];
                     if (h.Hp[j] <= 0) continue;
                     if (airOnly && !demons[(int)h.Kind[j]].Flies) continue;
+                    if (groundOnly && demons[(int)h.Kind[j]].Flies) continue;
                     float dx = h.X[j] - x, dy = h.Y[j] - y;
                     float d2 = dx * dx + dy * dy;
                     if (d2 < best || (d2 == best && found >= 0 && j < found))

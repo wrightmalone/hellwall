@@ -269,7 +269,7 @@ internal static class UnitSystem
                 OrderKind.Hold => weapon.Range,
                 _ => weapon.Range + AggroExtra,
             };
-            if (reach > 0) target = Combat.NearestDemon(world, u.X, u.Y, reach, weapon.AirOnly);
+            if (reach > 0) target = Combat.NearestDemon(world, u.X, u.Y, reach, weapon.AirOnly, weapon.GroundOnly);
 
             float vx = 0, vy = 0;
             // No demon to fight: a Hellgate within reach is the next best thing.

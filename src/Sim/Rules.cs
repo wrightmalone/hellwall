@@ -222,6 +222,8 @@ public sealed record WeaponDef
     public float Noise { get; init; }
     /// <summary>Shoots only fliers.</summary>
     public bool AirOnly { get; init; }
+    /// <summary>Can't hit fliers at all, target or splash (the Bombard's lobbed shot).</summary>
+    public bool GroundOnly { get; init; }
 }
 
 public sealed record BuildingDef

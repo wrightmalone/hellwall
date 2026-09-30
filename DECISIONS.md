@@ -1717,6 +1717,17 @@ last lost by at least one).
   - A save from 0.39 has only nine entries and loads at 100%.
 - **Test:** every kind scales and nothing else does, and a run made with it spawns demons
   that tough and survives a save.
+- **Bombards can't hit fliers** (you asked to be sure they don't; they did). A new weapon
+  flag, `groundOnly`, stops the Bombard targeting Gargoyles, and stops its splash hurting a
+  flier beside the demon it's shelling. Skyspires, Watchtowers, Lance Towers, Censers and
+  ranged soldiers still shoot fliers. The tooltips say "can't hit fliers".
+  - **The bot's Normal runs after both changes:**
+    - Pyre: won 7 before, 4 now.
+    - Legion: won 3, and still 3.
+    - Fortress: won 5 before, 4 now.
+    - Endless: fortress fell on days 57, 55 and 59.
+  - **Test:** a Bombard ignores a lone Gargoyle in range, and kills an Imp beside one
+    without scratching it. Without the flag, the test fails.
 
 ## The Observatory (your call: nearest first, gold and workers, Cartography, "Observatory")
 

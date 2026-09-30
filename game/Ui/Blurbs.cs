@@ -24,7 +24,7 @@ public static class Blurbs
         BuildingKind.Gate => "three tiles of wall with a way through the middle: your people pass, demons don't. Lay it on a wall to put a way through it",
         BuildingKind.StoneGate => "a gate in stone: three tiles, a way through the middle, and three times the timber gate's strength",
         BuildingKind.Watchtower => "the everyday tower: steady arrows at the nearest demon",
-        BuildingKind.Bombard => "slow, loud, splash: for crowds at the wall",
+        BuildingKind.Bombard => "slow, loud, splash: for crowds at the wall. Its shells can't touch fliers",
         BuildingKind.LanceTower => "long range, heavy bolts: for Brutes and the big ones",
         BuildingKind.Skyspire => "shoots only fliers, from far off",
         BuildingKind.Censer => "short range, rapid and quiet: burns whatever is at the wall",

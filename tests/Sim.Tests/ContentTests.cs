@@ -63,6 +63,26 @@ public class ContentTests
     }
 
     [Fact]
+    public void ABombardNeverHitsFliers()
+    {
+        // Alone in range, a Gargoyle is ignored.
+        var world = Rich(Dummies());
+        Built(world, BuildingKind.Bombard, C + 6, C - 1);
+        Run(world, new SpawnDemons(DemonKind.Gargoyle, C + 7, C + 5, 1));
+        RunSeconds(world, 10);
+        Assert.Equal(world.Rules[DemonKind.Gargoyle].Hp, Assert.Single(world.Horde.Hp.Take(world.Horde.Count)));
+
+        // Beside an Imp it's shelling, the blast still passes it by.
+        world = Rich(Dummies());
+        Built(world, BuildingKind.Bombard, C + 6, C - 1);
+        Run(world, new SpawnDemons(DemonKind.Imp, C + 7, C + 5, 1));
+        Run(world, new SpawnDemons(DemonKind.Gargoyle, C + 7, C + 5, 1));
+        RunSeconds(world, 10);
+        Assert.Equal(DemonKind.Gargoyle, Assert.Single(Enumerable.Range(0, world.Horde.Count).Select(i => world.Horde.Kind[i])));
+        Assert.Equal(world.Rules[DemonKind.Gargoyle].Hp, world.Horde.Hp[0]);
+    }
+
+    [Fact]
     public void ACenserBurnsTheCrowdAtItsFoot()
     {
         var world = Rich(Dummies());
