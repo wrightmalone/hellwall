@@ -22,6 +22,14 @@ public partial class HordeRenderer : Node2D
     /// <summary>Screen pixels from a demon's feet up to its quad's centre, per kind.</summary>
     readonly float[] _lift;
     double _time;
+    BearPose[] _poses = [];
+    int _trackedCount;
+    readonly List<Corpse> _corpses = new(256);
+    const int MaxCorpses = 256;
+    readonly record struct Corpse(float X, float Y, int Facing, int Tick);
+    public int CorpseCount => _corpses.Count;
+    public readonly long[] BearClipSamples = new long[BearAnimation.Clips];
+    public int BearFacingMask { get; private set; }
 
     sealed class Layer
     {
@@ -51,7 +59,9 @@ public partial class HordeRenderer : Node2D
         foreach (var kind in kinds)
         {
             // The quad is centred on its origin; the feet sit (Feet.Y - Cell/2) below the centre.
-            _lift[(int)kind] = (Art.Feet.Y - Art.Cell / 2f) * Art.DemonScale + (kind == DemonKind.Gargoyle ? 18 : 0);
+            bool bear = Art.BearEnabled && kind == DemonKind.Brute;
+            float feet = bear ? BearAnimation.FeetY / BearAnimation.Cell * Art.Cell : Art.Feet.Y;
+            _lift[(int)kind] = (feet - Art.Cell / 2f) * Art.DemonScale + (kind == DemonKind.Gargoyle ? 18 : 0);
             var mesh = new MultiMesh
             {
                 TransformFormat = MultiMesh.TransformFormatEnum.Transform2D,
@@ -62,10 +72,85 @@ public partial class HordeRenderer : Node2D
             _layers[(int)kind] = new Layer { Mesh = mesh, Stride = Floats };
             var material = new ShaderMaterial { Shader = shader };
             material.SetShaderParameter("cols", (float)Art.Frames);
-            material.SetShaderParameter("rows", (float)Art.Directions);
+            material.SetShaderParameter("rows", (float)(bear ? BearAnimation.Directions * BearAnimation.Clips : Art.Directions));
             material.SetShaderParameter("quad", cell);
             AddChild(new MultiMeshInstance2D { Multimesh = mesh, Texture = Art.Tex(Art.Demon(kind)), Material = material, TextureFilter = TextureFilterEnum.LinearWithMipmaps });
         }
+    }
+
+    void EnsurePoses(int count)
+    {
+        if (_poses.Length < count) Array.Resize(ref _poses, Math.Max(count, Math.Max(1024, _poses.Length * 2)));
+        for (int i = _trackedCount; i < count; i++) _poses[i] = BearAnimation.New(i);
+        _trackedCount = count;
+    }
+
+    /// <summary>Capture presentation inputs before a sim tick. No simulation state is changed.</summary>
+    public void BeforeTick(World world)
+    {
+        if (!Art.BearEnabled) return;
+        var h = world.Horde;
+        EnsurePoses(h.Count);
+        for (int i = 0; i < h.Count; i++)
+        {
+            if (h.Kind[i] != DemonKind.Brute) continue;
+            ref var p = ref _poses[i];
+            p.HpBefore = h.Hp[i]; p.CooldownBefore = h.Cooldown[i];
+            p.XBefore = h.X[i]; p.YBefore = h.Y[i];
+        }
+    }
+
+    /// <summary>Follow the sim's stable compaction using this tick's transient death slots.</summary>
+    public void AfterTick(World world)
+    {
+        if (!Art.BearEnabled) return;
+        var h = world.Horde;
+        var dead = world.RecentDeaths;
+        for (int n = 0; n < dead.Count; n++)
+        {
+            var d = dead[n];
+            if (d.Kind != DemonKind.Brute || !world.Vision.IsVisible(d.X, d.Y)) continue;
+            int facing = d.Slot >= 0 && d.Slot < _trackedCount ? _poses[d.Slot].Facing : 1;
+            if (_corpses.Count == MaxCorpses) _corpses.RemoveAt(0);
+            _corpses.Add(new Corpse(d.X, d.Y, facing, world.Tick));
+        }
+        int death = 0, write = 0;
+        for (int read = 0; read < _trackedCount; read++)
+        {
+            while (death < dead.Count && dead[death].Slot < read) death++;
+            if (death < dead.Count && dead[death].Slot == read) continue;
+            if (write < h.Count) _poses[write] = _poses[read];
+            write++;
+        }
+        _trackedCount = Math.Min(write, h.Count);
+        int oldCount = _trackedCount;
+        EnsurePoses(h.Count);
+        for (int i = 0; i < h.Count; i++)
+        {
+            if (h.Kind[i] != DemonKind.Brute) continue;
+            ref var p = ref _poses[i];
+            bool fresh = i >= oldCount;
+            float dx = fresh ? 0 : h.X[i] - p.XBefore, dy = fresh ? 0 : h.Y[i] - p.YBefore;
+            p.WalkFrame += Math.Sqrt(dx * dx + dy * dy) * 5; // one six-frame stride per 1.2 tiles
+            if (p.WalkFrame > 6000) p.WalkFrame %= BearAnimation.Frames;
+            bool attacking = h.Cooldown[i] > (fresh ? 0 : p.CooldownBefore) + 0.001f;
+            if (attacking)
+            {
+                p.AttackTick = world.Tick;
+                float vx = h.VX[i], vy = h.VY[i];
+                if (vx * vx + vy * vy < 0.01f)
+                {
+                    int tile = (int)h.Y[i] * world.Terrain.Width + (int)h.X[i];
+                    vx = world.Flow.DirX[tile]; vy = world.Flow.DirY[tile];
+                }
+                if (vx * vx + vy * vy > 0.001f) p.Facing = Art.Facing(vx, vy);
+            }
+            else if ((world.Tick - p.AttackTick) / BearAnimation.TickHz >= BearAnimation.AttackSeconds && dx * dx + dy * dy > 0.00001f)
+                p.Facing = Art.Facing(dx, dy);
+            if (!fresh && h.Hp[i] < p.HpBefore - 0.01f && world.Tick - p.HitTick >= 5) p.HitTick = world.Tick;
+        }
+        for (int i = _corpses.Count - 1; i >= 0; i--)
+            if ((world.Tick - _corpses[i].Tick) / BearAnimation.TickHz >= BearAnimation.CorpseSeconds) _corpses.RemoveAt(i);
     }
 
     /// <param name="alpha">How far between the previous tick and the current one, 0..1.</param>
@@ -101,13 +186,15 @@ public partial class HordeRenderer : Node2D
     {
         var horde = world.Horde;
         var vision = world.Vision;
+        if (Art.BearEnabled) EnsurePoses(horde.Count);
         RefreshSleepers(world);
         _time += delta;
         Span<int> counts = stackalloc int[_layers.Length];
         for (int i = 0; i < horde.Count; i++) counts[(int)horde.Kind[i]]++;
         foreach (var s in _sleepers) counts[s.Kind]++;
+        counts[(int)DemonKind.Brute] += _corpses.Count;
         for (int k = 0; k < _layers.Length; k++) Reserve(_layers[k], counts[k]);
-        Reserve(_shadows, horde.Count + _sleepers.Count);
+        Reserve(_shadows, horde.Count + _sleepers.Count + _corpses.Count);
         var sb = _shadows.Buffer;
         int step = (int)(_time * 10); // walk frames at 10 a second
         int shadows = 0;
@@ -122,9 +209,9 @@ public partial class HordeRenderer : Node2D
             var b = _layers[k].Buffer;
             b[o] = 1; b[o + 1] = 0; b[o + 2] = 0; b[o + 3] = x;
             b[o + 4] = 0; b[o + 5] = -1; b[o + 6] = 0; b[o + 7] = ground - _lift[k];
-            b[o + 8] = (step / 7 + n) % 23 == 0 ? 1 : 0;
+            b[o + 8] = Art.BearEnabled && k == (int)DemonKind.Brute ? (int)(world.Tick / BearAnimation.TickHz * 2 + n) % 6 : (step / 7 + n) % 23 == 0 ? 1 : 0;
             b[o + 9] = facing;
-            b[o + 10] = 0; b[o + 11] = 0;
+            b[o + 10] = 0; b[o + 11] = 1;
             float big = k is (int)DemonKind.Brute or (int)DemonKind.Broodmother or (int)DemonKind.Bloater ? 1.6f : 1f;
             int so = shadows++ * ShadowFloats;
             sb[so] = big; sb[so + 1] = 0; sb[so + 2] = 0; sb[so + 3] = x;
@@ -146,12 +233,33 @@ public partial class HordeRenderer : Node2D
             b[o + 4] = 0; b[o + 5] = -1; b[o + 6] = 0; b[o + 7] = ground - _lift[k]; // QuadMesh UVs run bottom-up in 2D
             b[o + 8] = moving ? (step + i) % Art.Frames : 0;
             b[o + 9] = Art.Facing(vx, vy);
-            b[o + 10] = 0; b[o + 11] = 0;
+            b[o + 10] = 0; b[o + 11] = 1;
+            if (Art.BearEnabled && k == (int)DemonKind.Brute)
+            {
+                var sample = BearAnimation.Living(_poses[i], world.Tick + alpha, moving);
+                b[o + 8] = sample.Frame; b[o + 9] = sample.Row(_poses[i].Facing); b[o + 10] = sample.Flash;
+                BearClipSamples[(int)sample.Clip]++;
+                BearFacingMask |= 1 << _poses[i].Facing;
+            }
 
             float big = k is (int)DemonKind.Brute or (int)DemonKind.Broodmother or (int)DemonKind.Bloater ? 1.6f : 1f;
             int so = shadows++ * ShadowFloats;
             sb[so] = big; sb[so + 1] = 0; sb[so + 2] = 0; sb[so + 3] = x;
             sb[so + 4] = 0; sb[so + 5] = big; sb[so + 6] = 0; sb[so + 7] = ground;
+        }
+
+        foreach (var corpse in _corpses)
+        {
+            if (!vision.IsVisible(corpse.X, corpse.Y)) continue;
+            var sample = BearAnimation.Dead((world.Tick + alpha - corpse.Tick) / BearAnimation.TickHz);
+            int k = (int)DemonKind.Brute;
+            float x = (corpse.X - corpse.Y) * Iso.HalfW, ground = (corpse.X + corpse.Y) * Iso.HalfH;
+            int o = counts[k]++ * Floats;
+            var b = _layers[k].Buffer;
+            b[o] = 1; b[o + 1] = 0; b[o + 2] = 0; b[o + 3] = x;
+            b[o + 4] = 0; b[o + 5] = -1; b[o + 6] = 0; b[o + 7] = ground - _lift[k];
+            b[o + 8] = sample.Frame; b[o + 9] = sample.Row(corpse.Facing); b[o + 10] = 0; b[o + 11] = sample.Opacity;
+            BearClipSamples[(int)BearAnimation.Clip.Death]++;
         }
 
         for (int k = 0; k < _layers.Length; k++) Upload(_layers[k], counts[k]);

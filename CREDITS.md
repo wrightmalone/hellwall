@@ -18,6 +18,8 @@ Demons are baked from [Ultimate Monsters](https://quaternius.com/packs/ultimatem
 
 Each pack's License.txt is in `game/art/kenney/` or `game/art/kenney3d/`. Sound and music are synthesized in code (`game/Sound.cs`, `game/Music.cs`).
 
+The corrupted bear's original concept drawings are by Kian. The painted 2D Brute replacement and animation sheets were adapted from those drawings with OpenAI image generation, then aligned and assembled for the game. These original character assets are separate from the CC0 asset packs above. Source sheets and generation prompts are retained in `game/art/bear/source/` and `docs/art-studies/bear-animation-prompts.json`.
+
 The in-game Credits screen (main menu) carries the same list: keep the two in step.
 
 ## Code and libraries

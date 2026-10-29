@@ -6,8 +6,8 @@ namespace Hellwall.Game;
 /// <summary>
 /// Placeholder art from Kenney's CC0 packs (game/art/kenney, each with its
 /// License.txt): Tower Defense and Isometric Tiles Landscape for terrain and
-/// buildings; soldiers and demons are sheets baked from Kenney's 3D Mini
-/// Dungeon and Graveyard Kit characters (tools/bake.gd). Everything that names a
+/// buildings; most characters are baked from asset-pack 3D models, while the
+/// Brute uses the painted corrupted bear's directional animation atlas. Everything that names a
 /// file lives here, so swapping the art is one file.
 /// </summary>
 public static class Art
@@ -188,7 +188,7 @@ public static class Art
     /// <summary>Worked ground under a building, for kinds that want it. None now: a Farm's fields show as its crops, tended by its farmers.</summary>
     public static string? Ground(BuildingKind kind) => null;
 
-    // --- soldiers and demons: sheets baked from Kenney's 3D characters (tools/bake.gd) ---
+    // --- character sheets: the legacy 6x8 bake layout; Brute animation metadata lives in BearAnimation ---
 
     /// <summary>Every sheet is Directions rows (facing d points along sim angle d x 45 deg) by Frames walk frames of Cell px.</summary>
     public const int Cell = 72, Frames = 6, Directions = 8;
@@ -204,7 +204,13 @@ public static class Art
 
     public static string Unit(UnitKind kind) => $"res://art/baked/unit-{kind.ToString().ToLowerInvariant()}.png";
 
-    public static string Demon(DemonKind kind) => $"res://art/baked/demon-{kind.ToString().ToLowerInvariant()}.png";
+    /// <summary>The bear's live art showcase; it has no bearing on the Brute's simulation rules.</summary>
+    public static readonly bool BearPreview = OS.GetCmdlineUserArgs().Any(a => a is "--bear-preview" or "--bear-gallery" or "--selftest=bear");
+    public static readonly bool BearEnabled = !OS.GetCmdlineUserArgs().Contains("--legacy-brute-art");
+
+    public static string Demon(DemonKind kind) => BearEnabled && kind == DemonKind.Brute
+        ? "res://art/bear/bear-animations.png"
+        : $"res://art/baked/demon-{kind.ToString().ToLowerInvariant()}.png";
 
     /// <summary>Demons draw at this scale of their baked cell (the bake already made the big ones big).</summary>
     public const float DemonScale = 0.72f;

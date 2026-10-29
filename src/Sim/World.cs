@@ -27,7 +27,8 @@ public sealed class WorldStats
     public readonly List<HistorySample> History = new();
 }
 
-public readonly record struct DeathMark(float X, float Y, DemonKind Kind);
+/// <summary>Transient output for the renderer. Slot is the index before this tick's stable compaction.</summary>
+public readonly record struct DeathMark(float X, float Y, DemonKind Kind, int Slot = -1);
 
 public readonly record struct HistorySample(int Tick, int Colonists, int Soldiers, int Horde);
 
@@ -1361,7 +1362,7 @@ public sealed partial class World
         for (int i = 0; i < Horde.Count; i++)
         {
             if (Horde.Hp[i] > 0) continue;
-            _deaths.Add(new DeathMark(Horde.X[i], Horde.Y[i], Horde.Kind[i]));
+            _deaths.Add(new DeathMark(Horde.X[i], Horde.Y[i], Horde.Kind[i], i));
             var def = Def(Horde.Kind[i]);
             if (def.ExplodeDamage > 0) Combat.Explode(this, Horde.X[i], Horde.Y[i], def);
             if (def.BroodCount > 0) (broods ??= new()).Add((def.BroodKind, Horde.X[i], Horde.Y[i], def.BroodCount));

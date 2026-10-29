@@ -1,0 +1,177 @@
+{
+  "cell": 96,
+  "frames": 6,
+  "directions": 8,
+  "clips": [
+    "idle",
+    "walk",
+    "attack",
+    "hit",
+    "death"
+  ],
+  "feet": [
+    48,
+    76
+  ],
+  "direction_sources": [
+    {
+      "source": "sw",
+      "mirrored": true
+    },
+    {
+      "source": "s",
+      "mirrored": false
+    },
+    {
+      "source": "sw",
+      "mirrored": false
+    },
+    {
+      "source": "w",
+      "mirrored": false
+    },
+    {
+      "source": "nw",
+      "mirrored": false
+    },
+    {
+      "source": "n",
+      "mirrored": false
+    },
+    {
+      "source": "nw",
+      "mirrored": true
+    },
+    {
+      "source": "w",
+      "mirrored": true
+    }
+  ],
+  "alignment": {
+    "sw": {
+      "source_size": [
+        1374,
+        1145
+      ],
+      "x_splits": [
+        0,
+        233,
+        466,
+        692,
+        922,
+        1150,
+        1374
+      ],
+      "y_splits": [
+        0,
+        244,
+        461,
+        688,
+        913,
+        1145
+      ],
+      "scale": 0.30327868852459017,
+      "neutral_height": 195.0
+    },
+    "s": {
+      "source_size": [
+        1374,
+        1145
+      ],
+      "x_splits": [
+        0,
+        229,
+        452,
+        674,
+        907,
+        1130,
+        1374
+      ],
+      "y_splits": [
+        0,
+        229,
+        454,
+        669,
+        891,
+        1145
+      ],
+      "scale": 0.3231441048034934,
+      "neutral_height": 206.0
+    },
+    "w": {
+      "source_size": [
+        1374,
+        1145
+      ],
+      "x_splits": [
+        0,
+        233,
+        467,
+        693,
+        929,
+        1149,
+        1374
+      ],
+      "y_splits": [
+        0,
+        229,
+        458,
+        687,
+        916,
+        1145
+      ],
+      "scale": 0.3425925925925926,
+      "neutral_height": 171.5
+    },
+    "nw": {
+      "source_size": [
+        1374,
+        1145
+      ],
+      "x_splits": [
+        0,
+        233,
+        470,
+        691,
+        935,
+        1152,
+        1374
+      ],
+      "y_splits": [
+        0,
+        229,
+        440,
+        661,
+        890,
+        1145
+      ],
+      "scale": 0.3394495412844037,
+      "neutral_height": 185.0
+    },
+    "n": {
+      "source_size": [
+        1374,
+        1145
+      ],
+      "x_splits": [
+        0,
+        229,
+        459,
+        687,
+        916,
+        1150,
+        1374
+      ],
+      "y_splits": [
+        0,
+        229,
+        457,
+        689,
+        916,
+        1145
+      ],
+      "scale": 0.3288888888888889,
+      "neutral_height": 208.0
+    }
+  }
+}

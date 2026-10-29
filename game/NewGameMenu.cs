@@ -494,15 +494,16 @@ public partial class NewGameMenu : CanvasLayer
 
     static readonly int MapKinds = Enum.GetValues<MapKind>().Length;
 
-    /// <summary>Who made what: the same list as CREDITS.md. Every pack is CC0; credit is a courtesy we keep.</summary>
+    /// <summary>Who made what: the same list as CREDITS.md, distinguishing CC0 packs from original character art.</summary>
     const string CreditsText =
         "HELLWALL: a playtest build\n\n" +
-        "Art (all CC0, public domain)\n" +
+        "Art packs (CC0, public domain)\n" +
         "  Kenney (kenney.nl): Tower Defense, Isometric Tiles Landscape, Graveyard Kit\n" +
         "  Quaternius (quaternius.com): RPG Characters (the soldiers), Ultimate Monsters (the demons),\n" +
         "    Stylized Nature MegaKit (trees, rocks, grass)\n" +
         "  Kay Lousberg (kaylousberg.itch.io): KayKit Medieval Hexagon Pack (the buildings),\n" +
         "    KayKit Dungeon Pack (the gold, food and sanctity icons)\n\n" +
+        "Corrupted bear: original concept by Kian; 2D adaptation and animations developed with OpenAI image generation.\n\n" +
         "Sound and music: synthesized in code, placeholders.\n\n" +
         "Code: Steamworks.NET by Riley Labrecque (MIT), and Valve's Steamworks libraries.\n\n" +
         "Built with Godot (godotengine.org) and .NET.";

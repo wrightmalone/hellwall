@@ -155,6 +155,12 @@ or `--look=ruin`, `--skip=<seconds>`, `--ui-scale=1.3`, `--pausemenu`, `--patron
 `--noise`, `--select-keep`, `--dump-music=<dir>`, `--screenshot=<path>`,
 `--selftest=controls` and `--selftest=editor` (both run by verify.sh).
 
+The corrupted bear replaces the Brute's art, with eight directions and idle, walk,
+attack, hit and death animations. `--bear-gallery` opens an animated inspection
+sheet; **F2** switches between that gallery and a staged fight. `--bear-preview`
+opens directly to the fight. See [the bear animation notes](docs/art-studies/bear-sprite-preview.md)
+for source art, remaining polish and verification commands.
+
 The balance tools take the same switches: `WOODS=1`, `MAP=lakes`, `DIFFICULTY=hard` and
 `EXTRA='--strays=100 --no-fog --tree-hp=150'` for `scripts/sweep.sh`.
 

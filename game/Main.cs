@@ -57,6 +57,8 @@ public partial class Main : Node2D
     Hellwall.Headless.Bot? _bot;
     Camera2D _camera = null!;
     HordeRenderer _horde = null!;
+    BearGallery? _bearGallery;
+    bool _pausedBeforeGallery;
     WorldView _view = null!;
     Hud _hud = null!;
     Minimap _minimap = null!;
@@ -116,7 +118,7 @@ public partial class Main : Node2D
             o.ContainsKey("endless"),
             o.TryGetValue("mission", out var mid) ? Campaign.Default.Find(mid) ?? throw new ArgumentException($"no mission '{mid}'") : null);
         // Any flag that sets up a run (and every headless boot, which is verify.sh) skips the menu.
-        bool flagged = new[] { "seed", "map", "difficulty", "endless", "autoplay", "bench", "demo", "skip", "screenshot", "mission", "woods" }.Any(o.ContainsKey);
+        bool flagged = new[] { "seed", "map", "difficulty", "endless", "autoplay", "bench", "demo", "skip", "screenshot", "mission", "woods", "bear-preview" }.Any(o.ContainsKey) || Art.BearPreview;
         if (_pendingStart != null)
         {
             // Chosen from the menu while the backdrop game was playing: a fresh scene, then this.
@@ -256,8 +258,8 @@ public partial class Main : Node2D
 
         var rules = Rules.Default;
         if (_benchSeconds > 0) rules = rules.WithBuilding(BuildingKind.Keep, k => k with { Hp = 1e9f });
-        if (_demoSeconds > 0) rules = rules.WithStartingResources(new Cost { Gold = 5000, Wood = 3000, Stone = 2000, Food = 1000, Iron = 1000 });
-        bool scripted = _benchSeconds > 0 || _demoSeconds > 0;
+        if (_demoSeconds > 0 || Art.BearPreview) rules = rules.WithStartingResources(new Cost { Gold = 5000, Wood = 3000, Stone = 2000, Food = 1000, Iron = 1000 });
+        bool scripted = _benchSeconds > 0 || _demoSeconds > 0 || Art.BearPreview;
         _baseRules = rules; // saves record whether the woods were living, and Load puts that back
         // Living woods and miners are how the game is: forest is a wall and rock runs out. --no-woods and --no-mining are for A/B tests only.
         bool woods = !options.ContainsKey("no-woods");
@@ -266,7 +268,7 @@ public partial class Main : Node2D
         // The player's economy (Settings), for their own runs only: after the run options, before the mission's own rules, as a save reapplies it.
         double[]? economy = !_backdrop && !scripted && !options.ContainsKey("autoplay") && DisplayServer.GetName() != "headless" ? EconomySettings.Current() : null;
         rules = rules.WithEconomy(economy);
-        if (options.ContainsKey("reveal") || _backdrop) rules = rules.WithFog(f => f with { Enabled = false });
+        if (options.ContainsKey("reveal") || _backdrop || Art.BearPreview) rules = rules.WithFog(f => f with { Enabled = false });
         if (options.ContainsKey("patrons-now")) rules = rules.WithSurvival(s => s with { PatronMilestones = [1, .. s.PatronMilestones] }); // screenshots of the picker
         // A survival run takes its packs from rules.json (wilds).
         _world = setup.Mission is { } mission && !scripted
@@ -299,6 +301,7 @@ public partial class Main : Node2D
 
         if (_benchSeconds > 0) StartBenchAssault();
         if (_demoSeconds > 0) StartDemo();
+        if (Art.BearPreview) StartBearPreview();
 
         if (options.ContainsKey("autoplay") || _backdrop) _bot = new Hellwall.Headless.Bot(_world, Hellwall.Headless.Bot.Style.Full);
         if (_backdrop)
@@ -307,7 +310,7 @@ public partial class Main : Node2D
             for (int t = 0; t < (_scenes is { Count: > 0 } ? 0 : 520 * Balance.TickHz) && _world.Outcome == Outcome.Running; t++)
             {
                 if (_world.Tick % Balance.TickHz == 0) _bot!.Act();
-                _world.Step();
+                StepWorld();
                 _state.Farmers.Step(_world, (float)TickSeconds);
                 _bot!.See(_world.DrainEvents());
             }
@@ -345,7 +348,7 @@ public partial class Main : Node2D
             for (int t = 0; t < double.Parse(skip) * Balance.TickHz && _world.Outcome == Outcome.Running; t++)
             {
                 if (_bot != null && _world.Tick % Balance.TickHz == 0) _bot.Act();
-                _world.Step();
+                StepWorld();
                 _state.Farmers.Step(_world, (float)TickSeconds);
                 _state.Fishers.Step(_world, (float)TickSeconds);
                 _state.Hunters.Step(_world, (float)TickSeconds);
@@ -377,6 +380,7 @@ public partial class Main : Node2D
 
         // scripts/verify.sh looks for this line: the engine banner alone doesn't prove the C# scene ran.
         if (options.GetValueOrDefault("selftest") == "controls") CallDeferred(nameof(SelfTestControls));
+        if (options.GetValueOrDefault("selftest") == "bear") CallDeferred(nameof(SelfTestBear));
         if (options.ContainsKey("pausemenu")) CallDeferred(nameof(OpenPauseMenu)); // for screenshots of it
         if (options.ContainsKey("noise")) _state.ShowNoise = true;
         ForestWatch.Log = DisplayServer.GetName() == "headless";
@@ -398,7 +402,7 @@ public partial class Main : Node2D
     /// <summary>A debug key was used this run (K, J, F6): nothing counts for achievements after.</summary>
     bool _cheated;
     double _achievementClock;
-    static readonly string[] DevOptions = ["skip", "autoplay", "reveal", "patrons-now", "demo", "bench", "hover", "arm", "build", "inspect", "screenshot", "selftest", "autosave-seconds"];
+    static readonly string[] DevOptions = ["skip", "autoplay", "reveal", "patrons-now", "demo", "bench", "hover", "arm", "build", "inspect", "screenshot", "selftest", "autosave-seconds", "bear-preview", "bear-gallery"];
 
     /// <summary>What this run is, for achievements: nothing counts with the bot, the backdrop, dev options or a debug key; a hand-made map counts only for the map-maker's.</summary>
     Hellwall.Achievements.RunInfo AchievementRun => new(
@@ -652,7 +656,7 @@ public partial class Main : Node2D
             {
                 if (_bot != null && _world.Tick % Balance.TickHz == 0) _bot.Act();
                 _simClock.Restart();
-                _world.Step();
+                StepWorld();
                 double ms = _simClock.Elapsed.TotalMilliseconds;
                 CollectMarks();
                 _simMsWindow += ms;
@@ -687,7 +691,7 @@ public partial class Main : Node2D
         _state.MouseWorld = GetGlobalMousePosition();
         _state.HoveredTile = _hoverOverride ?? Iso.TileAt(_state.MouseWorld);
 
-        _horde.Sync(_world, _state.Alpha, delta);
+        _horde.Sync(_world, _state.Alpha, _paused ? 0 : delta);
         if (!_paused) { _state.Farmers.Step(_world, (float)delta); _state.Fishers.Step(_world, (float)delta); _state.Hunters.Step(_world, (float)delta); _state.Commuters.Step(_world, (float)delta); }
         if (_pendingGroup is { } pending) { _pendingGroup = null; SelectGroupForScreenshot(pending); }
         _view.Refresh();
@@ -904,6 +908,13 @@ public partial class Main : Node2D
     public override void _UnhandledInput(InputEvent @event)
     {
         if (!_started || _backdrop) return;
+        if (@event is InputEventKey { Pressed: true, Echo: false, Keycode: Key.F2 })
+        {
+            ToggleBearGallery();
+            GetViewport().SetInputAsHandled();
+            return;
+        }
+        if (_bearGallery is { Visible: true }) { GetViewport().SetInputAsHandled(); return; }
         if (_pauseMenu != null)
         {
             if (@event is InputEventKey { Pressed: true, Echo: false, Keycode: Key.Escape or Key.F10 }) ClosePauseMenu();
@@ -1410,11 +1421,118 @@ public partial class Main : Node2D
 
     // --- scripted runs ---
 
+    void ToggleBearGallery()
+    {
+        if (_bearGallery == null)
+        {
+            var layer = new CanvasLayer { Layer = 20 };
+            _bearGallery = new BearGallery { Visible = false };
+            layer.AddChild(_bearGallery);
+            AddChild(layer);
+        }
+        if (_bearGallery.Visible)
+        {
+            _bearGallery.Visible = false;
+            _paused = _pausedBeforeGallery;
+        }
+        else
+        {
+            _pausedBeforeGallery = _paused;
+            _paused = true;
+            _bearGallery.Visible = true;
+        }
+    }
+
+    void StepWorld()
+    {
+        int before = _world.Tick;
+        _horde.BeforeTick(_world);
+        _world.Step();
+        if (_world.Tick != before) _horde.AfterTick(_world);
+    }
+
+    /// <summary>A live combat art showcase using the real simulation and enemy batching.</summary>
+    void StartBearPreview()
+    {
+        StartDemo();
+        Engine.TimeScale = 1;
+        for (int t = 0; t < 40 * Balance.TickHz; t++) StepWorld();
+        if (_world.Buildings.FirstOrDefault(b => b.Kind == BuildingKind.Barracks && b.Complete) is { } barracks)
+        {
+            for (int i = 0; i < 4; i++) Send(new TrainUnit(barracks.Id, UnitKind.Templar));
+            for (int i = 0; i < 4; i++) Send(new TrainUnit(barracks.Id, UnitKind.Marksman));
+            for (int t = 0; t < 100 * Balance.TickHz; t++) StepWorld();
+        }
+        _world.DrainEvents();
+        int c = _world.Terrain.Width / 2;
+        void Spawn(DemonKind kind, int x, int y, int count)
+        {
+            if (_world.FindReachableTileNear(x, y, 8) is { } tile)
+                Send(new SpawnDemons(kind, tile.X, tile.Y, count));
+        }
+        // Separated subjects and a dense pack, all in the clearing around the demo town.
+        Spawn(DemonKind.Brute, c - 2, c + 8, 1);
+        Spawn(DemonKind.Imp, c - 5, c + 7, 1);
+        Spawn(DemonKind.Hound, c - 4, c + 10, 1);
+        Spawn(DemonKind.Thrall, c - 1, c + 11, 1);
+        for (int i = 0; i < 6; i++) Spawn(DemonKind.Brute, c + 4 + i % 3 * 2, c + 7 + i / 3 * 2, 1);
+        Spawn(DemonKind.Brute, c + 11, c + 2, 12);
+        _world.FlushCommands();
+        _paused = false;
+        _cheated = true;
+        if (!_options.ContainsKey("look"))
+        {
+            _camera.Position = Iso.P(c + 3, c + 3);
+            _camera.Zoom = Vector2.One * 1.1f / Display.UiScale;
+        }
+        _hud.Visible = false;
+        var layer = new CanvasLayer();
+        var caption = new Label
+        {
+            Text = "CORRUPTED BEAR  |  Live Brute replacement  |  Eight directions / five animations\nF2: animation gallery  |  Wheel: zoom  |  Space: pause  |  Tab: speed",
+            Position = new Vector2(24, 20),
+        };
+        caption.AddThemeFontSizeOverride("font_size", 20);
+        caption.AddThemeColorOverride("font_outline_color", Colors.Black);
+        caption.AddThemeConstantOverride("outline_size", 8);
+        layer.AddChild(caption);
+        AddChild(layer);
+        GD.Print($"hellwall: animated bear showcase, {_world.Horde.Count} enemies, 240 atlas cells");
+        if (_options.ContainsKey("bear-gallery")) ToggleBearGallery();
+    }
+
+    void SelfTestBear()
+    {
+        bool wasPaused = _paused;
+        using var key = new InputEventKey { Pressed = true, Keycode = Key.F2 };
+        _UnhandledInput(key);
+        bool gallery = _bearGallery is { Visible: true } && _paused;
+        _UnhandledInput(key);
+        gallery &= _bearGallery is { Visible: false } && _paused == wasPaused;
+        // Compare a rendered world with an untouched simulation clone: presentation must not change rules or determinism.
+        var baseline = World.Load(_world.Save(), _world.Rules);
+        bool same = true;
+        _horde.Sync(_world, 1, 0);
+        for (int t = 0; t < 100 * Balance.TickHz; t++)
+        {
+            StepWorld();
+            baseline.Step();
+            _horde.Sync(_world, 1, 1.0 / Balance.TickHz);
+            if (t % Balance.TickHz == 0 && StateHash.Compute(_world) != StateHash.Compute(baseline)) same = false;
+        }
+        var clips = _horde.BearClipSamples;
+        bool all = clips.All(n => n > 0);
+        bool pass = same && all && gallery && _horde.BearFacingMask == 255;
+        GD.Print($"hellwall-selftest: {(pass ? "PASS" : "FAIL")} bear (sim unchanged {same}, gallery toggle {gallery}, idle {clips[0]}, walk {clips[1]}, attack {clips[2]}, hit {clips[3]}, death {clips[4]}, facing mask {_horde.BearFacingMask:x2}, corpses {_horde.CorpseCount})");
+        GetTree().Quit(pass ? 0 : 1);
+    }
+
     void StartBenchAssault()
     {
         foreach (var c in Scenarios.WallRing(_world, Scenarios.BenchRingRadius, Side.East, Side.West)) _world.Enqueue(c);
         _world.FlushCommands();
-        foreach (var c in Scenarios.EdgeAssault(_world, 20000, points: 8)) _world.Enqueue(c);
+        foreach (var c in Scenarios.EdgeAssault(_world, 20000, points: 8))
+            _world.Enqueue(_options.ContainsKey("bear-bench") && c is SpawnDemons spawn ? spawn with { Kind = DemonKind.Brute } : c);
         _world.FlushCommands();
         _camera.Zoom = new Vector2(0.45f, 0.45f);
     }
@@ -1499,6 +1617,7 @@ public partial class Main : Node2D
 
     void PanCamera(double delta)
     {
+        if (_bearGallery is { Visible: true }) return;
         if (_backdrop && _scenes is { Count: > 0 }) return; // StepBackdrop moves the camera
         if (_backdrop)
         {
